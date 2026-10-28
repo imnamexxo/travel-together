@@ -1,0 +1,17 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+backend/venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node / expo
+node_modules/
+
+# os / editor
+.DS_Store
+Thumbs.db
