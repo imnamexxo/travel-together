@@ -2,7 +2,7 @@
 
 마지막 갱신: 2026-10-28
 
-작업 단위(티켓)의 상태는 [GitHub Issues](https://github.com/kang1031/divided_app/issues)가 기준이다. 이 파일은 티켓에 담기지 않는 것만 기록한다: 지금 어디까지 왔는지, 사람이 해야 할 일, 아직 열린 질문, 날짜별 기록.
+작업 단위(티켓)의 상태는 [GitHub Issues](https://github.com/imnamexxo/travel-together/issues)가 기준이다. 이 파일은 티켓에 담기지 않는 것만 기록한다: 지금 어디까지 왔는지, 사람이 해야 할 일, 아직 열린 질문, 날짜별 기록.
 
 ## 현재 단계
 
@@ -73,3 +73,5 @@
 - 구조 정리: `backend/requirements.txt`·`requirements-dev.txt` 추가(psycopg, python-multipart, pytest 설치), 프론트에서 안 쓰는 `react-navigation`·`@react-navigation/native-stack` 제거.
 - 기술 스택 보강 채택: SQLAlchemy 2 + Alembic, 테스트 DB는 환경 변수 주소(Docker 또는 직접 설치), openapi-typescript, TanStack Query, expo-sqlite(경로 임시 저장), Gemini 응답 스키마 지정. #1, #2, #3, #8, #14, #15에 반영.
 - 알려진 문제: 프론트 타입 검사에서 템플릿의 `.css` 타입 선언 오류 2개. #3에서 템플릿 화면을 걷어낼 때 해결.
+- 팀 저장소로 이전: imnamexxo/travel-together(공개)에 README 기록과 합쳐 push. 이슈 #1~#18을 같은 번호·라벨·하위 이슈·선행 관계로 다시 생성. 스펙 백업은 `docs/specs/`. 기존 저장소 kang1031/divided_app은 그대로 두었고 로컬 원격 이름은 `old`.
+- README(팀원 작성)와 스펙이 다른 부분은 스펙 기준으로 결정: 동시 편집은 마지막 저장 반영, 장소는 카카오 검증 통과한 것만, 여행 생성 입력은 이름·기간, 사진 자동 연결은 #10, 용어는 `GLOSSARY.md`. README 수정은 팀원과 협의 필요.
