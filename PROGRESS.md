@@ -21,7 +21,7 @@
 | Supabase 프로젝트 생성 (URL, anon key, service key) | #3 | 대기 |
 | Render 계정 | #3 | 대기 |
 | Expo 계정, EAS 개발 빌드용 Android 실기기 | #3 | 대기 |
-| 테스트용 PostgreSQL 준비: Docker Desktop(WSL 설치·재부팅 필요) 또는 Windows용 PostgreSQL 직접 설치 중 택1. 현재 PC에는 둘 다 없음 | #3 | 대기 |
+| 테스트용 PostgreSQL 준비 | #3 | 완료 (강동헌 PC: PostgreSQL 17.11 직접 설치, DB `divided_dev`·`divided_test`, 연결 정보는 `backend/.env`). 팀원 PC는 `backend/.env.example` 참고해 각자 준비 |
 | 카카오 디벨로퍼스 REST API 키 | #7 | 대기 |
 | Gemini API 키 | #8 | 대기 |
 | Google Cloud 결제 계정(카드 등록) + Android 지도 키 | #16 | 대기 |
