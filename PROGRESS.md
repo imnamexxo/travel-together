@@ -21,6 +21,7 @@
 | Supabase 프로젝트 생성 (URL, anon key, service key) | #3 | 대기 |
 | Render 계정 | #3 | 대기 |
 | Expo 계정, EAS 개발 빌드용 Android 실기기 | #3 | 대기 |
+| 테스트용 PostgreSQL 준비: Docker Desktop(WSL 설치·재부팅 필요) 또는 Windows용 PostgreSQL 직접 설치 중 택1. 현재 PC에는 둘 다 없음 | #3 | 대기 |
 | 카카오 디벨로퍼스 REST API 키 | #7 | 대기 |
 | Gemini API 키 | #8 | 대기 |
 | Google Cloud 결제 계정(카드 등록) + Android 지도 키 | #16 | 대기 |
@@ -70,4 +71,5 @@
 - 스펙 #1(백엔드), #2(프론트엔드) 작성. 테스트 경계: 서버 HTTP API, 정산 계산 모듈, 앱 API 클라이언트, 실기기 수동 검증.
 - 구현 티켓 #3~#18 등록.
 - 구조 정리: `backend/requirements.txt`·`requirements-dev.txt` 추가(psycopg, python-multipart, pytest 설치), 프론트에서 안 쓰는 `react-navigation`·`@react-navigation/native-stack` 제거.
+- 기술 스택 보강 채택: SQLAlchemy 2 + Alembic, 테스트 DB는 환경 변수 주소(Docker 또는 직접 설치), openapi-typescript, TanStack Query, expo-sqlite(경로 임시 저장), Gemini 응답 스키마 지정. #1, #2, #3, #8, #14, #15에 반영.
 - 알려진 문제: 프론트 타입 검사에서 템플릿의 `.css` 타입 선언 오류 2개. #3에서 템플릿 화면을 걷어낼 때 해결.
