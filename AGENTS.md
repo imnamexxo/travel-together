@@ -1,3 +1,7 @@
+## Progress log
+
+`PROGRESS.md` records where the project stands, human to-dos, open questions, and a dated log. Update it at the end of any session that changes project state (a ticket finished, a decision made, a setup step done). Ticket status itself lives in GitHub Issues; don't duplicate it there.
+
 ## Agent skills
 
 ### Issue tracker
