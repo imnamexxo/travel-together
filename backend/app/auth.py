@@ -3,6 +3,7 @@
 서버의 나머지 코드는 AuthVerifier 인터페이스와 get_current_user 의존성만 안다.
 """
 
+import logging
 import uuid
 from dataclasses import dataclass
 from typing import Protocol
@@ -12,6 +13,8 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.errors import ApiError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -43,10 +46,9 @@ class SupabaseJwtVerifier:
 
     def __init__(self, supabase_url: str, jwt_secret: str = "", jwks_client=None):
         self._jwt_secret = jwt_secret
+        self._jwks_url = f"{supabase_url.strip().rstrip('/')}/auth/v1/.well-known/jwks.json"
         if jwks_client is None and supabase_url:
-            jwks_client = jwt.PyJWKClient(
-                f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
-            )
+            jwks_client = jwt.PyJWKClient(self._jwks_url)
         self._jwks_client = jwks_client
 
     def verify(self, token: str) -> AuthenticatedUser:
@@ -69,6 +71,8 @@ class SupabaseJwtVerifier:
             )
             user_id = uuid.UUID(claims["sub"])
         except jwt.PyJWKClientConnectionError as exc:
+            # SUPABASE_URL이 틀리면 여기로 온다. 어느 주소에서 왜 실패했는지 남긴다.
+            logger.warning("JWKS를 가져오지 못했습니다 (%s): %s", self._jwks_url, exc)
             raise AuthUnavailable() from exc
         except (jwt.PyJWTError, ValueError) as exc:
             raise InvalidToken() from exc
