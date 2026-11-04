@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: travel-together-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # 무료 플랜에는 preDeployCommand가 없어서 시작할 때 마이그레이션을 적용한다.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      # 아래 값은 Render 대시보드에서 직접 넣는다(커밋하지 않음).
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false

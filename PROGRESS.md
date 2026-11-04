@@ -1,26 +1,26 @@
 # 진행 상황
 
-마지막 갱신: 2026-10-28
+마지막 갱신: 2026-11-04
 
 작업 단위(티켓)의 상태는 [GitHub Issues](https://github.com/imnamexxo/travel-together/issues)가 기준이다. 이 파일은 티켓에 담기지 않는 것만 기록한다: 지금 어디까지 왔는지, 사람이 해야 할 일, 아직 열린 질문, 날짜별 기록.
 
 ## 현재 단계
 
-기획·설계 완료, 구현 시작 전. 다음 작업은 #3 로그인 뼈대.
+#3 로그인 뼈대 진행 중. 코드(서버·앱 구조, 테스트)는 작성 완료, 외부 계정 연결·배포·실기기 확인이 남음.
 
 ## 바로 다음 할 일
 
-1. #3에 필요한 계정 준비: Supabase 프로젝트, Render 계정, Expo(EAS) 계정, Android 실기기
-2. #3 로그인 뼈대 구현
+1. #3 코드를 GitHub에 올리기 (main 직접 push 또는 PR, 결정 필요)
+2. #3 계정 연결: Supabase 프로젝트 → Render 배포 → 앱 `.env` → EAS 개발 빌드 → 실기기에서 가입·로그인·재시작·로그아웃 확인
 3. 팀원(유소영) GitHub 아이디 받아서 저장소에 초대 (#4 끝나기 전)
 
 ## 사람이 해야 할 일
 
 | 할 일 | 필요한 시점 | 상태 |
 |---|---|---|
-| Supabase 프로젝트 생성 (URL, anon key, service key) | #3 | 대기 |
-| Render 계정 | #3 | 대기 |
-| Expo 계정, EAS 개발 빌드용 Android 실기기 | #3 | 대기 |
+| Supabase 프로젝트 생성. 필요한 값: 프로젝트 URL, publishable(anon) 키 → 앱 `frontend/.env`. DB 연결 문자열(Session pooler) → Render `DATABASE_URL`. 개발 중엔 Authentication 설정에서 메일 인증(Confirm email)을 끄면 편함 | #3 | 대기 |
+| Render 계정. 저장소 루트 `render.yaml`로 Blueprint 생성 후 `DATABASE_URL`·`SUPABASE_URL` 입력 (`SUPABASE_JWT_SECRET`은 예전 방식 키일 때만) | #3 | 대기 |
+| Expo 계정, EAS 개발 빌드용 Android 실기기. `cd frontend; npx eas-cli@latest login; npx eas-cli@latest build --platform android --profile development` (첫 빌드 때 Android 패키지 이름을 물어봄) | #3 | 대기 |
 | 테스트용 PostgreSQL 준비 | #3 | 완료 (강동헌 PC: PostgreSQL 17.11 직접 설치, DB `divided_dev`·`divided_test`, 연결 정보는 `backend/.env`). 팀원 PC는 `backend/.env.example` 참고해 각자 준비 |
 | 카카오 디벨로퍼스 REST API 키 | #7 | 대기 |
 | Gemini API 키 | #8 | 대기 |
@@ -62,6 +62,16 @@
 ```
 
 ## 기록
+
+### 2026-11-04
+
+- #3 코드 작성. 서버: FastAPI 기본 구조, 공통 오류 형식(`code`·`message`·`details`), 인증 검증기 어댑터(Supabase JWKS 기본 + 예전 HS256 비밀키 선택), `GET /me`(첫 호출 때 가입 시 표시 이름으로 프로필 생성), `GET /health`, SQLAlchemy + Alembic 첫 마이그레이션, 모든 테이블 RLS 켬(정책 없음 = 클라이언트 거부, 테스트로 강제), `render.yaml`.
+- 앱: 템플릿 예제 제거, 로그인/가입 화면, 하단 탭 4개 빈 화면, 인증 서비스 인터페이스(Supabase 구현, 세션은 expo-sqlite localStorage), API 클라이언트(토큰 첨부·공통 오류 해석), TanStack Query(401이면 로그아웃), openapi-typescript 타입 생성(`npm run gen:api`, 입력은 `backend/openapi.json`), `eas.json` 개발 빌드 프로필.
+- 테스트: 서버 `venv\Scripts\python -m pytest`, 앱 `npm test`. 앱 테스트 11개, 서버 테스트 17개 모두 통과(로컬 PostgreSQL). `backend/.env`는 이전 폴더에서 복사함.
+- `alembic.ini`에 한글을 넣으면 Windows(cp949)에서 읽다가 깨진다. 이 파일은 영어로만 쓴다.
+- 서버 API를 바꾸면 `venv\Scripts\python -m app.export_openapi` → `frontend`에서 `npm run gen:api`.
+- 버전 메모: SDK 57에서 `expo-router/testing-library`는 RNTL 13만 지원(그래서 `react-test-renderer`를 19.2.3으로 고정). openapi-typescript 7.13은 TypeScript 5를 peer로 요구해서 `overrides`로 프로젝트 TS 6을 쓰게 함. Render 무료 플랜엔 pre-deploy 명령이 없어 시작 명령에서 마이그레이션 적용.
+- 프론트에 ESLint가 설치되어 있지 않음(`expo lint` 실패). 필요하면 별도로 구성.
 
 ### 2026-10-28
 
