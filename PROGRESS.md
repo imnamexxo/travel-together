@@ -6,21 +6,21 @@
 
 ## 현재 단계
 
-#3 로그인 뼈대 진행 중. 코드(서버·앱 구조, 테스트)는 작성 완료, 외부 계정 연결·배포·실기기 확인이 남음.
+#3 로그인 뼈대 완료(서버 Render 배포, Android 실기기 확인). 다음 작업은 #4 여행 만들기와 목록.
 
 ## 바로 다음 할 일
 
-1. PR #19(#3 코드) 확인 후 main에 합치기. Render 자동 배포는 main 기준
-2. #3 계정 연결: Supabase 프로젝트 → Render 배포 → 앱 `.env` → EAS 개발 빌드 → 실기기에서 가입·로그인·재시작·로그아웃 확인
+1. GitHub에서 #3 닫기 (완료 조건 체크)
+2. #4 여행 만들기와 목록
 3. 팀원(유소영) GitHub 아이디 받아서 저장소에 초대 (#4 끝나기 전)
 
 ## 사람이 해야 할 일
 
 | 할 일 | 필요한 시점 | 상태 |
 |---|---|---|
-| Supabase 프로젝트 생성. 필요한 값: 프로젝트 URL, publishable(anon) 키 → 앱 `frontend/.env`. DB 연결 문자열(Session pooler) → Render `DATABASE_URL`. 개발 중엔 Authentication 설정에서 메일 인증(Confirm email)을 끄면 편함 | #3 | 대기 |
-| Render 계정. 저장소 루트 `render.yaml`로 Blueprint 생성 후 `DATABASE_URL`·`SUPABASE_URL` 입력 (`SUPABASE_JWT_SECRET`은 예전 방식 키일 때만) | #3 | 대기 |
-| Expo 계정, EAS 개발 빌드용 Android 실기기. `cd frontend; npx eas-cli@latest login; npx eas-cli@latest build --platform android --profile development` (첫 빌드 때 Android 패키지 이름을 물어봄) | #3 | 대기 |
+| Supabase 프로젝트 생성 | #3 | 완료 (`nttoauhqqsqhulbtgixn`, 서울 리전) |
+| Render 배포 | #3 | 완료 (https://travel-together-api-d4zr.onrender.com, oregon 리전) |
+| Expo 계정, EAS 개발 빌드, Android 실기기 | #3 | 완료 (EAS 계정 kang1031, 패키지 `com.kang1031.frontend`) |
 | 테스트용 PostgreSQL 준비 | #3 | 완료 (강동헌 PC: PostgreSQL 17.11 직접 설치, DB `divided_dev`·`divided_test`, 연결 정보는 `backend/.env`). 팀원 PC는 `backend/.env.example` 참고해 각자 준비 |
 | 카카오 디벨로퍼스 REST API 키 | #7 | 대기 |
 | Gemini API 키 | #8 | 대기 |
@@ -34,7 +34,8 @@
 ## 열린 질문
 
 - 자체 학습 모델 없이 Gemini 활용만으로 과목 요건이 충족되는가? 충족되지 않으면 모델 학습 티켓을 추가해야 한다. (기획서 7-1절 댓글)
-- 앱 이름 (미정, 나중에 결정)
+- 앱 이름 (미정, 나중에 결정). 정하면 Android 패키지 이름(`com.kang1031.frontend`)도 바꿀지 결정. 바꾸면 개발 빌드를 다시 해야 한다.
+- Render 리전을 싱가포르로 옮길지. 지금은 oregon이라 서울 DB와 왕복이 길다. 옮기려면 `render.yaml`에 `region: singapore`를 넣고 서비스를 다시 만든다.
 
 ## 주요 문서
 
@@ -62,6 +63,16 @@
 ```
 
 ## 기록
+
+### 2026-11-04 (#3 배포·실기기)
+
+- #3 완료: PR #19(코드), PR #20(JWKS 실패 원인 로그, `eas init`이 만든 `app.json` 설정). Android 실기기에서 가입, 로그인(표시 이름), 재시작 후 유지, 로그아웃, 재로그인 확인.
+- 배포하며 막힌 곳(팀원 설정 때 참고):
+  - Render `DATABASE_URL`은 Supabase Connect → **Session pooler** 주소(`postgres.<ref>@aws-...pooler.supabase.com`)여야 한다. Direct·Dedicated pooler는 IPv6라 Render 무료 플랜에서 `Network is unreachable`.
+  - Render `SUPABASE_URL`은 `https://<ref>.supabase.co`만. 뒤에 경로가 붙거나 틀리면 앱에 "로그인 확인 서버에 연결하지 못했습니다"(502)가 뜬다. 이제 원인이 Render 로그에 `JWKS를 가져오지 못했습니다`로 남는다.
+  - `eas build` 끝에 에뮬레이터에 설치할지 물으면 n. Yes면 Android Studio(adb)가 없어서 오류가 나지만 빌드 자체는 성공한 것이다. 설치는 expo.dev → Builds → Install QR.
+  - 저장소 주인이 imnamexxo라 Render GitHub 앱 설치는 주인 계정에서 해야 한다.
+- Supabase 프로젝트는 비대칭 서명 키(ES256, JWKS)를 쓴다. `SUPABASE_JWT_SECRET`은 비워 둔다.
 
 ### 2026-11-04
 
