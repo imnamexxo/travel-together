@@ -19,6 +19,10 @@ export type ExpenseStatus = Expense['status'];
 export type Settlement = components['schemas']['SettlementOut'];
 export type Transfer = components['schemas']['TransferOut'];
 export type TransferCreate = components['schemas']['TransferCreate'];
+export type Place = components['schemas']['PlaceOut'];
+export type PlaceCandidate = components['schemas']['PlaceCandidateOut'];
+export type PlanItem = components['schemas']['PlanItemOut'];
+export type PlanItemInput = components['schemas']['PlanItemIn'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -74,6 +78,14 @@ export interface ApiClient {
   listTransfers(tripId: string): Promise<Transfer[]>;
   recordTransfer(tripId: string, transfer: TransferCreate): Promise<Transfer>;
   deleteTransfer(tripId: string, transferId: string): Promise<void>;
+  /** 카카오 장소 검색. 사람의 위치는 보내지 않는다(ADR-0003). */
+  searchPlaces(tripId: string, query: string): Promise<PlaceCandidate[]>;
+  listPlanItems(tripId: string): Promise<PlanItem[]>;
+  createPlanItem(tripId: string, input: PlanItemInput): Promise<PlanItem>;
+  updatePlanItem(tripId: string, itemId: string, input: PlanItemInput): Promise<PlanItem>;
+  deletePlanItem(tripId: string, itemId: string): Promise<void>;
+  /** 그날의 일정 항목 id를 빠짐없이 새 순서대로 보낸다. */
+  reorderPlanItems(tripId: string, date: string, itemIds: string[]): Promise<PlanItem[]>;
 }
 
 type ApiClientOptions = {
@@ -145,5 +157,11 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     listTransfers: (tripId) => request<Transfer[]>('GET', `${trip(tripId)}/transfers`),
     recordTransfer: (tripId, transfer) => request<Transfer>('POST', `${trip(tripId)}/transfers`, transfer),
     deleteTransfer: (tripId, transferId) => request<void>('DELETE', `${trip(tripId)}/transfers/${encodeURIComponent(transferId)}`),
+    searchPlaces: (tripId, query) => request<PlaceCandidate[]>('GET', `${trip(tripId)}/places/search?query=${encodeURIComponent(query)}`),
+    listPlanItems: (tripId) => request<PlanItem[]>('GET', `${trip(tripId)}/plan-items`),
+    createPlanItem: (tripId, input) => request<PlanItem>('POST', `${trip(tripId)}/plan-items`, input),
+    updatePlanItem: (tripId, itemId, input) => request<PlanItem>('PUT', `${trip(tripId)}/plan-items/${encodeURIComponent(itemId)}`, input),
+    deletePlanItem: (tripId, itemId) => request<void>('DELETE', `${trip(tripId)}/plan-items/${encodeURIComponent(itemId)}`),
+    reorderPlanItems: (tripId, date, itemIds) => request<PlanItem[]>('PUT', `${trip(tripId)}/plan-items/order`, { date, item_ids: itemIds }),
   };
 }

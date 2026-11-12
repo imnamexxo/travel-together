@@ -3,7 +3,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { ApiError } from '@/api/client';
 
 import { openTripMenu } from './support/alerts';
-import { FakeAuthService, fakeApi, tripDetail } from './support/fakes';
+import { FakeAuthService, fakeApi, place, planItem, tripDetail } from './support/fakes';
 import { renderApp } from './support/render-app';
 
 function signedIn() {
@@ -105,7 +105,7 @@ test('총무가 아닌 여행에서는 총무라고 나오지 않는다', async 
 });
 
 test('지도의 앨범 바로가기는 같은 여행의 앨범을 연다', async () => {
-  renderApp({ auth: signedIn(), api: fakeApi({}, { trips: [tripDetail()] }), initialUrl: '/trips/trip-jeju/map' });
+  renderApp({ auth: signedIn(), api: fakeApi({}, { trips: [tripDetail()], planItems: { 'trip-jeju': [planItem({ title: '점심', place: place() })] } }), initialUrl: '/trips/trip-jeju/map' });
 
   fireEvent.press(await screen.findByRole('button', { name: '앨범 보기 ›' }));
 
@@ -113,7 +113,7 @@ test('지도의 앨범 바로가기는 같은 여행의 앨범을 연다', async
 });
 
 test('지도의 플래너 바로가기는 내 여행 목록이 아니라 같은 여행의 플래너를 연다', async () => {
-  renderApp({ auth: signedIn(), api: fakeApi({}, { trips: [tripDetail()] }), initialUrl: '/trips/trip-jeju/map' });
+  renderApp({ auth: signedIn(), api: fakeApi({}, { trips: [tripDetail()], planItems: { 'trip-jeju': [planItem({ title: '점심', place: place() })] } }), initialUrl: '/trips/trip-jeju/map' });
 
   fireEvent.press(await screen.findByRole('button', { name: '플래너 보기' }));
 

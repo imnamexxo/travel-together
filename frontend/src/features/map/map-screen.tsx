@@ -5,23 +5,36 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from '@/features/trip/current-trip';
-import { previewPlaces } from '@/features/trip/places';
+import { usePlanItems } from '@/api/queries';
+import type { PlanItem } from '@/api/client';
 import { usePreviewTrip } from '@/features/trip/preview-state';
 import PlaceMap from './place-map';
 
 type Filter = 'all' | 'visited' | 'planned';
 export default function MapScreen() {
-  const { photos, items } = usePreviewTrip();
+  const { photos } = usePreviewTrip();
   const { trip, days } = useCurrentTrip();
+  const planItems = usePlanItems(trip.id);
   const [day, setDay] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const places = useMemo(() => previewPlaces.map((place) => {
-    const linkedPhotos = photos.filter((photo) => photo.place === place.name && (day === null || photo.day === day));
-    const plans = items.filter((item) => item.name === place.name && (day === null || item.day === day)).sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
-    return { ...place, photos: linkedPhotos, plans, visited: linkedPhotos.length > 0 };
-  }).filter((place) => (place.plans.length > 0 || place.photos.length > 0)
-    && (filter === 'all' || (filter === 'visited' ? place.visited : !place.visited))), [photos, items, day, filter]);
+  // 장소는 일정 항목에 붙은 실제 장소다. 사진(들른 곳)은 #9·#10, 지출 연결은 #17에서 서버 데이터로 바뀐다.
+  const places = useMemo(() => {
+    const dayOf = (item: PlanItem) => days.findIndex((d) => d.iso === item.date);
+    const byPlace = new Map<string, { place: NonNullable<PlanItem['place']>; plans: (PlanItem & { day: number })[] }>();
+    for (const item of planItems.data ?? []) {
+      if (!item.place) continue;
+      const entry = byPlace.get(item.place.id) ?? { place: item.place, plans: [] };
+      entry.plans.push({ ...item, day: dayOf(item) });
+      byPlace.set(item.place.id, entry);
+    }
+    return [...byPlace.values()].map(({ place, plans }) => {
+      const linkedPhotos = photos.filter((photo) => photo.place === place.name && (day === null || photo.day === day));
+      const dayPlans = plans.filter((item) => day === null || item.day === day).sort((a, b) => a.day - b.day || a.position - b.position);
+      return { id: place.id, name: place.name, area: place.road_address ?? place.address, latitude: place.latitude, longitude: place.longitude, photos: linkedPhotos, plans: dayPlans, visited: linkedPhotos.length > 0 };
+    }).filter((place) => (place.plans.length > 0 || place.photos.length > 0)
+      && (filter === 'all' || (filter === 'visited' ? place.visited : !place.visited)));
+  }, [planItems.data, photos, day, filter, days]);
   const pins = useMemo(() => places.map(({ id, name, latitude, longitude, visited }) => ({ id, name, latitude, longitude, visited })), [places]);
   const selected = places.find((place) => place.id === selectedId) ?? places[0];
   const unlinkedPhotos = photos.filter((photo) => photo.place === null).length;
@@ -41,11 +54,11 @@ export default function MapScreen() {
         <View style={s.handle} />
         <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selected.name}</Text><Text style={s.area}>{selected.area}</Text></View><Text style={s.badge}>{selected.visited ? '들른 곳' : '계획'}</Text></View>
         <Text style={s.counts}>일정 {selected.plans.length}개 · 사진 {selected.photos.length}장</Text>
-        {selected.plans.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{item.day + 1}일 차 {item.time}</Text><Text style={s.memo}>{item.memo || item.name}</Text></View>)}
+        {selected.plans.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{item.day + 1}일 차 {item.time?.slice(0, 5) ?? ''}</Text><Text style={s.memo}>{item.memo || item.title}</Text></View>)}
         {!!selected.photos.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.thumbnails}>{selected.photos.slice(0, 8).map((photo) => <Image key={photo.id} source={{ uri: photo.uri }} style={s.thumbnail} />)}</ScrollView>}
         <View style={s.actions}><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}`)} style={s.action}><Text style={s.link}>플래너 보기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}/album`)} style={s.action}><Text style={s.link}>앨범 보기 ›</Text></Pressable></View>
-        <Text style={s.hint}>예시 장소 기준 · 지출 연결은 추후 제공돼요</Text>
-      </ScrollView> : <View style={s.noSelection}><Text style={s.emptyTitle}>아직 표시할 장소가 없어요</Text><Text style={s.hint}>다른 날짜를 선택하거나 앨범에서 사진에 장소를 연결해보세요.</Text></View>}
+        <Text style={s.hint}>일정에 넣은 장소 기준 · 사진·지출 연결은 추후 제공돼요</Text>
+      </ScrollView> : <View style={s.noSelection}><Text style={s.emptyTitle}>아직 표시할 장소가 없어요</Text><Text style={s.hint}>플래너에서 일정에 장소를 넣으면 지도에 핀이 생겨요.</Text></View>}
       {unlinkedPhotos > 0 && <Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}/album`)} style={s.unlinked}><Text style={s.unlinkedText}>장소 미연결 사진 {unlinkedPhotos}장</Text><Text style={s.link}>앨범에서 연결 ›</Text></Pressable>}
     </View>
   </SafeAreaView>;

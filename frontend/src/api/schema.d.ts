@@ -326,6 +326,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/places/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search
+         * @description 키워드로 실제 장소를 찾는다(카카오 로컬).
+         */
+        get: operations["search_trips__trip_id__places_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/plan-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Plan Items
+         * @description 여행의 모든 일정 항목. 날짜, 하루 안의 순서대로.
+         */
+        get: operations["list_plan_items_trips__trip_id__plan_items_get"];
+        put?: never;
+        /**
+         * Create Plan Item
+         * @description 멤버 누구나 일정 항목을 만든다.
+         */
+        post: operations["create_plan_item_trips__trip_id__plan_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/plan-items/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder Plan Items
+         * @description 하루 안의 순서를 바꾼다. 그날의 일정 항목 id를 빠짐없이 새 순서대로 보낸다.
+         */
+        put: operations["reorder_plan_items_trips__trip_id__plan_items_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/plan-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Plan Item
+         * @description 멤버 누구나 고칠 수 있다(다른 멤버가 만든 것도). 마지막 저장이 반영된다.
+         */
+        put: operations["update_plan_item_trips__trip_id__plan_items__item_id__put"];
+        post?: never;
+        /**
+         * Delete Plan Item
+         * @description 만든 멤버나 총무만 지울 수 있다.
+         */
+        delete: operations["delete_plan_item_trips__trip_id__plan_items__item_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -541,6 +629,113 @@ export interface components {
             join_order: number;
             /** Is Organizer */
             is_organizer: boolean;
+        };
+        /** PlaceCandidateOut */
+        PlaceCandidateOut: {
+            /** Kakao Place Id */
+            kakao_place_id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address: string;
+            /** Road Address */
+            road_address: string | null;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Category */
+            category: string | null;
+        };
+        /** PlaceOut */
+        PlaceOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kakao Place Id */
+            kakao_place_id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address: string;
+            /** Road Address */
+            road_address: string | null;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Category */
+            category: string | null;
+        };
+        /**
+         * PlaceRef
+         * @description 검색 결과에서 고른 장소. 서버가 카카오로 다시 확인한다.
+         */
+        PlaceRef: {
+            /** Kakao Place Id */
+            kakao_place_id: string;
+            /** Name */
+            name: string;
+        };
+        /** PlanItemIn */
+        PlanItemIn: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Time */
+            time?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Memo
+             * @default
+             */
+            memo: string;
+            /** Estimated Cost */
+            estimated_cost?: number | null;
+            place?: components["schemas"]["PlaceRef"] | null;
+        };
+        /** PlanItemOut */
+        PlanItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Position */
+            position: number;
+            /** Time */
+            time: string | null;
+            /** Title */
+            title: string;
+            /** Memo */
+            memo: string;
+            /** Estimated Cost */
+            estimated_cost: number | null;
+            place: components["schemas"]["PlaceOut"] | null;
+            /** Created By Member Id */
+            created_by_member_id: string | null;
+            /** Created By Name */
+            created_by_name: string | null;
+        };
+        /** PlanOrder */
+        PlanOrder: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Item Ids */
+            item_ids: string[];
         };
         /** Profile */
         Profile: {
@@ -1935,6 +2130,353 @@ export interface operations {
                 };
             };
             /** @description 여행·송금 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    search_trips__trip_id__places_search_get: {
+        parameters: {
+            query: {
+                query: string;
+                /** @description 검색 기준점(장소·지역)의 위도 */
+                lat?: number | null;
+                lng?: number | null;
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceCandidateOut"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 카카오 장소 검색 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_plan_items_trips__trip_id__plan_items_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_plan_item_trips__trip_id__plan_items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 카카오 장소 검색 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reorder_plan_items_trips__trip_id__plan_items_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanOrder"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_plan_item_trips__trip_id__plan_items__item_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 카카오 장소 검색 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_plan_item_trips__trip_id__plan_items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 만든 사람·총무가 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
             404: {
                 headers: {
                     [name: string]: unknown;

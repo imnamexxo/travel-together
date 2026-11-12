@@ -1,18 +1,13 @@
 import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { demoPlanItems, type PlanItem } from './demo';
 
 export type PreviewPhoto = { id: string; uri: string; assetId: string | null; day: number | null; place: string | null };
-type PreviewState = {
-  items: PlanItem[]; setItems: Dispatch<SetStateAction<PlanItem[]>>;
-  photos: PreviewPhoto[]; setPhotos: Dispatch<SetStateAction<PreviewPhoto[]>>;
-};
+type PreviewState = { photos: PreviewPhoto[]; setPhotos: Dispatch<SetStateAction<PreviewPhoto[]>> };
 const PreviewContext = createContext<PreviewState | null>(null);
 
-// Shared in-memory preview only. Replace with authenticated API data later.
+// 앨범 미리보기 전용(기기 안 메모리). 사진은 #9에서 서버로 옮긴다.
 export function PreviewTripProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState(demoPlanItems);
   const [photos, setPhotos] = useState<PreviewPhoto[]>([]);
-  return <PreviewContext.Provider value={{ items, setItems, photos, setPhotos }}>{children}</PreviewContext.Provider>;
+  return <PreviewContext.Provider value={{ photos, setPhotos }}>{children}</PreviewContext.Provider>;
 }
 export function usePreviewTrip() {
   const context = useContext(PreviewContext);

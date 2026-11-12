@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Settlement, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type PlaceCandidate, type PlanItem, type Settlement, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -90,7 +90,22 @@ type FakeApiOptions = {
   settlements?: Record<string, Settlement>;
   /** 여행 id → 기록된 송금 */
   transfers?: Record<string, Transfer[]>;
+  /** 여행 id → 일정 항목 */
+  planItems?: Record<string, PlanItem[]>;
+  /** 카카오 장소 검색 결과로 쓸 후보. 이름에 검색어가 들어간 것만 돌려준다. */
+  placeCandidates?: PlaceCandidate[];
 };
+
+export function place(overrides: Partial<NonNullable<PlanItem['place']>> = {}): NonNullable<PlanItem['place']> {
+  return { id: 'place-1', kakao_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null, ...overrides };
+}
+
+export function planItem(overrides: Partial<PlanItem> = {}): PlanItem {
+  return {
+    id: 'plan-1', date: '2026-11-12', position: 0, time: null, title: '일정', memo: '', estimated_cost: null, place: null,
+    created_by_member_id: 'member-1', created_by_name: '민지', ...overrides,
+  };
+}
 
 export function expense(overrides: Partial<Expense> = {}): Expense {
   return {
@@ -102,7 +117,7 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {} }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [] }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -120,6 +135,17 @@ export function fakeApi(
     payer_name: membersOf(tripId).find((m) => m.member_id === e.payer_member_id)?.display_name ?? null, item_count: e.items.length,
   });
   const keys = new Map<string, string>();
+  const planStore: Record<string, PlanItem[]> = Object.fromEntries(Object.entries(planItems).map(([id, list]) => [id, [...list]]));
+  const plansOf = (tripId: string) => (planStore[tripId] ??= []);
+  const planFrom = (tripId: string, id: string, input: Parameters<ApiClient['createPlanItem']>[1], base?: PlanItem): PlanItem => {
+    const candidate = input.place ? placeCandidates.find((c) => c.kakao_place_id === input.place!.kakao_place_id) : undefined;
+    return {
+      ...(base ?? planItem({ id, created_by_member_id: trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1' })),
+      id, date: input.date, time: input.time ? `${input.time}:00` : null, title: input.title, memo: input.memo ?? '', estimated_cost: input.estimated_cost ?? null,
+      place: input.place ? place({ id: `place-${input.place.kakao_place_id}`, kakao_place_id: input.place.kakao_place_id, name: candidate?.name ?? input.place.name }) : null,
+      position: base?.position ?? plansOf(tripId).filter((i) => i.date === input.date).length,
+    };
+  };
   const transferStore: Record<string, Transfer[]> = Object.fromEntries(Object.entries(transfers).map(([id, list]) => [id, [...list]]));
   const transfersOf = (tripId: string) => (transferStore[tripId] ??= []);
   const fromInput = (id: string, input: Parameters<ApiClient['updateExpense']>[2]): Expense => ({
@@ -221,6 +247,26 @@ export function fakeApi(
     }),
     deleteTransfer: jest.fn(async (tripId, transferId) => {
       transferStore[tripId] = transfersOf(tripId).filter((t) => t.id !== transferId);
+    }),
+    searchPlaces: jest.fn(async (_tripId, query) => placeCandidates.filter((c) => c.name.includes(query))),
+    listPlanItems: jest.fn(async (tripId) => [...plansOf(tripId)]),
+    createPlanItem: jest.fn(async (tripId, input) => {
+      const created = planFrom(tripId, `plan-${plansOf(tripId).length + 1}`, input);
+      plansOf(tripId).push(created);
+      return created;
+    }),
+    updatePlanItem: jest.fn(async (tripId, itemId, input) => {
+      const list = plansOf(tripId);
+      const index = list.findIndex((i) => i.id === itemId);
+      list[index] = planFrom(tripId, itemId, input, list[index]);
+      return list[index];
+    }),
+    deletePlanItem: jest.fn(async (tripId, itemId) => {
+      planStore[tripId] = plansOf(tripId).filter((i) => i.id !== itemId);
+    }),
+    reorderPlanItems: jest.fn(async (tripId, date, itemIds) => {
+      for (const item of plansOf(tripId)) if (item.date === date) item.position = itemIds.indexOf(item.id);
+      return plansOf(tripId).filter((i) => i.date === date).sort((a, b) => a.position - b.position);
     }),
     ...overrides,
   } as jest.Mocked<ApiClient>;

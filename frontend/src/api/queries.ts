@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, PlanItemInput, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -13,6 +13,8 @@ export const queryKeys = {
   expense: (tripId: string, expenseId: string) => ['trips', tripId, 'expenses', expenseId] as const,
   settlement: (tripId: string) => ['trips', tripId, 'settlement'] as const,
   transfers: (tripId: string) => ['trips', tripId, 'transfers'] as const,
+  planItems: (tripId: string) => ['trips', tripId, 'plan-items'] as const,
+  placeSearch: (tripId: string, query: string) => ['trips', tripId, 'place-search', query] as const,
 };
 
 export function useMe() {
@@ -189,4 +191,54 @@ export function useDeleteTransfer(tripId: string) {
   const api = useApi();
   const refresh = useRefreshTransfers(tripId);
   return useMutation({ mutationFn: (transferId: string) => api.deleteTransfer(tripId, transferId), onSuccess: refresh });
+}
+
+export function usePlanItems(tripId: string) {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.planItems(tripId), queryFn: () => api.listPlanItems(tripId) });
+}
+
+/** 검색어를 확정했을 때만 부른다(입력할 때마다 카카오를 부르지 않는다). */
+export function usePlaceSearch(tripId: string, query: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.placeSearch(tripId, query),
+    queryFn: () => api.searchPlaces(tripId, query),
+    enabled: query.length > 0,
+    staleTime: 5 * 60 * 1000,
+    // 사용자가 검색을 다시 누르면 된다. 몰래 다시 시도하느라 실패 안내가 늦어지지 않게 한다.
+    retry: false,
+  });
+}
+
+function useRefreshPlan(tripId: string) {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: queryKeys.planItems(tripId) });
+}
+
+type SavePlanItem = { itemId?: string; input: PlanItemInput };
+
+export function useSavePlanItem(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshPlan(tripId);
+  return useMutation({
+    mutationFn: ({ itemId, input }: SavePlanItem) => (itemId ? api.updatePlanItem(tripId, itemId, input) : api.createPlanItem(tripId, input)),
+    onSuccess: refresh,
+  });
+}
+
+export function useDeletePlanItem(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshPlan(tripId);
+  return useMutation({ mutationFn: (itemId: string) => api.deletePlanItem(tripId, itemId), onSuccess: refresh });
+}
+
+export function useReorderPlanItems(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshPlan(tripId);
+  // 실패해도(그사이 바뀜 409) 최신 일정을 다시 불러온다.
+  return useMutation({
+    mutationFn: ({ date, itemIds }: { date: string; itemIds: string[] }) => api.reorderPlanItems(tripId, date, itemIds),
+    onSettled: refresh,
+  });
 }

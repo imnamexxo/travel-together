@@ -4,11 +4,15 @@ from app.auth import AuthVerifier, SupabaseJwtVerifier
 from app.config import Settings, load_settings
 from app.db import make_sessionmaker
 from app.errors import install_error_handlers
-from app.routers import expenses, health, me, members, settlement, transfers, trips
+from app.place_search import KakaoPlaceSearcher, PlaceSearcher
+from app.routers import expenses, health, me, members, planner, settlement, transfers, trips
 
 
 def create_app(
-    *, settings: Settings | None = None, auth_verifier: AuthVerifier | None = None
+    *,
+    settings: Settings | None = None,
+    auth_verifier: AuthVerifier | None = None,
+    place_searcher: PlaceSearcher | None = None,
 ) -> FastAPI:
     settings = settings or load_settings()
     app = FastAPI(title="Travel Together API", version="0.1.0")
@@ -18,6 +22,7 @@ def create_app(
     app.state.auth_verifier = auth_verifier or SupabaseJwtVerifier(
         settings.supabase_url, settings.supabase_jwt_secret
     )
+    app.state.place_searcher = place_searcher or KakaoPlaceSearcher(settings.kakao_rest_api_key)
     install_error_handlers(app)
     app.include_router(health.router)
     app.include_router(me.router)
@@ -26,6 +31,7 @@ def create_app(
     app.include_router(expenses.router)
     app.include_router(settlement.router)
     app.include_router(transfers.router)
+    app.include_router(planner.router)
     return app
 
 
