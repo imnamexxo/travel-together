@@ -3,6 +3,7 @@
  * 타입은 서버 OpenAPI 명세에서 생성한 schema.d.ts만 쓴다(`npm run gen:api`).
  */
 
+import { filePart } from '@/api/file-part';
 import type { components } from '@/api/schema';
 
 export type Profile = components['schemas']['Profile'];
@@ -193,8 +194,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     listPhotos: (tripId) => request<PhotoList>('GET', `${trip(tripId)}/photos`),
     uploadPhoto: (tripId, photo) => {
       const form = new FormData();
-      // React Native의 FormData는 {uri, name, type}으로 기기 파일을 보낸다.
-      form.append('file', { uri: photo.uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
+      form.append('file', filePart(photo.uri, 'photo.jpg', 'image/jpeg') as unknown as Blob);
       if (photo.takenAt) form.append('taken_at', photo.takenAt);
       if (photo.placeId) form.append('place_id', photo.placeId);
       return request<Photo>('POST', `${trip(tripId)}/photos`, form);
@@ -204,7 +204,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     getExpensePlaceCandidates: (tripId, query) => request<ExpensePlaceCandidate[]>('GET', `${trip(tripId)}/expenses/place-candidates?query=${encodeURIComponent(query)}`),
     uploadReceipt: (tripId, receipt, idempotencyKey) => {
       const form = new FormData();
-      form.append('file', { uri: receipt.uri, name: 'receipt.jpg', type: 'image/jpeg' } as unknown as Blob);
+      form.append('file', filePart(receipt.uri, 'receipt.jpg', 'image/jpeg') as unknown as Blob);
       form.append('idempotency_key', idempotencyKey);
       return request<ReceiptUpload>('POST', `${trip(tripId)}/receipts`, form);
     },

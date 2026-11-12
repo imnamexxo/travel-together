@@ -1,4 +1,5 @@
 import { ApiError, createApiClient } from '@/api/client';
+import type { FilePart } from '@/api/file-part';
 
 function jsonResponse(status: number, body: unknown): Response {
   return {
@@ -77,4 +78,19 @@ test('서버에 닿지 못하면 network_error가 된다', async () => {
   const error = await clientWith(fetchFn).getMe().catch((e) => e);
 
   expect(error).toMatchObject({ status: 0, code: 'network_error' });
+});
+
+test('사진·영수증은 내용을 읽는 bytes()가 있는 파일 조각으로 보낸다(Expo fetch는 uri 첨부를 못 보낸다)', async () => {
+  // 테스트 환경의 FormData는 Node 것이라 객체를 문자열로 바꾼다. 무엇을 넣었는지만 본다.
+  const append = jest.spyOn(FormData.prototype, 'append');
+  const fetchFn = jest.fn(async (_url: string, _init: RequestInit) => jsonResponse(201, {}));
+  const client = clientWith(fetchFn);
+
+  await client.uploadPhoto('t1', { uri: 'file:///cache/a.jpg', takenAt: null, placeId: null });
+  await client.uploadReceipt('t1', { uri: 'file:///cache/r.jpg' }, 'key-1');
+
+  const parts = append.mock.calls.filter(([key]) => key === 'file').map(([, value]) => value as unknown as FilePart);
+  expect(parts.map((part) => [part.name, part.type])).toEqual([['photo.jpg', 'image/jpeg'], ['receipt.jpg', 'image/jpeg']]);
+  expect(typeof parts[0].bytes).toBe('function');
+  append.mockRestore();
 });

@@ -6,3 +6,8 @@ jest.mock('react-native-maps', () => {
   const Marker = (props: object) => <View {...props} />;
   return { __esModule: true, default: MapView, Marker };
 });
+
+// 테스트 환경에는 파일 시스템 네이티브 모듈이 없다. 파일 내용 대신 uri를 담은 가짜 조각을 쓴다.
+jest.mock('@/api/file-part', () => ({
+  filePart: (uri: string, name: string, type: string) => ({ uri, name, type, bytes: async () => new Uint8Array([1, 2, 3]) }),
+}));

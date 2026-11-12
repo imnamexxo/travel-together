@@ -39,7 +39,7 @@ class ObjectStorage(Protocol):
 
 class SupabaseStorage:
     def __init__(self, supabase_url: str, service_key: str, bucket: str, client: httpx.Client | None = None):
-        self._base = f"{supabase_url.rstrip('/')}/storage/v1"
+        self._base = f"{supabase_url.strip().rstrip('/')}/storage/v1"
         self._key = service_key
         self._bucket = bucket
         self._client = client or httpx.Client(timeout=20.0)
@@ -54,7 +54,7 @@ class SupabaseStorage:
             response = self._client.request(method, f"{self._base}{path}", headers={**self._headers(), **kwargs.pop("headers", {})}, **kwargs)
             response.raise_for_status()
             return response
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.InvalidURL) as exc:
             raise StorageUnavailable(describe(exc)) from exc
 
     def upload(self, key: str, data: bytes, content_type: str) -> None:
