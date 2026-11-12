@@ -9,6 +9,7 @@ export type Profile = components['schemas']['Profile'];
 export type TripSummary = components['schemas']['TripSummary'];
 export type TripDetail = components['schemas']['TripDetail'];
 export type TripCreate = components['schemas']['TripCreate'];
+export type TripUpdate = components['schemas']['TripUpdate'];
 export type Member = components['schemas']['MemberOut'];
 export type InviteCode = components['schemas']['InviteCode'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
@@ -43,6 +44,10 @@ export interface ApiClient {
   getInviteCode(tripId: string): Promise<InviteCode>;
   reissueInviteCode(tripId: string): Promise<InviteCode>;
   joinTrip(code: string): Promise<TripDetail>;
+  updateTrip(tripId: string, changes: TripUpdate): Promise<TripDetail>;
+  deleteTrip(tripId: string): Promise<void>;
+  leaveTrip(tripId: string): Promise<void>;
+  removeMember(tripId: string, memberId: string): Promise<void>;
 }
 
 type ApiClientOptions = {
@@ -99,5 +104,9 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     getInviteCode: (tripId) => request<InviteCode>('GET', `${trip(tripId)}/invite-code`),
     reissueInviteCode: (tripId) => request<InviteCode>('POST', `${trip(tripId)}/invite-code`),
     joinTrip: (code) => request<TripDetail>('POST', '/trips/join', { code }),
+    updateTrip: (tripId, changes) => request<TripDetail>('PATCH', trip(tripId), changes),
+    deleteTrip: (tripId) => request<void>('DELETE', trip(tripId)),
+    leaveTrip: (tripId) => request<void>('DELETE', `${trip(tripId)}/members/me`),
+    removeMember: (tripId, memberId) => request<void>('DELETE', `${trip(tripId)}/members/${encodeURIComponent(memberId)}`),
   };
 }

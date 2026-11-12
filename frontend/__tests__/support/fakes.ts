@@ -93,6 +93,11 @@ export function fakeApi(
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
+  const memberStore: Record<string, Member[]> = Object.fromEntries(Object.entries(members).map(([id, list]) => [id, [...list]]));
+  const dropTrip = (tripId: string) => {
+    const index = store.findIndex((t) => t.id === tripId);
+    if (index >= 0) store.splice(index, 1);
+  };
   const codes = new Map<string, string>();
   let issued = 0;
   const codeOf = (tripId: string) => {
@@ -120,7 +125,7 @@ export function fakeApi(
       if (!trip) throw new ApiError(404, 'trip_not_found', '여행을 찾을 수 없습니다.');
       return trip;
     }),
-    listMembers: jest.fn(async (tripId) => members[tripId] ?? [member()]),
+    listMembers: jest.fn(async (tripId) => memberStore[tripId] ?? [member()]),
     getInviteCode: jest.fn(async (tripId) => ({ code: codeOf(tripId) })),
     reissueInviteCode: jest.fn(async (tripId) => {
       codes.delete(tripId);
@@ -131,6 +136,17 @@ export function fakeApi(
       if (!trip) throw new ApiError(404, 'invalid_invite_code', '초대 코드가 맞지 않습니다. 총무에게 새 코드를 받아 주세요.');
       if (!store.some((t) => t.id === trip.id)) store.unshift(trip);
       return trip;
+    }),
+    updateTrip: jest.fn(async (tripId, changes) => {
+      const index = store.findIndex((t) => t.id === tripId);
+      const updated = { ...store[index], ...Object.fromEntries(Object.entries(changes).filter(([, v]) => v != null)) };
+      store[index] = updated;
+      return updated;
+    }),
+    deleteTrip: jest.fn(async (tripId) => dropTrip(tripId)),
+    leaveTrip: jest.fn(async (tripId) => dropTrip(tripId)),
+    removeMember: jest.fn(async (tripId, memberId) => {
+      memberStore[tripId] = (memberStore[tripId] ?? []).filter((m) => m.member_id !== memberId);
     }),
     ...overrides,
   } as jest.Mocked<ApiClient>;
