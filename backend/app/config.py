@@ -32,7 +32,8 @@ def load_settings() -> Settings:
     load_dotenv(BACKEND_DIR / ".env")
     return Settings(
         database_url=normalize_database_url(os.getenv("DATABASE_URL", "")),
-        supabase_url=os.getenv("SUPABASE_URL", ""),
+        # 대시보드에 붙여 넣다 끝에 줄바꿈이 들어가는 경우가 있어 앞뒤 공백을 지운다.
+        supabase_url=os.getenv("SUPABASE_URL", "").strip(),
         supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
         kakao_rest_api_key=os.getenv("KAKAO_REST_API_KEY", "").strip(),
         gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),

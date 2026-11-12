@@ -96,3 +96,20 @@ def test_failure_reason_is_logged_without_the_key(caplog):
 
     assert "Supabase 저장소 요청 실패" in caplog.text and "Bucket not found" in caplog.text
     assert "sb_secret_x" not in caplog.text
+
+
+def test_supabase_url_with_trailing_newline_still_works():
+    """Render 대시보드에 붙여 넣은 SUPABASE_URL 끝에 줄바꿈이 있어도 저장소 주소가 깨지지 않는다."""
+    seen = []
+    storage = SupabaseStorage("https://proj.supabase.co/\n", "sb_secret_x", "trip-media", client=httpx.Client(transport=httpx.MockTransport(lambda r: seen.append(str(r.url)) or httpx.Response(200, json={}))))
+
+    storage.upload("a.jpg", b"x", "image/jpeg")
+
+    assert seen == ["https://proj.supabase.co/storage/v1/object/trip-media/a.jpg"]
+
+
+def test_broken_url_is_unavailable_not_a_crash():
+    storage = SupabaseStorage("https://proj.supabase.co/bad\x01", "sb_secret_x", "trip-media", client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200))))
+
+    with pytest.raises(StorageUnavailable):
+        storage.upload("a.jpg", b"x", "image/jpeg")
