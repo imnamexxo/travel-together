@@ -5,6 +5,7 @@
 """
 
 import logging
+import time
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Protocol
@@ -85,18 +86,47 @@ def build_prompt(request: PlanRequest) -> str:
     )
 
 
+# 모델이 바쁠 때(503 등) 잠깐 뒤 한 번 더 묻고, 그래도 바쁘면 이 가벼운 모델로 한 번 묻는다.
+FALLBACK_MODEL = "gemini-flash-lite-latest"
+BUSY_CODES = {429, 500, 502, 503, 504}
+TIMEOUT_CODE = 504
+# Gemini에 주는 답변 시간 제한(밀리초). 여행 기간 전체 일정을 한 번에 만들어서 60초로는 모자랄 때가 있다.
+TIMEOUT_MS = 120_000
+
+
+def generate(client, model: str, *, sleep=time.sleep, **kwargs):
+    """Gemini에 묻는다. 바쁘다는 응답이면 같은 모델로 한 번 더, 그다음 가벼운 모델로 한 번 더."""
+    from google.genai import errors
+
+    models = [model, model] + ([FALLBACK_MODEL] if model != FALLBACK_MODEL else [])
+    for attempt, name in enumerate(models):
+        try:
+            return client.models.generate_content(model=name, **kwargs)
+        except errors.APIError as exc:
+            if exc.code not in BUSY_CODES or attempt == len(models) - 1:
+                raise
+            logger.warning("Gemini %s 바쁨(%s), 다시 묻습니다", name, exc.code)
+            if exc.code == TIMEOUT_CODE and name != FALLBACK_MODEL:
+                # 시간 초과는 같은 모델로 다시 물어도 또 오래 걸리므로 바로 가벼운 모델로 간다.
+                return generate(client, FALLBACK_MODEL, sleep=sleep, **kwargs)
+            if attempt == 0:
+                sleep(1.5)
+    raise AssertionError("unreachable")
+
+
 class GeminiPlanSuggester:
-    def __init__(self, api_key: str, model: str, client=None):
+    def __init__(self, api_key: str, model: str, client=None, sleep=time.sleep):
         self._api_key = api_key
         self._model = model
         self._client = client
+        self._sleep = sleep
 
     def _get_client(self):
         if self._client is None:
             from google import genai
             from google.genai import types
 
-            self._client = genai.Client(api_key=self._api_key, http_options=types.HttpOptions(timeout=60_000))
+            self._client = genai.Client(api_key=self._api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
         return self._client
 
     def suggest(self, request: PlanRequest) -> list[SuggestedStop]:
@@ -105,8 +135,10 @@ class GeminiPlanSuggester:
         from google.genai import errors, types
 
         try:
-            response = self._get_client().models.generate_content(
-                model=self._model,
+            response = generate(
+                self._get_client(),
+                self._model,
+                sleep=self._sleep,
                 contents=build_prompt(request),
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",

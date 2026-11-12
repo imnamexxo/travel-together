@@ -9,7 +9,8 @@ from app.db import Base
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # 테스트처럼 같은 프로세스에서 마이그레이션을 돌려도 앱 로그(app.*)가 꺼지지 않게 한다.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
