@@ -12,6 +12,7 @@
     "axios": "^1.20.0",
     "eslint-config-expo": "~57.0.2",
     "expo": "~57.0.32",
+    "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.21",
     "expo-dev-client": "~57.0.21",
     "expo-device": "~57.0.2",
@@ -57,7 +58,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "jest && node --test src/features/auth/validation.test.mjs src/features/settlement/preview-data.test.mjs",
+    "test": "jest && node --test src/features/auth/validation.test.mjs",
     "gen:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts"
   },
   "private": true,

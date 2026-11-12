@@ -4,7 +4,7 @@ from app.auth import AuthVerifier, SupabaseJwtVerifier
 from app.config import Settings, load_settings
 from app.db import make_sessionmaker
 from app.errors import install_error_handlers
-from app.routers import health, me, trips
+from app.routers import expenses, health, me, members, settlement, transfers, trips
 
 
 def create_app(
@@ -22,6 +22,10 @@ def create_app(
     app.include_router(health.router)
     app.include_router(me.router)
     app.include_router(trips.router)
+    app.include_router(members.router)
+    app.include_router(expenses.router)
+    app.include_router(settlement.router)
+    app.include_router(transfers.router)
     return app
 
 

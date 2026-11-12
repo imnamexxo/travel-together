@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
+from app.invites import new_invite_code
 from app.models import TRIP_NAME_MAX, Member, Trip
-from app.permissions import require_member
+from app.permissions import require_member, require_organizer
 from app.profiles import ensure_profile
 
 router = APIRouter(prefix="/trips", tags=["trips"], responses=ERROR_RESPONSES)
@@ -25,6 +26,14 @@ class TripCreate(BaseModel):
     name: TripName
     start_date: date
     end_date: date
+
+
+class TripUpdate(BaseModel):
+    """보낸 값만 바꾼다."""
+
+    name: TripName | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class MyMembership(BaseModel):
@@ -51,7 +60,7 @@ class TripDetail(BaseModel):
     me: MyMembership
 
 
-def _detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
+def trip_detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
     return TripDetail(
         id=trip.id,
         name=trip.name,
@@ -64,8 +73,26 @@ def _detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
     )
 
 
-def _member_count(session: Session, trip_id: uuid.UUID) -> int:
+def member_count_of(session: Session, trip_id: uuid.UUID) -> int:
     return session.scalar(select(func.count()).where(Member.trip_id == trip_id)) or 0
+
+
+def _check_dates(start: date, end: date) -> None:
+    if start > end:
+        raise ApiError(
+            422,
+            "validation_failed",
+            "입력값을 확인해 주세요.",
+            [ErrorDetail(field="end_date", message="종료일은 시작일과 같거나 뒤여야 합니다.")],
+        )
+
+
+def _dates_with_plan_items_outside(trip: Trip, start: date, end: date) -> list[date]:
+    """새 기간 밖으로 밀려나는 일정 항목의 날짜.
+
+    일정 항목은 #7에서 생긴다. 그때 이 함수가 실제 날짜를 돌려주고 테스트도 함께 추가한다.
+    """
+    return []
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -75,24 +102,19 @@ def create_trip(
     session: Session = Depends(get_session),
 ) -> TripDetail:
     """여행을 만든다. 만든 사용자가 총무이자 첫 번째 멤버가 된다."""
-    if body.start_date > body.end_date:
-        raise ApiError(
-            422,
-            "validation_failed",
-            "입력값을 확인해 주세요.",
-            [ErrorDetail(field="end_date", message="종료일은 시작일과 같거나 뒤여야 합니다.")],
-        )
+    _check_dates(body.start_date, body.end_date)
     ensure_profile(session, user)
     trip = Trip(
         name=body.name,
         start_date=body.start_date,
         end_date=body.end_date,
         organizer_user_id=user.id,
+        invite_code=new_invite_code(session),
     )
     me = Member(trip=trip, user_id=user.id, join_order=1)
     session.add_all([trip, me])
     session.commit()
-    return _detail(trip, me, member_count=1)
+    return trip_detail(trip, me, member_count=1)
 
 
 @router.get("")
@@ -134,4 +156,53 @@ def get_trip(
 ) -> TripDetail:
     """여행과 그 여행에서의 내 멤버 정보(총무 여부)."""
     me = require_member(session, trip_id, user)
-    return _detail(me.trip, me, _member_count(session, trip_id))
+    return trip_detail(me.trip, me, member_count_of(session, trip_id))
+
+
+ORGANIZER_ONLY = {
+    403: {"model": ErrorResponse, "description": "총무 아님"},
+    404: {"model": ErrorResponse, "description": "여행 없음"},
+}
+
+
+@router.patch(
+    "/{trip_id}",
+    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "일정 항목이 있는 날짜가 빠짐"}},
+)
+def update_trip(
+    trip_id: uuid.UUID,
+    body: TripUpdate,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> TripDetail:
+    """총무가 여행 이름·기간을 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지면 409."""
+    me = require_organizer(session, trip_id, user)
+    trip = me.trip
+    start = body.start_date or trip.start_date
+    end = body.end_date or trip.end_date
+    _check_dates(start, end)
+    stranded = _dates_with_plan_items_outside(trip, start, end)
+    if stranded:
+        raise ApiError(
+            409,
+            "plan_items_outside_period",
+            "일정 항목이 있는 날짜가 기간에서 빠집니다. 그 날짜의 일정을 먼저 옮기거나 지워 주세요.",
+            [ErrorDetail(field="dates", message=d.isoformat()) for d in stranded],
+        )
+    if body.name is not None:
+        trip.name = body.name
+    trip.start_date, trip.end_date = start, end
+    session.commit()
+    return trip_detail(trip, me, member_count_of(session, trip_id))
+
+
+@router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT, responses=ORGANIZER_ONLY)
+def delete_trip(
+    trip_id: uuid.UUID,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> None:
+    """총무가 여행을 통째로 지운다. 멤버 등 여행에 속한 데이터는 함께 지워진다(DB cascade)."""
+    me = require_organizer(session, trip_id, user)
+    session.delete(me.trip)
+    session.commit()

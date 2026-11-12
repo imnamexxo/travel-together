@@ -19,6 +19,7 @@ export function RootNavigator() {
       <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="index" />
         <Stack.Screen name="trips/new" />
+        <Stack.Screen name="trips/join" />
         <Stack.Screen name="trips/[tripId]" />
       </Stack.Protected>
       <Stack.Protected guard={status === 'signedOut'}>

@@ -20,3 +20,13 @@ def require_member(
     if member is None:
         raise ApiError(404, "trip_not_found", "여행을 찾을 수 없습니다.")
     return member
+
+
+def require_organizer(
+    session: Session, trip_id: uuid.UUID, user: AuthenticatedUser
+) -> Member:
+    """총무만 하는 동작. 멤버가 아니면 404, 멤버지만 총무가 아니면 403."""
+    member = require_member(session, trip_id, user)
+    if not member.is_organizer:
+        raise ApiError(403, "organizer_only", "총무만 할 수 있습니다.")
+    return member
