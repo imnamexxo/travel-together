@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, text
 from app.auth import AuthenticatedUser, InvalidToken
 from app.gemini import PlanRequest, SuggestedStop
 from app.place_search import PlaceCandidate, PlaceSearchUnavailable
+from app.receipt_reader import ReceiptDraft
 from app.storage import StorageUnavailable
 from app.config import BACKEND_DIR, Settings, normalize_database_url
 from app.main import create_app
@@ -116,6 +117,21 @@ class FakeStorage:
         return {key: f"https://storage.test/{key}?expires_in={expires_in}" for key in keys if key in self.files}
 
 
+class FakeReceiptReader:
+    """미리 넣어 둔 결과(초안 또는 예외)를 차례로 돌려준다. 받은 이미지를 기록한다."""
+
+    def __init__(self) -> None:
+        self.results: list[ReceiptDraft | Exception] = []
+        self.images: list[bytes] = []
+
+    def read(self, image: bytes) -> ReceiptDraft:
+        self.images.append(image)
+        result = self.results.pop(0) if self.results else ReceiptDraft()
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
 def bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
@@ -181,13 +197,20 @@ def storage() -> FakeStorage:
 
 
 @pytest.fixture
+def receipts() -> FakeReceiptReader:
+    return FakeReceiptReader()
+
+
+@pytest.fixture
 def client(
     engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher, suggester: FakePlanSuggester,
-    storage: FakeStorage,
+    storage: FakeStorage, receipts: FakeReceiptReader,
 ) -> TestClient:
     settings = Settings(
         database_url=database_url, supabase_url="", supabase_jwt_secret=""
     )
-    app = create_app(settings=settings, auth_verifier=auth, place_searcher=places, plan_suggester=suggester, storage=storage)
+    app = create_app(
+        settings=settings, auth_verifier=auth, place_searcher=places, plan_suggester=suggester, storage=storage, receipt_reader=receipts,
+    )
     with TestClient(app) as client:
         yield client

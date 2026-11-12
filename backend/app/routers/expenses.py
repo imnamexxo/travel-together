@@ -14,6 +14,8 @@ from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.expenses import broken_conditions
 from app.models import Expense, LineItem, Member, Trip
 from app.permissions import require_member, require_organizer
+from app.photos import SIGNED_URL_SECONDS, get_storage
+from app.storage import ObjectStorage, StorageUnavailable
 
 router = APIRouter(prefix="/trips/{trip_id}/expenses", tags=["expenses"], responses=ERROR_RESPONSES)
 
@@ -67,6 +69,9 @@ class ExpenseOut(BaseModel):
     total_amount: int | None
     default_sharer_ids: list[uuid.UUID]
     items: list[LineItemOut]
+    # 영수증으로 만든 지출이면 원본 이미지의 짧게 열리는 서명 URL(지출 조회 때만 채운다)
+    receipt_url: str | None = None
+    has_receipt: bool = False
 
 
 class ExpenseSummary(BaseModel):
@@ -84,7 +89,7 @@ def _utc(value: datetime | None) -> datetime | None:
     return value.astimezone(timezone.utc) if value else None
 
 
-def _out(expense: Expense) -> ExpenseOut:
+def expense_out(expense: Expense, receipt_url: str | None = None) -> ExpenseOut:
     return ExpenseOut(
         id=expense.id,
         status=expense.status,  # type: ignore[arg-type]
@@ -103,6 +108,8 @@ def _out(expense: Expense) -> ExpenseOut:
             )
             for item in expense.items
         ],
+        receipt_url=receipt_url,
+        has_receipt=expense.receipt_id is not None,
     )
 
 
@@ -179,9 +186,17 @@ def get_expense(
     expense_id: uuid.UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    storage: ObjectStorage = Depends(get_storage),
 ) -> ExpenseOut:
     require_member(session, trip_id, user)
-    return _out(_get_expense(session, trip_id, expense_id))
+    expense = _get_expense(session, trip_id, expense_id)
+    receipt_url = None
+    if expense.receipt is not None:
+        try:
+            receipt_url = storage.signed_urls([expense.receipt.storage_key], SIGNED_URL_SECONDS).get(expense.receipt.storage_key)
+        except StorageUnavailable:
+            receipt_url = None  # 영수증만 못 보여 줄 뿐, 지출은 그대로 보여준다.
+    return expense_out(expense, receipt_url)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, responses=ORGANIZER_ONLY)
@@ -199,7 +214,7 @@ def create_expense(
     ).one_or_none()
     if existing is not None:
         response.status_code = status.HTTP_200_OK
-        return _out(existing)
+        return expense_out(existing)
 
     expense = Expense(trip_id=trip_id, idempotency_key=body.idempotency_key)
     _apply(expense, body, organizer.trip)
@@ -210,14 +225,14 @@ def create_expense(
         # 같은 키의 요청이 동시에 들어와 다른 쪽이 먼저 저장했다.
         session.rollback()
         response.status_code = status.HTTP_200_OK
-        return _out(
+        return expense_out(
             session.scalars(
                 select(Expense).where(
                     Expense.trip_id == trip_id, Expense.idempotency_key == body.idempotency_key
                 )
             ).one()
         )
-    return _out(expense)
+    return expense_out(expense)
 
 
 @router.put("/{expense_id}", responses=ORGANIZER_ONLY)
@@ -233,7 +248,7 @@ def update_expense(
     expense = _get_expense(session, trip_id, expense_id)
     _apply(expense, body, organizer.trip)
     session.commit()
-    return _out(expense)
+    return expense_out(expense)
 
 
 @router.post(
@@ -254,7 +269,7 @@ def confirm_expense(
     session.commit()
     if broken:
         raise ApiError(422, "confirm_conditions_failed", "확정 조건을 확인해 주세요.", broken)
-    return _out(expense)
+    return expense_out(expense)
 
 
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT, responses=ORGANIZER_ONLY)

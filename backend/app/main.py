@@ -6,8 +6,9 @@ from app.db import make_sessionmaker
 from app.errors import install_error_handlers
 from app.gemini import GeminiPlanSuggester, PlanSuggester
 from app.place_search import KakaoPlaceSearcher, PlaceSearcher
+from app.receipt_reader import GeminiReceiptReader, ReceiptReader
 from app.storage import ObjectStorage, SupabaseStorage
-from app.routers import expenses, health, me, members, photos, planner, settlement, suggestions, transfers, trips
+from app.routers import expenses, health, me, members, photos, planner, receipts, settlement, suggestions, transfers, trips
 
 
 def create_app(
@@ -17,6 +18,7 @@ def create_app(
     place_searcher: PlaceSearcher | None = None,
     plan_suggester: PlanSuggester | None = None,
     storage: ObjectStorage | None = None,
+    receipt_reader: ReceiptReader | None = None,
 ) -> FastAPI:
     settings = settings or load_settings()
     app = FastAPI(title="Travel Together API", version="0.1.0")
@@ -29,6 +31,7 @@ def create_app(
     app.state.place_searcher = place_searcher or KakaoPlaceSearcher(settings.kakao_rest_api_key)
     app.state.plan_suggester = plan_suggester or GeminiPlanSuggester(settings.gemini_api_key, settings.gemini_model)
     app.state.storage = storage or SupabaseStorage(settings.supabase_url, settings.supabase_service_role_key, settings.storage_bucket)
+    app.state.receipt_reader = receipt_reader or GeminiReceiptReader(settings.gemini_api_key, settings.gemini_model)
     install_error_handlers(app)
     app.include_router(health.router)
     app.include_router(me.router)
@@ -40,6 +43,7 @@ def create_app(
     app.include_router(planner.router)
     app.include_router(suggestions.router)
     app.include_router(photos.router)
+    app.include_router(receipts.router)
     return app
 
 

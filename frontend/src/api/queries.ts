@@ -291,3 +291,12 @@ export function useLinkPhotoPlace(tripId: string) {
     ]),
   });
 }
+
+export function useUploadReceipt(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshExpenses(tripId);
+  return useMutation({
+    mutationFn: ({ uri, idempotencyKey }: { uri: string; idempotencyKey: string }) => api.uploadReceipt(tripId, { uri }, idempotencyKey),
+    onSuccess: refresh,
+  });
+}

@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, newIdempotencyKey, type Expense, type ExpenseStatus, type Member } from '@/api/client';
@@ -27,7 +27,7 @@ function detailErrors(e: ApiError): FormErrors {
 
 export default function ExpenseEditorScreen() {
   const { trip } = useCurrentTrip();
-  const { expenseId } = useLocalSearchParams<{ expenseId?: string }>();
+  const { expenseId, analysis } = useLocalSearchParams<{ expenseId?: string; analysis?: string }>();
   const members = useMembers(trip.id);
   const expense = useExpense(trip.id, expenseId);
 
@@ -41,10 +41,16 @@ export default function ExpenseEditorScreen() {
       <Pressable accessibilityRole="button" onPress={() => goBack(`/trips/${trip.id}/settlement`)} style={s.textButton}><Text style={s.link}>정산으로 돌아가기</Text></Pressable>
     </SafeAreaView>;
   }
-  return <Editor key={expense.data?.id ?? 'new'} members={members.data} expense={expense.data} />;
+  return <Editor key={expense.data?.id ?? 'new'} members={members.data} expense={expense.data} analysis={analysis} />;
 }
 
-function Editor({ members, expense }: { members: Member[]; expense: Expense | undefined }) {
+const ANALYSIS_NOTICE: Record<string, string> = {
+  read: '영수증에서 읽은 값이에요. 원본과 비교해 빈 칸을 채우고 확정해 주세요.',
+  reused: '같은 영수증을 읽어 둔 결과를 썼어요. 원본과 비교해 확인해 주세요.',
+  failed: '영수증을 읽지 못했어요. 원본을 보며 직접 입력해 주세요.',
+};
+
+function Editor({ members, expense, analysis }: { members: Member[]; expense: Expense | undefined; analysis?: string }) {
   const { trip, isOrganizer } = useCurrentTrip();
   const memberOrder = members.map((m) => m.member_id);
   const nameOf = (id: string) => members.find((m) => m.member_id === id)?.display_name ?? '알 수 없음';
@@ -55,11 +61,17 @@ function Editor({ members, expense }: { members: Member[]; expense: Expense | un
   const [idempotencyKey] = useState(newIdempotencyKey);
   const [errors, setErrors] = useState<FormErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const receiptNotice = analysis ? ANALYSIS_NOTICE[analysis] ?? null : null;
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  // 영수증으로 만든 지출이면 읽지 못한(비어 있는) 칸을 표시한다.
+  const fromReceipt = !!expense?.has_receipt && isOrganizer;
+  const missing = (value: string) => fromReceipt && !value.trim() ? <Text style={s.missing}>읽지 못함</Text> : null;
   const save = useSaveExpense(trip.id);
   const confirm = useConfirmExpense(trip.id);
   const remove = useDeleteExpense(trip.id);
   const busy = save.isPending || confirm.isPending || remove.isPending;
   const editable = isOrganizer;
+  const { width: viewerWidth, height: viewerHeight } = useWindowDimensions();
 
   const total = totalAmount(form);
   const sum = itemsTotal(form);
@@ -132,13 +144,18 @@ function Editor({ members, expense }: { members: Member[]; expense: Expense | un
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
         <Pressable accessibilityRole="button" accessibilityLabel="정산으로 돌아가기" onPress={() => goBack(`/trips/${trip.id}/settlement`)} style={s.back}><Text style={s.backText}>‹ 정산</Text></Pressable>
         <View style={s.between}><Text style={s.title}>{title}</Text>{status && <Text style={[s.status, status === 'needs_review' && s.statusWarn, status === 'confirmed' && s.statusDone]}>{STATUS_LABEL[status]}</Text>}</View>
+        {!!expense?.receipt_url && <Pressable accessibilityRole="button" accessibilityLabel="영수증 원본 크게 보기" onPress={() => setReceiptOpen(true)} style={s.receipt}>
+          <Image source={{ uri: expense.receipt_url }} style={s.receiptImage} resizeMode="contain" />
+          <Text style={s.receiptHint}>눌러서 크게 보기</Text>
+        </Pressable>}
+        {!!receiptNotice && <Text style={s.receiptNotice}>{receiptNotice}</Text>}
         {editable && status !== 'confirmed' && <Text style={s.hint}>확정한 지출만 정산에 들어가요.</Text>}
         {editable && status === 'confirmed' && <Text style={s.hint}>고쳐서 저장하면 다시 초안이 돼요. 확정해야 정산에 다시 들어가요.</Text>}
 
-        <Text style={s.label}>상호</Text>
+        <View style={s.labelRow}><Text style={s.label}>상호</Text>{missing(form.merchant)}</View>
         {input('상호', form.merchant, (v) => update({ merchant: v }), { placeholder: '예: 제주 편의점', maxLength: 50 })}
         <View style={s.row}>
-          <View style={s.flex}><Text style={s.label}>결제 날짜</Text>{input('결제 날짜', form.date, (v) => update({ date: v }), { placeholder: '2026-11-12', maxLength: 10, keyboardType: 'numbers-and-punctuation' })}{fieldError('date')}</View>
+          <View style={s.flex}><View style={s.labelRow}><Text style={s.label}>결제 날짜</Text>{missing(form.date)}</View>{input('결제 날짜', form.date, (v) => update({ date: v }), { placeholder: '2026-11-12', maxLength: 10, keyboardType: 'numbers-and-punctuation' })}{fieldError('date')}</View>
           <View style={s.flex}><Text style={s.label}>결제 시각</Text>{input('결제 시각', form.time, (v) => update({ time: v }), { placeholder: '14:30', maxLength: 5, keyboardType: 'numbers-and-punctuation' })}{fieldError('time')}</View>
         </View>
 
@@ -146,7 +163,7 @@ function Editor({ members, expense }: { members: Member[]; expense: Expense | un
         <View style={s.chips}>{members.map((m) => chip(m.display_name, form.payerId === m.member_id, () => update({ payerId: m.member_id }), 'radio', `결제자 ${m.display_name}`))}</View>
         {fieldError('payer_member_id')}
 
-        <Text style={s.label}>총액 (원)</Text>
+        <View style={s.labelRow}><Text style={s.label}>총액 (원)</Text>{missing(form.total)}</View>
         {input('총액', form.total, (v) => update({ total: v }), { placeholder: '0', keyboardType: 'number-pad', maxLength: 9 })}
         {fieldError('total_amount')}
 
@@ -157,7 +174,7 @@ function Editor({ members, expense }: { members: Member[]; expense: Expense | un
         <Text style={s.heading}>품목</Text>
         {form.items.map((item, index) => <View key={item.key} accessibilityLabel={`품목 ${index + 1}`} style={s.item}>
           <View style={s.between}>
-            <Text style={s.itemTitle}>품목 {index + 1}</Text>
+            <View style={s.labelRow}><Text style={s.itemTitle}>품목 {index + 1}</Text>{missing(item.name)}{!!item.name.trim() && missing(item.amount)}</View>
             <View style={s.row}>
               <Text style={[s.tag, !item.followsDefault && s.tagException]}>{item.followsDefault ? '기본 분담 대상' : '예외'}</Text>
               {editable && form.items.length > 1 && <Pressable accessibilityRole="button" accessibilityLabel={`품목 ${index + 1} 삭제`} onPress={() => update({ items: form.items.filter((it) => it.key !== item.key) })} style={s.smallButton}><Text style={s.removeText}>삭제</Text></Pressable>}
@@ -195,6 +212,17 @@ function Editor({ members, expense }: { members: Member[]; expense: Expense | un
         </>}
       </ScrollView>
     </KeyboardAvoidingView>
+    {!!expense?.receipt_url && <Modal visible={receiptOpen} animationType="fade" onRequestClose={() => setReceiptOpen(false)}>
+      <SafeAreaView style={s.viewer}>
+        <Pressable accessibilityRole="button" onPress={() => setReceiptOpen(false)} style={s.viewerClose}><Text style={s.viewerCloseText}>닫기</Text></Pressable>
+        {/* 크게 그려 두고 상하좌우로 밀어서 본다. iOS는 두 손가락으로 확대도 된다. */}
+        <ScrollView maximumZoomScale={4} minimumZoomScale={1} contentContainerStyle={s.viewerContent}>
+          <ScrollView horizontal>
+            <Image accessibilityLabel="영수증 원본" source={{ uri: expense.receipt_url }} style={{ width: viewerWidth * 2, height: viewerHeight * 2 }} resizeMode="contain" />
+          </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>}
   </SafeAreaView>;
 }
 
@@ -235,4 +263,11 @@ const s = StyleSheet.create({
   deleteButton: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 12 },
   removeText: { fontSize: 13, color: C.error },
   pressed: { opacity: 0.6 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  missing: { fontSize: 11, fontWeight: '600', color: C.error, backgroundColor: C.surface, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden', marginTop: 10 },
+  receipt: { marginTop: 16, borderRadius: 14, backgroundColor: C.surface, padding: 8, alignItems: 'center' },
+  receiptImage: { width: '100%', height: 220 }, receiptHint: { fontSize: 11, color: C.textMuted, marginTop: 6 },
+  receiptNotice: { fontSize: 13, lineHeight: 19, color: C.primary, marginTop: 12 },
+  viewer: { flex: 1, backgroundColor: '#000' }, viewerClose: { alignSelf: 'flex-end', minHeight: 48, minWidth: 64, justifyContent: 'center', alignItems: 'center' },
+  viewerCloseText: { color: '#fff', fontSize: 15 }, viewerContent: { flexGrow: 1, justifyContent: 'center' },
 });

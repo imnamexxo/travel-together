@@ -31,6 +31,7 @@ export type PhotoList = components['schemas']['PhotoList'];
 /** 올릴 사진: 기기 안의 JPEG 파일과 촬영 시각. 위치 좌표는 넣지 않는다(ADR-0003). */
 export type PhotoUpload = { uri: string; takenAt: string | null; placeId?: string | null };
 export type PhotoPlaceLink = components['schemas']['PhotoPlaceLink'];
+export type ReceiptUpload = components['schemas']['ReceiptUploadOut'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -103,6 +104,8 @@ export interface ApiClient {
   deletePhoto(tripId: string, photoId: string): Promise<void>;
   /** 사진의 장소를 바꾼다(수동). 둘 다 비우면 해제. */
   linkPhotoPlace(tripId: string, photoId: string, link: PhotoPlaceLink): Promise<Photo>;
+  /** 총무가 영수증을 올려 지출 초안을 만든다. 같은 키면 처음 초안을 돌려준다. */
+  uploadReceipt(tripId: string, receipt: { uri: string }, idempotencyKey: string): Promise<ReceiptUpload>;
 }
 
 type ApiClientOptions = {
@@ -195,5 +198,11 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     },
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
     linkPhotoPlace: (tripId, photoId, link) => request<Photo>('PUT', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}/place`, link),
+    uploadReceipt: (tripId, receipt, idempotencyKey) => {
+      const form = new FormData();
+      form.append('file', { uri: receipt.uri, name: 'receipt.jpg', type: 'image/jpeg' } as unknown as Blob);
+      form.append('idempotency_key', idempotencyKey);
+      return request<ReceiptUpload>('POST', `${trip(tripId)}/receipts`, form);
+    },
   };
 }

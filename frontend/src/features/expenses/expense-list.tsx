@@ -1,11 +1,13 @@
 import { router } from 'expo-router';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { ExpenseSummary } from '@/api/client';
-import { useExpenses } from '@/api/queries';
+import { newIdempotencyKey, type ExpenseSummary } from '@/api/client';
+import { useExpenses, useUploadReceipt } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import { STATUS_LABEL, toKstParts } from './expense-form';
+import { pickReceipt, prepareReceipt, type ReceiptSource } from './receipt-prep';
 
 const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
 
@@ -13,6 +15,32 @@ const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
 export default function ExpenseList() {
   const { trip, isOrganizer } = useCurrentTrip();
   const expenses = useExpenses(trip.id);
+  const upload = useUploadReceipt(trip.id);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+  // 같은 영수증을 다시 시도할 때 지출 초안이 두 개 생기지 않도록, 성공할 때까지 같은 키를 쓴다.
+  const receiptKey = useRef(newIdempotencyKey());
+
+  function chooseReceipt() {
+    Alert.alert('영수증으로 추가', '영수증을 찍거나 앨범에서 골라 주세요.', [
+      { text: '취소', style: 'cancel' },
+      { text: '앨범에서 고르기', onPress: () => void addReceipt('library') },
+      { text: '사진 찍기', onPress: () => void addReceipt('camera') },
+    ]);
+  }
+
+  async function addReceipt(source: ReceiptSource) {
+    setReceiptError(null);
+    try {
+      const picked = await pickReceipt(source);
+      if (!picked) return;
+      const uri = await prepareReceipt(picked);
+      const result = await upload.mutateAsync({ uri, idempotencyKey: receiptKey.current });
+      receiptKey.current = newIdempotencyKey();
+      router.push(`/trips/${trip.id}/expenses/${result.expense.id}?analysis=${result.analysis}`);
+    } catch (e) {
+      setReceiptError(e instanceof Error ? e.message : '영수증을 올리지 못했어요.');
+    }
+  }
 
   if (expenses.isPending) return <ActivityIndicator style={s.loading} color={C.primary} />;
   if (expenses.isError) return <View style={s.empty}>
@@ -33,7 +61,11 @@ export default function ExpenseList() {
     {!confirmed.length && <Text style={s.helper}>아직 확정된 지출이 없어요.</Text>}
     {confirmed.map((expense) => <ExpenseRow key={expense.id} expense={expense} tripId={trip.id} />)}
     {isOrganizer && <View style={s.addActions}>
-      <Pressable accessibilityRole="button" onPress={() => Alert.alert('영수증으로 추가', '영수증 분석은 준비 중이에요. 지금은 직접 입력해 주세요.')} style={s.receiptButton}><Text style={s.receiptText}>영수증으로 추가</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: upload.isPending, busy: upload.isPending }} disabled={upload.isPending} onPress={chooseReceipt} style={[s.receiptButton, upload.isPending && s.busy]}>
+        {upload.isPending ? <ActivityIndicator color={C.onPrimary} /> : <Text style={s.receiptText}>영수증으로 추가</Text>}
+      </Pressable>
+      {upload.isPending && <Text style={s.helper}>영수증을 읽는 중이에요. 20초쯤 걸릴 수 있어요.</Text>}
+      {!!receiptError && <Text accessibilityRole="alert" style={s.error}>{receiptError}</Text>}
       <Pressable accessibilityRole="button" onPress={() => router.push(`/trips/${trip.id}/expenses/new`)} style={s.manualButton}><Text style={s.link}>＋ 직접 입력</Text></Pressable>
     </View>}
     {!isOrganizer && <Text style={s.helper}>지출은 총무가 입력하고 확정해요.</Text>}
@@ -68,4 +100,5 @@ const s = StyleSheet.create({
   receiptButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: C.primary, borderRadius: 12 },
   receiptText: { color: C.onPrimary, fontSize: 14, fontWeight: '500' },
   manualButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  busy: { opacity: 0.6 }, error: { fontSize: 12, color: C.error, marginTop: 8, lineHeight: 18 },
 });
