@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type PlaceCandidate, type PlanItem, type Settlement, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -94,6 +94,8 @@ type FakeApiOptions = {
   planItems?: Record<string, PlanItem[]>;
   /** 카카오 장소 검색 결과로 쓸 후보. 이름에 검색어가 들어간 것만 돌려준다. */
   placeCandidates?: PlaceCandidate[];
+  /** 추천 일정 요청에 돌려줄 결과 */
+  suggestion?: Suggestion;
 };
 
 export function place(overrides: Partial<NonNullable<PlanItem['place']>> = {}): NonNullable<PlanItem['place']> {
@@ -117,7 +119,7 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [] }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -263,6 +265,20 @@ export function fakeApi(
     }),
     deletePlanItem: jest.fn(async (tripId, itemId) => {
       planStore[tripId] = plansOf(tripId).filter((i) => i.id !== itemId);
+    }),
+    askSuggestions: jest.fn(async () => {
+      if (!suggestion) throw new ApiError(502, 'ai_unavailable', '추천 서버에 연결하지 못했습니다.');
+      return suggestion;
+    }),
+    adoptSuggestions: jest.fn(async (tripId, _requestId, itemIds) => {
+      const chosen = (suggestion?.items ?? []).filter((item) => itemIds.includes(item.id));
+      const created = chosen.map((item, n) => planItem({
+        id: `adopted-${n + 1}`, date: item.date, title: item.place_name, memo: item.description,
+        position: plansOf(tripId).filter((i) => i.date === item.date).length + n,
+        place: item.place ? place({ id: `place-${item.place.kakao_place_id}`, kakao_place_id: item.place.kakao_place_id, name: item.place.name }) : null,
+      }));
+      plansOf(tripId).push(...created);
+      return created;
     }),
     reorderPlanItems: jest.fn(async (tripId, date, itemIds) => {
       for (const item of plansOf(tripId)) if (item.date === date) item.position = itemIds.indexOf(item.id);

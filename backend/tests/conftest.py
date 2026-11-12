@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
 from app.auth import AuthenticatedUser, InvalidToken
+from app.gemini import PlanRequest, SuggestedStop
 from app.place_search import PlaceCandidate, PlaceSearchUnavailable
 from app.config import BACKEND_DIR, Settings, normalize_database_url
 from app.main import create_app
@@ -50,17 +51,43 @@ class FakePlaceSearcher:
         self.places: list[PlaceCandidate] = []
         self.queries: list[str] = []
         self.unavailable = False
+        self.aliases: dict[str, tuple[str, ...]] = {}
 
-    def add(self, kakao_place_id: str, name: str, *, lat: float = 33.5, lng: float = 126.5, address: str = "제주시") -> PlaceCandidate:
+    def add(
+        self, kakao_place_id: str, name: str, *, lat: float = 33.5, lng: float = 126.5, address: str = "제주시",
+        aliases: tuple[str, ...] = (),
+    ) -> PlaceCandidate:
+        """aliases: 카카오가 이 장소를 돌려주는 다른 검색어(예: 동문시장 → 동문재래시장)."""
         candidate = PlaceCandidate(kakao_place_id, name, address, None, lat, lng, "여행 > 관광명소")
         self.places.append(candidate)
+        self.aliases[kakao_place_id] = aliases
         return candidate
 
     def search(self, query: str, *, near: tuple[float, float] | None = None) -> list[PlaceCandidate]:
         self.queries.append(query)
         if self.unavailable:
             raise PlaceSearchUnavailable("down")
-        return [p for p in self.places if query in p.name]
+        # "장소명 지역"처럼 여러 단어면 한 단어라도 이름에 들어간 장소를 돌려준다.
+        words = query.split() or [query]
+        return [
+            p for p in self.places
+            if query in p.name or any(w in p.name for w in words) or any(a in query for a in self.aliases[p.kakao_place_id])
+        ]
+
+
+class FakePlanSuggester:
+    """미리 넣어 둔 응답(추천 목록 또는 예외)을 차례로 돌려준다. 받은 요청을 기록한다."""
+
+    def __init__(self) -> None:
+        self.responses: list[list[SuggestedStop] | Exception] = []
+        self.requests: list[PlanRequest] = []
+
+    def suggest(self, request: PlanRequest) -> list[SuggestedStop]:
+        self.requests.append(request)
+        response = self.responses.pop(0) if self.responses else []
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 def bearer(token: str) -> dict[str, str]:
@@ -118,10 +145,17 @@ def places() -> FakePlaceSearcher:
 
 
 @pytest.fixture
-def client(engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher) -> TestClient:
+def suggester() -> FakePlanSuggester:
+    return FakePlanSuggester()
+
+
+@pytest.fixture
+def client(
+    engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher, suggester: FakePlanSuggester
+) -> TestClient:
     settings = Settings(
         database_url=database_url, supabase_url="", supabase_jwt_secret=""
     )
-    app = create_app(settings=settings, auth_verifier=auth, place_searcher=places)
+    app = create_app(settings=settings, auth_verifier=auth, place_searcher=places, plan_suggester=suggester)
     with TestClient(app) as client:
         yield client

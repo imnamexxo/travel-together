@@ -49,15 +49,25 @@ def place_for(
             "카카오에서 확인되지 않은 장소입니다. 장소를 다시 검색해 골라 주세요.",
             [ErrorDetail(field=field, message="카카오 검색 결과에 없는 장소입니다.")],
         )
+    return place_from_candidate(session, trip_id, match)
+
+
+def place_from_candidate(session: Session, trip_id: uuid.UUID, candidate: PlaceCandidate) -> Place:
+    """서버가 카카오에서 직접 받은 후보로 장소를 만든다. 같은 카카오 장소가 이미 있으면 그것을 쓴다."""
+    existing = session.scalars(
+        select(Place).where(Place.trip_id == trip_id, Place.kakao_place_id == candidate.kakao_place_id)
+    ).one_or_none()
+    if existing is not None:
+        return existing
     place = Place(
         trip_id=trip_id,
-        kakao_place_id=match.kakao_place_id,
-        name=match.name,
-        address=match.address,
-        road_address=match.road_address,
-        latitude=match.latitude,
-        longitude=match.longitude,
-        category=match.category,
+        kakao_place_id=candidate.kakao_place_id,
+        name=candidate.name,
+        address=candidate.address,
+        road_address=candidate.road_address,
+        latitude=candidate.latitude,
+        longitude=candidate.longitude,
+        category=candidate.category,
     )
     session.add(place)
     session.flush()

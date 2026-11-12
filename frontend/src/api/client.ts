@@ -23,6 +23,9 @@ export type Place = components['schemas']['PlaceOut'];
 export type PlaceCandidate = components['schemas']['PlaceCandidateOut'];
 export type PlanItem = components['schemas']['PlanItemOut'];
 export type PlanItemInput = components['schemas']['PlanItemIn'];
+export type Suggestion = components['schemas']['SuggestionOut'];
+export type SuggestedItem = components['schemas']['SuggestedItemOut'];
+export type SuggestionAsk = components['schemas']['SuggestionAsk'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -86,6 +89,10 @@ export interface ApiClient {
   deletePlanItem(tripId: string, itemId: string): Promise<void>;
   /** 그날의 일정 항목 id를 빠짐없이 새 순서대로 보낸다. */
   reorderPlanItems(tripId: string, date: string, itemIds: string[]): Promise<PlanItem[]>;
+  /** Gemini 추천 일정. 하루 한도를 넘으면 429, AI가 실패하면 502 ApiError. */
+  askSuggestions(tripId: string, ask: SuggestionAsk): Promise<Suggestion>;
+  /** 고른 추천 일정만 일정 항목으로 만든다. 만든 일정 항목을 돌려준다. */
+  adoptSuggestions(tripId: string, requestId: string, itemIds: string[]): Promise<PlanItem[]>;
 }
 
 type ApiClientOptions = {
@@ -163,5 +170,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     updatePlanItem: (tripId, itemId, input) => request<PlanItem>('PUT', `${trip(tripId)}/plan-items/${encodeURIComponent(itemId)}`, input),
     deletePlanItem: (tripId, itemId) => request<void>('DELETE', `${trip(tripId)}/plan-items/${encodeURIComponent(itemId)}`),
     reorderPlanItems: (tripId, date, itemIds) => request<PlanItem[]>('PUT', `${trip(tripId)}/plan-items/order`, { date, item_ids: itemIds }),
+    askSuggestions: (tripId, ask) => request<Suggestion>('POST', `${trip(tripId)}/suggestions`, ask),
+    adoptSuggestions: (tripId, requestId, itemIds) => request<PlanItem[]>('POST', `${trip(tripId)}/suggestions/${encodeURIComponent(requestId)}/adopt`, { item_ids: itemIds }),
   };
 }
