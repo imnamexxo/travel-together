@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -12,6 +12,7 @@ export const queryKeys = {
   expenses: (tripId: string) => ['trips', tripId, 'expenses'] as const,
   expense: (tripId: string, expenseId: string) => ['trips', tripId, 'expenses', expenseId] as const,
   settlement: (tripId: string) => ['trips', tripId, 'settlement'] as const,
+  transfers: (tripId: string) => ['trips', tripId, 'transfers'] as const,
 };
 
 export function useMe() {
@@ -162,4 +163,30 @@ export function useDeleteExpense(tripId: string) {
 export function useSettlement(tripId: string) {
   const api = useApi();
   return useQuery({ queryKey: queryKeys.settlement(tripId), queryFn: () => api.getSettlement(tripId) });
+}
+
+export function useTransfers(tripId: string) {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.transfers(tripId), queryFn: () => api.listTransfers(tripId) });
+}
+
+/** 송금이 바뀌면 송금 목록과 정산 결과를 다시 불러온다. */
+function useRefreshTransfers(tripId: string) {
+  const queryClient = useQueryClient();
+  return () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.transfers(tripId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.settlement(tripId) }),
+  ]);
+}
+
+export function useRecordTransfer(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshTransfers(tripId);
+  return useMutation({ mutationFn: (transfer: TransferCreate) => api.recordTransfer(tripId, transfer), onSuccess: refresh });
+}
+
+export function useDeleteTransfer(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshTransfers(tripId);
+  return useMutation({ mutationFn: (transferId: string) => api.deleteTransfer(tripId, transferId), onSuccess: refresh });
 }

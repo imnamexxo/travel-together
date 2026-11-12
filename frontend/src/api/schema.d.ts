@@ -269,12 +269,58 @@ export interface paths {
         };
         /**
          * Get Settlement
-         * @description 확정된 지출과 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다.
+         * @description 확정된 지출과 기록된 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다.
+         *
+         *     송금이 기록된 뒤 지출이 바뀌면 여기서 다시 계산된다(재정산). 기록된 송금은 바뀌지 않는다.
          */
         get: operations["get_settlement_trips__trip_id__settlement_get"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Transfers
+         * @description 기록된 송금. 모든 멤버가 볼 수 있다. 최근 기록부터.
+         */
+        get: operations["list_transfers_trips__trip_id__transfers_get"];
+        put?: never;
+        /**
+         * Record Transfer
+         * @description 총무가 송금을 기록한다. 실제 송금은 하지 않는다.
+         */
+        post: operations["record_transfer_trips__trip_id__transfers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/transfers/{transfer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Transfer
+         * @description 잘못 기록한 송금을 지운다.
+         */
+        delete: operations["delete_transfer_trips__trip_id__transfers__transfer_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -562,6 +608,50 @@ export interface components {
             to_name: string;
             /** Amount */
             amount: number;
+        };
+        /** TransferCreate */
+        TransferCreate: {
+            /**
+             * From Member Id
+             * Format: uuid
+             */
+            from_member_id: string;
+            /**
+             * To Member Id
+             * Format: uuid
+             */
+            to_member_id: string;
+            /** Amount */
+            amount: number;
+        };
+        /** TransferOut */
+        TransferOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * From Member Id
+             * Format: uuid
+             */
+            from_member_id: string;
+            /** From Name */
+            from_name: string;
+            /**
+             * To Member Id
+             * Format: uuid
+             */
+            to_member_id: string;
+            /** To Name */
+            to_name: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
         };
         /** TripCreate */
         TripCreate: {
@@ -1677,6 +1767,174 @@ export interface operations {
                 };
             };
             /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_transfers_trips__trip_id__transfers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferOut"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·송금 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_transfer_trips__trip_id__transfers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·송금 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_transfer_trips__trip_id__transfers__transfer_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                transfer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·송금 없음 */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -17,6 +17,8 @@ export type Expense = components['schemas']['ExpenseOut'];
 export type ExpenseInput = components['schemas']['ExpenseIn'];
 export type ExpenseStatus = Expense['status'];
 export type Settlement = components['schemas']['SettlementOut'];
+export type Transfer = components['schemas']['TransferOut'];
+export type TransferCreate = components['schemas']['TransferCreate'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -69,6 +71,9 @@ export interface ApiClient {
   deleteExpense(tripId: string, expenseId: string): Promise<void>;
   /** 서버가 계산한 정산 결과. 앱은 이 값을 그대로 보여주고 다시 계산하지 않는다. */
   getSettlement(tripId: string): Promise<Settlement>;
+  listTransfers(tripId: string): Promise<Transfer[]>;
+  recordTransfer(tripId: string, transfer: TransferCreate): Promise<Transfer>;
+  deleteTransfer(tripId: string, transferId: string): Promise<void>;
 }
 
 type ApiClientOptions = {
@@ -137,5 +142,8 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     confirmExpense: (tripId, expenseId) => request<Expense>('POST', `${expense(tripId, expenseId)}/confirm`),
     deleteExpense: (tripId, expenseId) => request<void>('DELETE', expense(tripId, expenseId)),
     getSettlement: (tripId) => request<Settlement>('GET', `${trip(tripId)}/settlement`),
+    listTransfers: (tripId) => request<Transfer[]>('GET', `${trip(tripId)}/transfers`),
+    recordTransfer: (tripId, transfer) => request<Transfer>('POST', `${trip(tripId)}/transfers`, transfer),
+    deleteTransfer: (tripId, transferId) => request<void>('DELETE', `${trip(tripId)}/transfers/${encodeURIComponent(transferId)}`),
   };
 }

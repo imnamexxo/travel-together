@@ -162,3 +162,25 @@ class LineItem(Base):
     sharers: Mapped[list[Member]] = relationship(
         secondary=line_item_sharers, order_by=Member.join_order
     )
+
+
+class Transfer(Base):
+    """멤버 사이에 실제로 돈이 오갔다고 총무가 기록한 것. 잔액에 반영된다."""
+
+    __tablename__ = "transfers"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="transfers_amount_positive"),
+        CheckConstraint("from_member_id <> to_member_id", name="transfers_not_to_self"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    from_member_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("members.id", **MEMBER_FK))
+    to_member_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("members.id", **MEMBER_FK))
+    amount: Mapped[int] = mapped_column(Integer)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    from_member: Mapped[Member] = relationship(foreign_keys=[from_member_id])
+    to_member: Mapped[Member] = relationship(foreign_keys=[to_member_id])

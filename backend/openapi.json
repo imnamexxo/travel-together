@@ -1393,7 +1393,7 @@
           "settlement"
         ],
         "summary": "Get Settlement",
-        "description": "확정된 지출과 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다.",
+        "description": "확정된 지출과 기록된 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다.\n\n송금이 기록된 뒤 지출이 바뀌면 여기서 다시 계산된다(재정산). 기록된 송금은 바뀌지 않는다.",
         "operationId": "get_settlement_trips__trip_id__settlement_get",
         "security": [
           {
@@ -1445,6 +1445,248 @@
           },
           "404": {
             "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{trip_id}/transfers": {
+      "get": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "List Transfers",
+        "description": "기록된 송금. 모든 멤버가 볼 수 있다. 최근 기록부터.",
+        "operationId": "list_transfers_trips__trip_id__transfers_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferOut"
+                  },
+                  "title": "Response List Transfers Trips  Trip Id  Transfers Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·송금 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Record Transfer",
+        "description": "총무가 송금을 기록한다. 실제 송금은 하지 않는다.",
+        "operationId": "record_transfer_trips__trip_id__transfers_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "총무 아님",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·송금 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{trip_id}/transfers/{transfer_id}": {
+      "delete": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Delete Transfer",
+        "description": "잘못 기록한 송금을 지운다.",
+        "operationId": "delete_transfer_trips__trip_id__transfers__transfer_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "transfer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transfer Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "총무 아님",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·송금 없음",
             "content": {
               "application/json": {
                 "schema": {
@@ -2228,6 +2470,80 @@
           "amount"
         ],
         "title": "SuggestedTransferOut"
+      },
+      "TransferCreate": {
+        "properties": {
+          "from_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "From Member Id"
+          },
+          "to_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "To Member Id"
+          },
+          "amount": {
+            "type": "integer",
+            "maximum": 100000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_member_id",
+          "to_member_id",
+          "amount"
+        ],
+        "title": "TransferCreate"
+      },
+      "TransferOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "from_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "From Member Id"
+          },
+          "from_name": {
+            "type": "string",
+            "title": "From Name"
+          },
+          "to_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "To Member Id"
+          },
+          "to_name": {
+            "type": "string",
+            "title": "To Name"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "from_member_id",
+          "from_name",
+          "to_member_id",
+          "to_name",
+          "amount",
+          "recorded_at"
+        ],
+        "title": "TransferOut"
       },
       "TripCreate": {
         "properties": {
