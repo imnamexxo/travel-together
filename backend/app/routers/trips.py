@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
+from app.invites import new_invite_code
 from app.models import TRIP_NAME_MAX, Member, Trip
 from app.permissions import require_member
 from app.profiles import ensure_profile
@@ -51,7 +52,7 @@ class TripDetail(BaseModel):
     me: MyMembership
 
 
-def _detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
+def trip_detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
     return TripDetail(
         id=trip.id,
         name=trip.name,
@@ -64,7 +65,7 @@ def _detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
     )
 
 
-def _member_count(session: Session, trip_id: uuid.UUID) -> int:
+def member_count_of(session: Session, trip_id: uuid.UUID) -> int:
     return session.scalar(select(func.count()).where(Member.trip_id == trip_id)) or 0
 
 
@@ -88,11 +89,12 @@ def create_trip(
         start_date=body.start_date,
         end_date=body.end_date,
         organizer_user_id=user.id,
+        invite_code=new_invite_code(session),
     )
     me = Member(trip=trip, user_id=user.id, join_order=1)
     session.add_all([trip, me])
     session.commit()
-    return _detail(trip, me, member_count=1)
+    return trip_detail(trip, me, member_count=1)
 
 
 @router.get("")
@@ -134,4 +136,4 @@ def get_trip(
 ) -> TripDetail:
     """여행과 그 여행에서의 내 멤버 정보(총무 여부)."""
     me = require_member(session, trip_id, user)
-    return _detail(me.trip, me, _member_count(session, trip_id))
+    return trip_detail(me.trip, me, member_count_of(session, trip_id))

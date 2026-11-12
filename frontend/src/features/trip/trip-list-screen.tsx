@@ -20,6 +20,7 @@ export default function TripListScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel="새 여행 만들기" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.newButton, pressed && s.pressed]}><Text style={s.newText}>＋ 새 여행</Text></Pressable>
     </View>
     {!!me.data && <Text style={s.subtitle}>{me.data.display_name}님, 함께 떠날 여행을 골라요.</Text>}
+    <Pressable accessibilityRole="button" onPress={() => router.push('/trips/join')} style={s.joinButton}><Text style={s.link}>초대 코드로 들어가기 ›</Text></Pressable>
   </View>;
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
@@ -39,7 +40,7 @@ export default function TripListScreen() {
         </View>
         : <View style={s.empty}>
           <Text style={s.emptyTitle}>아직 여행이 없어요</Text>
-          <Text style={s.emptyText}>새 여행을 만들고 친구들을 초대해 보세요.</Text>
+          <Text style={s.emptyText}>새 여행을 만들거나, 친구에게 받은 초대 코드로 들어가 보세요.</Text>
           <Pressable accessibilityRole="button" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.primaryButton, pressed && s.pressed]}><Text style={s.primaryText}>여행 만들기</Text></Pressable>
         </View>}
       ListFooterComponent={<Pressable accessibilityRole="button" onPress={() => void signOut()} style={s.signOut}><Text style={s.signOutText}>로그아웃</Text></Pressable>}
@@ -79,6 +80,7 @@ const s = StyleSheet.create({
   primaryButton: { minHeight: 50, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, marginTop: 12 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
   textButton: { minHeight: 44, justifyContent: 'center' },
+  joinButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 4 },
   link: { fontSize: 14, fontWeight: '600', color: C.accent },
   signOut: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: 32 },
   signOutText: { fontSize: 12, color: C.textMuted },

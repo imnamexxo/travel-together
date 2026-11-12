@@ -9,7 +9,9 @@ import TripLayout from '@/app/trips/[tripId]/_layout';
 import AlbumScreen from '@/app/trips/[tripId]/album';
 import PlannerScreen from '@/app/trips/[tripId]/index';
 import MapScreen from '@/app/trips/[tripId]/map';
+import MembersScreen from '@/app/trips/[tripId]/members';
 import SettlementScreen from '@/app/trips/[tripId]/settlement';
+import JoinTripScreen from '@/app/trips/join';
 import NewTripScreen from '@/app/trips/new';
 import type { AuthService } from '@/auth/auth-service';
 import { RootNavigator } from '@/components/root-navigator';
@@ -30,11 +32,13 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       signup: SignupScreen,
       index: TripListScreen,
       'trips/new': NewTripScreen,
+      'trips/join': JoinTripScreen,
       'trips/[tripId]/_layout': TripLayout,
       'trips/[tripId]/index': PlannerScreen,
       'trips/[tripId]/album': AlbumScreen,
       'trips/[tripId]/map': MapScreen,
       'trips/[tripId]/settlement': SettlementScreen,
+      'trips/[tripId]/members': MembersScreen,
     },
     { initialUrl },
   );

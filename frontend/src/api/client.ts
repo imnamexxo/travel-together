@@ -9,6 +9,8 @@ export type Profile = components['schemas']['Profile'];
 export type TripSummary = components['schemas']['TripSummary'];
 export type TripDetail = components['schemas']['TripDetail'];
 export type TripCreate = components['schemas']['TripCreate'];
+export type Member = components['schemas']['MemberOut'];
+export type InviteCode = components['schemas']['InviteCode'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -37,6 +39,10 @@ export interface ApiClient {
   listTrips(): Promise<TripSummary[]>;
   createTrip(trip: TripCreate): Promise<TripDetail>;
   getTrip(tripId: string): Promise<TripDetail>;
+  listMembers(tripId: string): Promise<Member[]>;
+  getInviteCode(tripId: string): Promise<InviteCode>;
+  reissueInviteCode(tripId: string): Promise<InviteCode>;
+  joinTrip(code: string): Promise<TripDetail>;
 }
 
 type ApiClientOptions = {
@@ -82,10 +88,16 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     return data as T;
   }
 
+  const trip = (tripId: string) => `/trips/${encodeURIComponent(tripId)}`;
+
   return {
     getMe: () => request<Profile>('GET', '/me'),
     listTrips: () => request<TripSummary[]>('GET', '/trips'),
     createTrip: (trip) => request<TripDetail>('POST', '/trips', trip),
-    getTrip: (tripId) => request<TripDetail>('GET', `/trips/${encodeURIComponent(tripId)}`),
+    getTrip: (tripId) => request<TripDetail>('GET', trip(tripId)),
+    listMembers: (tripId) => request<Member[]>('GET', `${trip(tripId)}/members`),
+    getInviteCode: (tripId) => request<InviteCode>('GET', `${trip(tripId)}/invite-code`),
+    reissueInviteCode: (tripId) => request<InviteCode>('POST', `${trip(tripId)}/invite-code`),
+    joinTrip: (code) => request<TripDetail>('POST', '/trips/join', { code }),
   };
 }

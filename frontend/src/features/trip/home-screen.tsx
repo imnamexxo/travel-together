@@ -45,9 +45,10 @@ export default function HomeScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => Alert.alert('여행 메뉴', [
           me.data && `${me.data.display_name}님으로 로그인했어요.`,
           isOrganizer && '이 여행의 총무예요.',
-          `멤버 ${trip.member_count}명 · 초대 기능은 추후 연결됩니다.`,
+          `멤버 ${trip.member_count}명`,
         ].filter(Boolean).join('\n'), [
           { text: '닫기', style: 'cancel' },
+          { text: '멤버·초대 코드', onPress: () => router.navigate(`/trips/${trip.id}/members`) },
           { text: '내 여행 목록', onPress: () => router.replace('/') },
           { text: '로그아웃', onPress: () => Alert.alert('로그아웃할까요?', '예시 여행에서 추가한 일정·사진·메모는 초기화됩니다.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
         ])}><Text style={s.more}>•••</Text></Pressable>

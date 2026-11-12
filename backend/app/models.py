@@ -18,6 +18,8 @@ from app.db import Base
 
 DISPLAY_NAME_MAX = 30
 TRIP_NAME_MAX = 50
+MAX_MEMBERS = 10
+INVITE_CODE_LENGTH = 8
 
 
 class UserProfile(Base):
@@ -45,6 +47,8 @@ class Trip(Base):
     organizer_user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("user_profiles.user_id")
     )
+    # 지금 유효한 초대 코드 하나. 재발급하면 바뀌고 이전 코드는 무효가 된다.
+    invite_code: Mapped[str] = mapped_column(String(INVITE_CODE_LENGTH), unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
