@@ -194,6 +194,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Expenses
+         * @description 여행의 모든 지출(초안 포함). 결제 시각이 늦은 것부터, 시각이 없는 초안이 맨 앞.
+         */
+        get: operations["list_expenses_trips__trip_id__expenses_get"];
+        put?: never;
+        /**
+         * Create Expense
+         * @description 총무가 지출 초안을 만든다. 같은 멱등 키로 다시 보내면 처음 만든 지출을 200으로 돌려준다.
+         */
+        post: operations["create_expense_trips__trip_id__expenses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/expenses/{expense_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Expense */
+        get: operations["get_expense_trips__trip_id__expenses__expense_id__get"];
+        /**
+         * Update Expense
+         * @description 지출 내용을 통째로 바꾼다. 확정된 지출도 고칠 수 있고, 고치면 다시 초안이 된다.
+         */
+        put: operations["update_expense_trips__trip_id__expenses__expense_id__put"];
+        post?: never;
+        /** Delete Expense */
+        delete: operations["delete_expense_trips__trip_id__expenses__expense_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/expenses/{expense_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Expense
+         * @description 확정 조건이 모두 맞으면 confirmed. 아니면 needs_review로 바꾸고 깨진 조건과 함께 422. 강제 확정은 없다.
+         */
+        post: operations["confirm_expense_trips__trip_id__expenses__expense_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -220,6 +286,101 @@ export interface components {
              */
             details: components["schemas"]["ErrorDetail"][];
         };
+        /** ExpenseCreate */
+        ExpenseCreate: {
+            /** Payer Member Id */
+            payer_member_id?: string | null;
+            /** Paid At */
+            paid_at?: string | null;
+            /** Merchant Name */
+            merchant_name?: string | null;
+            /** Total Amount */
+            total_amount?: number | null;
+            /**
+             * Default Sharer Ids
+             * @default []
+             */
+            default_sharer_ids: string[];
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["LineItemIn"][];
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /**
+         * ExpenseIn
+         * @description 지출 초안의 내용. 비어 있는 값은 확정할 때 검사한다.
+         */
+        ExpenseIn: {
+            /** Payer Member Id */
+            payer_member_id?: string | null;
+            /** Paid At */
+            paid_at?: string | null;
+            /** Merchant Name */
+            merchant_name?: string | null;
+            /** Total Amount */
+            total_amount?: number | null;
+            /**
+             * Default Sharer Ids
+             * @default []
+             */
+            default_sharer_ids: string[];
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["LineItemIn"][];
+        };
+        /** ExpenseOut */
+        ExpenseOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "needs_review" | "confirmed";
+            /** Payer Member Id */
+            payer_member_id: string | null;
+            /** Paid At */
+            paid_at: string | null;
+            /** Merchant Name */
+            merchant_name: string | null;
+            /** Total Amount */
+            total_amount: number | null;
+            /** Default Sharer Ids */
+            default_sharer_ids: string[];
+            /** Items */
+            items: components["schemas"]["LineItemOut"][];
+        };
+        /** ExpenseSummary */
+        ExpenseSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "needs_review" | "confirmed";
+            /** Merchant Name */
+            merchant_name: string | null;
+            /** Paid At */
+            paid_at: string | null;
+            /** Total Amount */
+            total_amount: number | null;
+            /** Payer Name */
+            payer_name: string | null;
+            /** Item Count */
+            item_count: number;
+        };
         /** Health */
         Health: {
             /** Status */
@@ -234,6 +395,36 @@ export interface components {
         JoinRequest: {
             /** Code */
             code: string;
+        };
+        /** LineItemIn */
+        LineItemIn: {
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity?: number | null;
+            /** Amount */
+            amount?: number | null;
+            /**
+             * Sharer Ids
+             * @default []
+             */
+            sharer_ids: string[];
+        };
+        /** LineItemOut */
+        LineItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number | null;
+            /** Amount */
+            amount: number | null;
+            /** Sharer Ids */
+            sharer_ids: string[];
         };
         /** MemberOut */
         MemberOut: {
@@ -1007,6 +1198,346 @@ export interface operations {
                 };
             };
             /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_expenses_trips__trip_id__expenses_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseSummary"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·지출 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_expense_trips__trip_id__expenses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·지출 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_expense_trips__trip_id__expenses__expense_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                expense_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·지출 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_expense_trips__trip_id__expenses__expense_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                expense_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·지출 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_expense_trips__trip_id__expenses__expense_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                expense_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·지출 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_expense_trips__trip_id__expenses__expense_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                expense_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·지출 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 확정 조건이 깨짐 */
             422: {
                 headers: {
                     [name: string]: unknown;

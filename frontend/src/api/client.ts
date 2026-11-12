@@ -12,6 +12,10 @@ export type TripCreate = components['schemas']['TripCreate'];
 export type TripUpdate = components['schemas']['TripUpdate'];
 export type Member = components['schemas']['MemberOut'];
 export type InviteCode = components['schemas']['InviteCode'];
+export type ExpenseSummary = components['schemas']['ExpenseSummary'];
+export type Expense = components['schemas']['ExpenseOut'];
+export type ExpenseInput = components['schemas']['ExpenseIn'];
+export type ExpenseStatus = Expense['status'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -31,6 +35,12 @@ export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
+/** 지출 생성 재시도를 구분하는 키. 보안용이 아니라 겹치지만 않으면 된다. */
+export function newIdempotencyKey(): string {
+  const random = () => Math.random().toString(36).slice(2, 10);
+  return `${Date.now().toString(36)}-${random()}-${random()}`;
+}
+
 export function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
 }
@@ -48,6 +58,14 @@ export interface ApiClient {
   deleteTrip(tripId: string): Promise<void>;
   leaveTrip(tripId: string): Promise<void>;
   removeMember(tripId: string, memberId: string): Promise<void>;
+  listExpenses(tripId: string): Promise<ExpenseSummary[]>;
+  getExpense(tripId: string, expenseId: string): Promise<Expense>;
+  /** 같은 idempotencyKey로 다시 보내면 서버가 처음 만든 지출을 돌려준다. 키는 newIdempotencyKey()로 만든다. */
+  createExpense(tripId: string, input: ExpenseInput, idempotencyKey: string): Promise<Expense>;
+  updateExpense(tripId: string, expenseId: string, input: ExpenseInput): Promise<Expense>;
+  /** 확정 조건이 깨지면 422 ApiError(details에 깨진 조건)를 던진다. */
+  confirmExpense(tripId: string, expenseId: string): Promise<Expense>;
+  deleteExpense(tripId: string, expenseId: string): Promise<void>;
 }
 
 type ApiClientOptions = {
@@ -94,6 +112,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
   }
 
   const trip = (tripId: string) => `/trips/${encodeURIComponent(tripId)}`;
+  const expense = (tripId: string, expenseId: string) => `${trip(tripId)}/expenses/${encodeURIComponent(expenseId)}`;
 
   return {
     getMe: () => request<Profile>('GET', '/me'),
@@ -108,5 +127,11 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     deleteTrip: (tripId) => request<void>('DELETE', trip(tripId)),
     leaveTrip: (tripId) => request<void>('DELETE', `${trip(tripId)}/members/me`),
     removeMember: (tripId, memberId) => request<void>('DELETE', `${trip(tripId)}/members/${encodeURIComponent(memberId)}`),
+    listExpenses: (tripId) => request<ExpenseSummary[]>('GET', `${trip(tripId)}/expenses`),
+    getExpense: (tripId, expenseId) => request<Expense>('GET', expense(tripId, expenseId)),
+    createExpense: (tripId, input, idempotencyKey) => request<Expense>('POST', `${trip(tripId)}/expenses`, { ...input, idempotency_key: idempotencyKey }),
+    updateExpense: (tripId, expenseId, input) => request<Expense>('PUT', expense(tripId, expenseId), input),
+    confirmExpense: (tripId, expenseId) => request<Expense>('POST', `${expense(tripId, expenseId)}/confirm`),
+    deleteExpense: (tripId, expenseId) => request<void>('DELETE', expense(tripId, expenseId)),
   };
 }

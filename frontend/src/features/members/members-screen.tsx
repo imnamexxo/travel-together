@@ -1,5 +1,4 @@
 import * as Clipboard from 'expo-clipboard';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Member } from '@/api/client';
 import { useInviteCode, useMembers, useReissueInviteCode, useRemoveMember } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
+import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 
 const MAX_MEMBERS = 10;
@@ -17,7 +17,7 @@ export default function MembersScreen() {
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={members.isRefetching} onRefresh={() => members.refetch()} tintColor={C.primary} />}>
-      <Pressable accessibilityRole="button" accessibilityLabel="플래너로 돌아가기" onPress={() => router.navigate(`/trips/${trip.id}`)} style={s.back}><Text style={s.backText}>‹ 플래너</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="플래너로 돌아가기" onPress={() => goBack(`/trips/${trip.id}`)} style={s.back}><Text style={s.backText}>‹ 플래너</Text></Pressable>
       <Text style={s.eyebrow}>{trip.name}</Text>
       <Text style={s.title}>멤버</Text>
 

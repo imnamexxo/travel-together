@@ -1,10 +1,9 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isNotFound } from '@/api/client';
 import { useTrip } from '@/api/queries';
-import TravelTabs from '@/components/travel-tabs';
 import { TravelColors as C } from '@/constants/theme';
 import { CurrentTripProvider } from '@/features/trip/current-trip';
 import { PreviewTripProvider } from '@/features/trip/preview-state';
@@ -27,7 +26,8 @@ export default function TripLayout() {
   }
   return <CurrentTripProvider trip={trip.data}>
     {/* 일정·사진은 아직 예시 데이터다(#7·#9에서 서버로 교체). */}
-    <PreviewTripProvider><TravelTabs /></PreviewTripProvider>
+    {/* 탭 화면 위로 멤버·설정·지출 화면이 쌓인다. 뒤로 가기는 쌓인 순서를 따른다. */}
+    <PreviewTripProvider><Stack screenOptions={{ headerShown: false }} /></PreviewTripProvider>
   </CurrentTripProvider>;
 }
 

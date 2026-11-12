@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorResponse
+from app.expenses import is_involved_in_expenses
 from app.invites import new_invite_code, normalize_code
 from app.models import MAX_MEMBERS, Member, Trip
 from app.permissions import require_member, require_organizer
@@ -124,10 +125,15 @@ def join_trip(
     return trip_detail(trip, me, count + 1)
 
 
-def _remove(session: Session, member: Member) -> None:
-    """멤버를 여행에서 뺀다. 지출에 엮인 멤버를 막는 규칙과 사진 삭제는 해당 기능(#11, #9)에서 여기에 더한다."""
+def _remove(session: Session, member: Member, verb: str) -> None:
+    """멤버를 여행에서 뺀다. 나간 멤버의 사진 삭제는 앨범(#9)에서 여기에 더한다."""
     if member.is_organizer:
         raise ApiError(409, "organizer_cannot_leave", "총무는 여행에서 나갈 수 없습니다.")
+    # 잔액이 깨지지 않도록, 결제자나 분담 대상으로 지정된 적 있는 멤버는 뺄 수 없다.
+    if is_involved_in_expenses(session, member.id):
+        raise ApiError(
+            409, "member_has_expenses", f"결제자나 분담 대상으로 지정된 적이 있어 {verb} 수 없습니다."
+        )
     session.delete(member)
     session.commit()
 
@@ -143,7 +149,7 @@ def leave_trip(
     session: Session = Depends(get_session),
 ) -> None:
     """내가 여행에서 나간다. 총무는 나갈 수 없다."""
-    _remove(session, require_member(session, trip_id, user))
+    _remove(session, require_member(session, trip_id, user), "나갈")
 
 
 @router.delete(
@@ -162,4 +168,4 @@ def remove_member(
     target = next((m for m in organizer.trip.members if m.id == member_id), None)
     if target is None:
         raise ApiError(404, "member_not_found", "멤버를 찾을 수 없습니다.")
-    _remove(session, target)
+    _remove(session, target, "내보낼")
