@@ -28,6 +28,8 @@ export type ExpenseForm = {
   total: string;
   defaultSharerIds: string[];
   items: FormItem[];
+  /** 장소 후보에서 고른 장소. 고르기 전에는 비어 있다(자동으로 붙이지 않음). */
+  place: { kakao_place_id: string; name: string } | null;
 };
 
 let nextKey = 0;
@@ -48,7 +50,7 @@ export function newItem(defaultSharerIds: string[]): FormItem {
 
 /** 새 지출: 결제자는 나, 기본 분담 대상은 전원, 빈 품목 하나. */
 export function emptyForm(memberIds: string[], payerId: string | null): ExpenseForm {
-  return { merchant: '', date: '', time: '', payerId, total: '', defaultSharerIds: memberIds, items: [newItem(memberIds)] };
+  return { merchant: '', date: '', time: '', payerId, total: '', defaultSharerIds: memberIds, items: [newItem(memberIds)], place: null };
 }
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -72,6 +74,7 @@ export function formFromExpense(expense: Expense): ExpenseForm {
     payerId: expense.payer_member_id,
     total: numberText(expense.total_amount),
     defaultSharerIds: expense.default_sharer_ids,
+    place: expense.place ? { kakao_place_id: expense.place.kakao_place_id, name: expense.place.name } : null,
     items: expense.items.map((item) => ({
       key: newKey(),
       name: item.name,
@@ -156,6 +159,7 @@ export function toInput(form: ExpenseForm): { input: ExpenseInput; errors: FormE
       total_amount: amount(form.total, 'total_amount'),
       default_sharer_ids: form.defaultSharerIds,
       items,
+      place: form.place,
     },
     errors,
   };

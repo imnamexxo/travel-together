@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { PlanItem } from '@/api/client';
-import { queryKeys, useMe, usePhotos, usePlanItems } from '@/api/queries';
+import { queryKeys, useExpenses, useMe, usePhotos, usePlanItems } from '@/api/queries';
+import { toKstParts } from '@/features/expenses/expense-form';
 import { photoDayIndex } from '@/features/album/album-screen';
 import TravelNotes from './travel-notes';
 import { useAuth } from '@/auth/auth-context';
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const { trip, days, isOrganizer } = useCurrentTrip();
   const planItems = usePlanItems(trip.id);
   const photos = usePhotos(trip.id).data?.photos ?? [];
+  const expenses = useExpenses(trip.id).data ?? [];
   const todayIndex = days.findIndex((d) => d.iso === todayInKorea());
   // 여행 중이면 오늘을 먼저 보여준다.
   const [selectedDay, setDay] = useState(Math.max(todayIndex, 0));
@@ -36,6 +38,10 @@ export default function HomeScreen() {
   const [editing, setEditing] = useState<Editing>(null);
   const plans = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
   // 일정 항목의 장소에 연결된 그날의 사진 수
+  // 그날 그 장소에서 쓴 확정된 지출의 합
+  const spentAt = (item: PlanItem) => item.place ? expenses
+    .filter((e) => e.status === 'confirmed' && e.place?.id === item.place!.id && e.paid_at && toKstParts(e.paid_at).date === item.date)
+    .reduce((sum, e) => sum + (e.total_amount ?? 0), 0) : 0;
   const photoCount = (item: PlanItem) => item.place ? photos.filter((p) => p.place?.id === item.place!.id && photoDayIndex(p, days) === day).length : 0;
 
   function refresh() {
@@ -71,6 +77,7 @@ export default function HomeScreen() {
         {plans.map((item, index) => {
           const time = item.time?.slice(0, 5) ?? '';
           const photosHere = photoCount(item);
+          const spent = spentAt(item);
           return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} onPress={() => setEditing({ item })} style={({ pressed }) => [s.row, pressed && s.pressed]}>
             <Text style={s.time}>{time || '—'}</Text><View style={s.rail}><View style={[s.dot, index === 0 && s.activeDot]} />{index < plans.length - 1 && <View style={s.line} />}</View>
             <View style={s.item}>
@@ -80,6 +87,7 @@ export default function HomeScreen() {
                 {!!item.place && item.place.name !== item.title && <Text style={s.metaText}>📍 {item.place.name}</Text>}
                 {item.estimated_cost != null && item.estimated_cost > 0 && <Text style={s.metaText}>예상 {money(item.estimated_cost)}</Text>}
                 {photosHere > 0 && <Text style={s.photoText}>사진 {photosHere}장</Text>}
+                {spent > 0 && <Text style={s.photoText}>지출 {money(spent)}</Text>}
               </View>
             </View>
           </Pressable>;

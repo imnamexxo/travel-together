@@ -32,6 +32,7 @@ export type PhotoList = components['schemas']['PhotoList'];
 export type PhotoUpload = { uri: string; takenAt: string | null; placeId?: string | null };
 export type PhotoPlaceLink = components['schemas']['PhotoPlaceLink'];
 export type ReceiptUpload = components['schemas']['ReceiptUploadOut'];
+export type ExpensePlaceCandidate = components['schemas']['ExpensePlaceCandidate'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -106,6 +107,8 @@ export interface ApiClient {
   linkPhotoPlace(tripId: string, photoId: string, link: PhotoPlaceLink): Promise<Photo>;
   /** 총무가 영수증을 올려 지출 초안을 만든다. 같은 키면 처음 초안을 돌려준다. */
   uploadReceipt(tripId: string, receipt: { uri: string }, idempotencyKey: string): Promise<ReceiptUpload>;
+  /** 지출에 붙일 장소 후보(총무만). 이 여행의 장소가 앞에 온다. */
+  getExpensePlaceCandidates(tripId: string, query: string): Promise<ExpensePlaceCandidate[]>;
 }
 
 type ApiClientOptions = {
@@ -198,6 +201,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     },
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
     linkPhotoPlace: (tripId, photoId, link) => request<Photo>('PUT', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}/place`, link),
+    getExpensePlaceCandidates: (tripId, query) => request<ExpensePlaceCandidate[]>('GET', `${trip(tripId)}/expenses/place-candidates?query=${encodeURIComponent(query)}`),
     uploadReceipt: (tripId, receipt, idempotencyKey) => {
       const form = new FormData();
       form.append('file', { uri: receipt.uri, name: 'receipt.jpg', type: 'image/jpeg' } as unknown as Blob);

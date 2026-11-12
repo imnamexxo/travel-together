@@ -884,6 +884,112 @@
         }
       }
     },
+    "/trips/{trip_id}/expenses/place-candidates": {
+      "get": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "Expense Place Candidates",
+        "description": "지출에 붙일 장소 후보. 위치 좌표 없이 검색어로만 찾는다(ADR-0003). 고르기 전에는 붙이지 않는다.",
+        "operationId": "expense_place_candidates_trips__trip_id__expenses_place_candidates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "영수증 상호 또는 총무가 입력한 검색어",
+              "title": "Query"
+            },
+            "description": "영수증 상호 또는 총무가 입력한 검색어"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpensePlaceCandidate"
+                  },
+                  "title": "Response Expense Place Candidates Trips  Trip Id  Expenses Place Candidates Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "총무 아님",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "카카오 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/trips/{trip_id}/expenses": {
       "get": {
         "tags": [
@@ -3144,6 +3250,16 @@
             "title": "Items",
             "default": []
           },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "idempotency_key": {
             "type": "string",
             "maxLength": 100,
@@ -3225,6 +3341,16 @@
             "maxItems": 100,
             "title": "Items",
             "default": []
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3323,6 +3449,16 @@
             "type": "boolean",
             "title": "Has Receipt",
             "default": false
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3337,6 +3473,68 @@
           "items"
         ],
         "title": "ExpenseOut"
+      },
+      "ExpensePlaceCandidate": {
+        "properties": {
+          "kakao_place_id": {
+            "type": "string",
+            "title": "Kakao Place Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "road_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Road Address"
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "in_trip": {
+            "type": "boolean",
+            "title": "In Trip"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kakao_place_id",
+          "name",
+          "address",
+          "road_address",
+          "latitude",
+          "longitude",
+          "category",
+          "in_trip"
+        ],
+        "title": "ExpensePlaceCandidate"
       },
       "ExpenseSummary": {
         "properties": {
@@ -3402,6 +3600,16 @@
           "item_count": {
             "type": "integer",
             "title": "Item Count"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

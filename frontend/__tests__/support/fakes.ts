@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Photo, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -99,6 +99,8 @@ type FakeApiOptions = {
   /** 여행 id → 사진 */
   photos?: Record<string, Photo[]>;
   photoLimit?: number;
+  /** 지출 장소 후보(검색어가 이름에 들어간 것만) */
+  expensePlaceCandidates?: ExpensePlaceCandidate[];
   /** 영수증 분석 결과로 돌려줄 지출 초안 내용과 분석 상태 */
   receipt?: { expense: Partial<Expense>; analysis: 'read' | 'reused' | 'failed' };
 };
@@ -124,14 +126,14 @@ export function planItem(overrides: Partial<PlanItem> = {}): PlanItem {
 export function expense(overrides: Partial<Expense> = {}): Expense {
   return {
     id: 'expense-1', status: 'draft', payer_member_id: 'member-1', paid_at: '2026-11-12T06:30:00Z', merchant_name: '편의점',
-    total_amount: 30000, default_sharer_ids: ['member-1'], items: [], receipt_url: null, has_receipt: false, ...overrides,
+    total_amount: 30000, default_sharer_ids: ['member-1'], items: [], receipt_url: null, has_receipt: false, place: null, ...overrides,
   };
 }
 
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [] }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -147,6 +149,7 @@ export function fakeApi(
   const summaryOf = (tripId: string, e: Expense): ExpenseSummary => ({
     id: e.id, status: e.status, merchant_name: e.merchant_name, paid_at: e.paid_at, total_amount: e.total_amount,
     payer_name: membersOf(tripId).find((m) => m.member_id === e.payer_member_id)?.display_name ?? null, item_count: e.items.length,
+    place: e.place ?? null,
   });
   const keys = new Map<string, string>();
   const photoStore: Record<string, Photo[]> = Object.fromEntries(Object.entries(photos).map(([id, list]) => [id, [...list]]));
@@ -169,6 +172,7 @@ export function fakeApi(
     merchant_name: input.merchant_name ?? null, total_amount: input.total_amount ?? null, default_sharer_ids: input.default_sharer_ids ?? [],
     items: (input.items ?? []).map((item, i) => ({ id: `${id}-item-${i}`, name: item.name, quantity: item.quantity ?? null, amount: item.amount ?? null, sharer_ids: item.sharer_ids ?? [] })),
     receipt_url: null, has_receipt: false,
+    place: input.place ? place({ id: `place-${input.place.kakao_place_id}`, kakao_place_id: input.place.kakao_place_id, name: input.place.name }) : null,
   });
   const dropTrip = (tripId: string) => {
     const index = store.findIndex((t) => t.id === tripId);
@@ -308,6 +312,7 @@ export function fakeApi(
     deletePhoto: jest.fn(async (tripId, photoId) => {
       photoStore[tripId] = photosOf(tripId).filter((p) => p.id !== photoId);
     }),
+    getExpensePlaceCandidates: jest.fn(async (_tripId, query) => expensePlaceCandidates.filter((c) => c.name.includes(query))),
     uploadReceipt: jest.fn(async (tripId, upload, idempotencyKey) => {
       const existing = keys.get(idempotencyKey);
       if (existing) return { expense: findExpense(tripId, existing), analysis: 'reused' as const };

@@ -8,7 +8,7 @@ from app.gemini import GeminiPlanSuggester, PlanSuggester
 from app.place_search import KakaoPlaceSearcher, PlaceSearcher
 from app.receipt_reader import GeminiReceiptReader, ReceiptReader
 from app.storage import ObjectStorage, SupabaseStorage
-from app.routers import expenses, health, me, members, photos, planner, receipts, settlement, suggestions, transfers, trips
+from app.routers import expense_places, expenses, health, me, members, photos, planner, receipts, settlement, suggestions, transfers, trips
 
 
 def create_app(
@@ -37,6 +37,7 @@ def create_app(
     app.include_router(me.router)
     app.include_router(trips.router)
     app.include_router(members.router)
+    app.include_router(expense_places.router)  # expenses보다 먼저(경로 충돌)
     app.include_router(expenses.router)
     app.include_router(settlement.router)
     app.include_router(transfers.router)
