@@ -1,12 +1,23 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, String, Uuid, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
 DISPLAY_NAME_MAX = 30
+TRIP_NAME_MAX = 50
 
 
 class UserProfile(Base):
@@ -18,3 +29,50 @@ class UserProfile(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class Trip(Base):
+    __tablename__ = "trips"
+    __table_args__ = (
+        CheckConstraint("start_date <= end_date", name="trips_dates_in_order"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(TRIP_NAME_MAX))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    # 총무는 여행을 만든 사용자다. 총무 위임은 하지 않는다.
+    organizer_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_profiles.user_id")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    members: Mapped[list["Member"]] = relationship(
+        back_populates="trip", order_by="Member.join_order"
+    )
+
+
+class Member(Base):
+    __tablename__ = "members"
+    __table_args__ = (
+        UniqueConstraint("trip_id", "user_id", name="members_one_per_user"),
+        UniqueConstraint("trip_id", "join_order", name="members_join_order_unique"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_profiles.user_id"))
+    # 1부터. 정산에서 남는 원을 나눌 때 이 순서를 쓴다.
+    join_order: Mapped[int] = mapped_column(Integer)
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    trip: Mapped[Trip] = relationship(back_populates="members")
+    profile: Mapped[UserProfile] = relationship()
+
+    @property
+    def is_organizer(self) -> bool:
+        return self.user_id == self.trip.organizer_user_id

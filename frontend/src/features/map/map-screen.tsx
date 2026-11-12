@@ -4,7 +4,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TravelColors as C } from '@/constants/theme';
-import { demoTrip } from '@/features/trip/demo';
+import { useCurrentTrip } from '@/features/trip/current-trip';
 import { previewPlaces } from '@/features/trip/places';
 import { usePreviewTrip } from '@/features/trip/preview-state';
 import PlaceMap from './place-map';
@@ -12,6 +12,7 @@ import PlaceMap from './place-map';
 type Filter = 'all' | 'visited' | 'planned';
 export default function MapScreen() {
   const { photos, items } = usePreviewTrip();
+  const { trip, days } = useCurrentTrip();
   const [day, setDay] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function MapScreen() {
       <Text style={s.title}>여행 지도</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.dates}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected: day === null }} onPress={() => { setDay(null); setSelectedId(null); }} style={[s.chip, day === null && s.chipActive]}><Text style={[s.chipText, day === null && s.chipActiveText]}>전체 일정</Text></Pressable>
-        {demoTrip.days.map((entry, index) => <Pressable key={entry.date} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => { setDay(index); setSelectedId(null); }} style={[s.chip, day === index && s.chipActive]}><Text style={[s.chipText, day === index && s.chipActiveText]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
+        {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => { setDay(index); setSelectedId(null); }} style={[s.chip, day === index && s.chipActive]}><Text style={[s.chipText, day === index && s.chipActiveText]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
       </ScrollView>
       <View style={s.filters}>{([{ key: 'all', title: '전체' }, { key: 'visited', title: '● 들른 곳' }, { key: 'planned', title: '○ 계획만 한 곳' }] as const).map((entry) => <Pressable key={entry.key} accessibilityRole="tab" accessibilityState={{ selected: filter === entry.key }} onPress={() => { setFilter(entry.key); setSelectedId(null); }} style={s.filterButton}><Text style={[s.filterText, filter === entry.key && s.activeText]}>{entry.title}</Text></Pressable>)}<Text style={s.placeCount}>{places.length}곳</Text></View>
     </View>
@@ -42,10 +43,10 @@ export default function MapScreen() {
         <Text style={s.counts}>일정 {selected.plans.length}개 · 사진 {selected.photos.length}장</Text>
         {selected.plans.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{item.day + 1}일 차 {item.time}</Text><Text style={s.memo}>{item.memo || item.name}</Text></View>)}
         {!!selected.photos.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.thumbnails}>{selected.photos.slice(0, 8).map((photo) => <Image key={photo.id} source={{ uri: photo.uri }} style={s.thumbnail} />)}</ScrollView>}
-        <View style={s.actions}><Pressable accessibilityRole="button" onPress={() => router.navigate('/')} style={s.action}><Text style={s.link}>플래너 보기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate('/album')} style={s.action}><Text style={s.link}>앨범 보기 ›</Text></Pressable></View>
+        <View style={s.actions}><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}`)} style={s.action}><Text style={s.link}>플래너 보기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}/album`)} style={s.action}><Text style={s.link}>앨범 보기 ›</Text></Pressable></View>
         <Text style={s.hint}>예시 장소 기준 · 지출 연결은 추후 제공돼요</Text>
       </ScrollView> : <View style={s.noSelection}><Text style={s.emptyTitle}>아직 표시할 장소가 없어요</Text><Text style={s.hint}>다른 날짜를 선택하거나 앨범에서 사진에 장소를 연결해보세요.</Text></View>}
-      {unlinkedPhotos > 0 && <Pressable accessibilityRole="button" onPress={() => router.navigate('/album')} style={s.unlinked}><Text style={s.unlinkedText}>장소 미연결 사진 {unlinkedPhotos}장</Text><Text style={s.link}>앨범에서 연결 ›</Text></Pressable>}
+      {unlinkedPhotos > 0 && <Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}/album`)} style={s.unlinked}><Text style={s.unlinkedText}>장소 미연결 사진 {unlinkedPhotos}장</Text><Text style={s.link}>앨범에서 연결 ›</Text></Pressable>}
     </View>
   </SafeAreaView>;
 }

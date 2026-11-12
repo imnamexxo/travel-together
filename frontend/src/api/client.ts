@@ -6,6 +6,9 @@
 import type { components } from '@/api/schema';
 
 export type Profile = components['schemas']['Profile'];
+export type TripSummary = components['schemas']['TripSummary'];
+export type TripDetail = components['schemas']['TripDetail'];
+export type TripCreate = components['schemas']['TripCreate'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -25,8 +28,15 @@ export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
+
 export interface ApiClient {
   getMe(): Promise<Profile>;
+  listTrips(): Promise<TripSummary[]>;
+  createTrip(trip: TripCreate): Promise<TripDetail>;
+  getTrip(tripId: string): Promise<TripDetail>;
 }
 
 type ApiClientOptions = {
@@ -45,29 +55,37 @@ function isErrorResponse(body: unknown): body is ErrorResponse {
 }
 
 export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: ApiClientOptions): ApiClient {
-  async function request<T>(method: string, path: string): Promise<T> {
+  async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const token = await getAccessToken();
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     let response: Response;
     try {
-      response = await fetchFn(`${baseUrl.replace(/\/$/, '')}${path}`, { method, headers });
+      response = await fetchFn(`${baseUrl.replace(/\/$/, '')}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
     } catch {
       throw new ApiError(0, 'network_error', '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.');
     }
 
-    const body: unknown = await response.json().catch(() => null);
+    const data: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      if (isErrorResponse(body)) {
-        throw new ApiError(response.status, body.code, body.message, body.details ?? []);
+      if (isErrorResponse(data)) {
+        throw new ApiError(response.status, data.code, data.message, data.details ?? []);
       }
       throw new ApiError(response.status, 'unknown_error', '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     }
-    return body as T;
+    return data as T;
   }
 
   return {
     getMe: () => request<Profile>('GET', '/me'),
+    listTrips: () => request<TripSummary[]>('GET', '/trips'),
+    createTrip: (trip) => request<TripDetail>('POST', '/trips', trip),
+    getTrip: (tripId) => request<TripDetail>('GET', `/trips/${encodeURIComponent(tripId)}`),
   };
 }

@@ -72,6 +72,181 @@
           }
         ]
       }
+    },
+    "/trips": {
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "List Trips",
+        "description": "내가 멤버인 여행. 시작일이 늦은 여행부터.",
+        "operationId": "list_trips_trips_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Trips Trips Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Create Trip",
+        "description": "여행을 만든다. 만든 사용자가 총무이자 첫 번째 멤버가 된다.",
+        "operationId": "create_trip_trips_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/trips/{trip_id}": {
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Get Trip",
+        "description": "여행과 그 여행에서의 내 멤버 정보(총무 여부).",
+        "operationId": "get_trip_trips__trip_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -140,6 +315,30 @@
         ],
         "title": "Health"
       },
+      "MyMembership": {
+        "properties": {
+          "member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Member Id"
+          },
+          "join_order": {
+            "type": "integer",
+            "title": "Join Order"
+          },
+          "is_organizer": {
+            "type": "boolean",
+            "title": "Is Organizer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "member_id",
+          "join_order",
+          "is_organizer"
+        ],
+        "title": "MyMembership"
+      },
       "Profile": {
         "properties": {
           "id": {
@@ -158,6 +357,114 @@
           "display_name"
         ],
         "title": "Profile"
+      },
+      "TripCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "TripCreate"
+      },
+      "TripDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count"
+          },
+          "me": {
+            "$ref": "#/components/schemas/MyMembership"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "start_date",
+          "end_date",
+          "member_count",
+          "me"
+        ],
+        "title": "TripDetail"
+      },
+      "TripSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count"
+          },
+          "is_organizer": {
+            "type": "boolean",
+            "title": "Is Organizer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "start_date",
+          "end_date",
+          "member_count",
+          "is_organizer"
+        ],
+        "title": "TripSummary"
       }
     },
     "securitySchemes": {

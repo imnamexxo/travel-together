@@ -3,13 +3,14 @@ import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, St
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TravelColors as C } from '@/constants/theme';
-import { demoTrip } from '@/features/trip/demo';
+import { useCurrentTrip } from '@/features/trip/current-trip';
 import { expenses, memberName, members, snapshots, suggestedTransfers, totalExpense, type MemberId } from './preview-data';
 
 type Draft = { id: string; name: string; amount: number; payer: MemberId; sharers: MemberId[] };
 const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
 
 export default function SettlementScreen() {
+  const { trip } = useCurrentTrip();
   const [viewer, setViewer] = useState<MemberId>('minji');
   const [tab, setTab] = useState<'balance' | 'expenses'>('balance');
   const [recorded, setRecorded] = useState<string[]>([]);
@@ -66,7 +67,7 @@ export default function SettlementScreen() {
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-      <Text style={s.eyebrow}>{demoTrip.name}</Text><Text style={s.title}>여행 정산</Text>
+      <Text style={s.eyebrow}>{trip.name}</Text><Text style={s.title}>여행 정산</Text>
       <View style={s.totalRow}><Text style={s.secondary}>확정된 총지출</Text><Text style={s.total}>{money(totalExpense)}</Text></View>
       <View style={s.previewHeader}><Text style={s.micro}>미리보기 멤버</Text><Text style={s.micro}>로그인 연결 전 · 예시 데이터</Text></View>
       <View style={s.members}>{members.map((member) => <Pressable key={member.id} accessibilityRole="radio" accessibilityState={{ checked: viewer === member.id }} onPress={() => setViewer(member.id)} style={[s.member, viewer === member.id && s.memberActive]}><Text style={[s.memberText, viewer === member.id && s.memberActiveText]}>{member.name}{member.id === 'minji' ? ' · 총무' : ''}</Text></Pressable>)}</View>
