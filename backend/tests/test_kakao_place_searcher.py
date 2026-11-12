@@ -69,3 +69,16 @@ def test_failures_become_unavailable(response):
 def test_missing_key_is_unavailable():
     with pytest.raises(PlaceSearchUnavailable):
         KakaoPlaceSearcher("").search("카페")
+
+
+def test_failure_reason_is_logged_without_the_key(caplog):
+    """앱에는 짧은 문구만 가므로, 카카오가 준 이유가 서버 로그에 남아야 원인을 찾을 수 있다."""
+    def handler(request: httpx.Request):
+        return httpx.Response(401, json={"errorType": "AccessDeniedError", "message": "wrong appKey"})
+
+    with pytest.raises(PlaceSearchUnavailable):
+        searcher_with(handler).search("카페")
+
+    assert "카카오 장소 검색 실패" in caplog.text
+    assert "401" in caplog.text and "wrong appKey" in caplog.text
+    assert "test-key" not in caplog.text

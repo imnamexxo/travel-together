@@ -3,13 +3,28 @@
 서버의 나머지 코드는 ObjectStorage 인터페이스만 안다. 테스트에서는 가짜로 바꾼다.
 """
 
+import logging
 from typing import Protocol
 
 import httpx
 
+logger = logging.getLogger(__name__)
+
+
+def describe(exc: Exception) -> str:
+    """HTTP 오류면 상대 서버가 준 이유(예: Bucket not found)도 붙인다."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"{exc} / {exc.response.text[:300]}"
+    return repr(exc)
+
 
 class StorageUnavailable(Exception):
-    pass
+    """저장소에 올리거나 지우거나 서명 URL을 받지 못했다(키 없음, 버킷 없음, 네트워크)."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        # 앱에는 짧은 문구만 가므로, 원인(키 없음, 401, 버킷 없음 등)은 Render 로그에서 본다. 키 값은 담기지 않는다.
+        logger.warning("Supabase 저장소 요청 실패: %s", reason)
 
 
 class ObjectStorage(Protocol):
@@ -40,7 +55,7 @@ class SupabaseStorage:
             response.raise_for_status()
             return response
         except httpx.HTTPError as exc:
-            raise StorageUnavailable(str(exc)) from exc
+            raise StorageUnavailable(describe(exc)) from exc
 
     def upload(self, key: str, data: bytes, content_type: str) -> None:
         self._send("POST", f"/object/{self._bucket}/{key}", content=data, headers={"Content-Type": content_type, "x-upsert": "false"})

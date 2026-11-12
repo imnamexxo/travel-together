@@ -4,9 +4,12 @@
 읽지 못한 값은 null로 받는다. 응답 형식은 google-genai의 응답 스키마 지정으로 강제한다.
 """
 
+import logging
 from typing import Protocol
 
 from pydantic import BaseModel, Field, ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class ReceiptLine(BaseModel):
@@ -25,6 +28,11 @@ class ReceiptDraft(BaseModel):
 
 class ReceiptUnreadable(Exception):
     """분석하지 못했다(키 없음, 네트워크, 형식 오류). 영수증은 저장하고 빈 초안으로 이어간다."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        # 앱에는 짧은 문구만 가므로, 원인(키 없음, 401, 버킷 없음 등)은 Render 로그에서 본다. 키 값은 담기지 않는다.
+        logger.warning("Gemini 영수증 분석 실패: %s", reason)
 
 
 class ReceiptReader(Protocol):
