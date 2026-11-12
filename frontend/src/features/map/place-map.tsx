@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { TravelColors as C } from '@/constants/theme';
 import type { PlaceMapProps } from './map-types';
+import PlaceList from './place-list';
 
-export default function PlaceMap({ pins, selectedId, onSelect }: PlaceMapProps) {
+/** Android는 구글 지도 키 없이 지도를 그리면 화면이 열리지 않는다(#16에서 키를 넣으면 지도가 나온다). */
+export function hasMapKey(platform = Platform.OS, config = Constants.expoConfig): boolean {
+  return platform !== 'android' || !!config?.android?.config?.googleMaps?.apiKey;
+}
+
+export default function PlaceMap(props: PlaceMapProps) {
+  if (!hasMapKey()) return <PlaceList {...props} hint="지도 키가 아직 없어 장소를 목록으로 보여 드려요." />;
+  return <NativeMap {...props} />;
+}
+
+function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
   const map = useRef<MapView>(null);
   const [ready, setReady] = useState(false);
   const fit = useCallback(() => {
