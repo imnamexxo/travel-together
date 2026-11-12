@@ -20,7 +20,8 @@ export function RootNavigator() {
         <Stack.Screen name="(tabs)" />
       </Stack.Protected>
       <Stack.Protected guard={status === 'signedOut'}>
-        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
       </Stack.Protected>
     </Stack>
   );

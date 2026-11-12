@@ -7,7 +7,8 @@ import AlbumScreen from '@/app/(tabs)/album';
 import PlannerScreen from '@/app/(tabs)/index';
 import MapScreen from '@/app/(tabs)/map';
 import SettlementScreen from '@/app/(tabs)/settlement';
-import SignInScreen from '@/app/sign-in';
+import LoginScreen from '@/app/login';
+import SignupScreen from '@/app/signup';
 import type { AuthService } from '@/auth/auth-service';
 import { RootNavigator } from '@/components/root-navigator';
 
@@ -23,7 +24,8 @@ export function renderApp({ auth, api }: { auth: AuthService; api: ApiClient }) 
           <RootNavigator />
         </AppProviders>
       ),
-      'sign-in': SignInScreen,
+      login: LoginScreen,
+      signup: SignupScreen,
       '(tabs)/_layout': TabLayout,
       '(tabs)/index': PlannerScreen,
       '(tabs)/album': AlbumScreen,

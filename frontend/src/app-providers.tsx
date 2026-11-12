@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { ApiProvider } from '@/api/api-context';
 import type { ApiClient } from '@/api/client';
@@ -26,9 +26,8 @@ export function AppProviders({ authService, api, children }: AppProvidersProps) 
 
 function QueryLayer({ children }: { children: ReactNode }) {
   const { status, signOut } = useAuth();
-  const signOutRef = useRef(signOut);
-  signOutRef.current = signOut;
-  const [queryClient] = useState(() => createQueryClient(() => void signOutRef.current()));
+  // signOut은 인증 서비스가 같으면 바뀌지 않으므로 처음 값을 그대로 써도 된다.
+  const [queryClient] = useState(() => createQueryClient(() => void signOut()));
 
   // 로그아웃하면 이전 사용자의 데이터를 캐시에서 지운다.
   useEffect(() => {
