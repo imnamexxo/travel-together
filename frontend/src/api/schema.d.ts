@@ -260,6 +260,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/settlement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Settlement
+         * @description 확정된 지출과 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다.
+         */
+        get: operations["get_settlement_trips__trip_id__settlement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -426,6 +446,28 @@ export interface components {
             /** Sharer Ids */
             sharer_ids: string[];
         };
+        /** MemberBalanceOut */
+        MemberBalanceOut: {
+            /**
+             * Member Id
+             * Format: uuid
+             */
+            member_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Join Order */
+            join_order: number;
+            /** Paid */
+            paid: number;
+            /** Owed */
+            owed: number;
+            /** Sent */
+            sent: number;
+            /** Received */
+            received: number;
+            /** Balance */
+            balance: number;
+        };
         /** MemberOut */
         MemberOut: {
             /**
@@ -463,6 +505,63 @@ export interface components {
             id: string;
             /** Display Name */
             display_name: string;
+        };
+        /** SettlementOut */
+        SettlementOut: {
+            /** Confirmed Total */
+            confirmed_total: number;
+            /** Confirmed Count */
+            confirmed_count: number;
+            /** Is Settled */
+            is_settled: boolean;
+            /** Members */
+            members: components["schemas"]["MemberBalanceOut"][];
+            /** Suggested Transfers */
+            suggested_transfers: components["schemas"]["SuggestedTransferOut"][];
+            /** Shares */
+            shares: components["schemas"]["ShareOut"][];
+        };
+        /** ShareOut */
+        ShareOut: {
+            /**
+             * Member Id
+             * Format: uuid
+             */
+            member_id: string;
+            /**
+             * Expense Id
+             * Format: uuid
+             */
+            expense_id: string;
+            /** Expense Name */
+            expense_name: string;
+            /** Item Name */
+            item_name: string;
+            /** Item Amount */
+            item_amount: number;
+            /** Sharer Count */
+            sharer_count: number;
+            /** Amount */
+            amount: number;
+        };
+        /** SuggestedTransferOut */
+        SuggestedTransferOut: {
+            /**
+             * From Member Id
+             * Format: uuid
+             */
+            from_member_id: string;
+            /** From Name */
+            from_name: string;
+            /**
+             * To Member Id
+             * Format: uuid
+             */
+            to_member_id: string;
+            /** To Name */
+            to_name: string;
+            /** Amount */
+            amount: number;
         };
         /** TripCreate */
         TripCreate: {
@@ -1538,6 +1637,55 @@ export interface operations {
                 };
             };
             /** @description 확정 조건이 깨짐 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_settlement_trips__trip_id__settlement_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettlementOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
             422: {
                 headers: {
                     [name: string]: unknown;
