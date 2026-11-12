@@ -1,4 +1,4 @@
-import 'expo-sqlite/localStorage/install';
+import '@/lib/local-storage';
 
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
@@ -9,7 +9,8 @@ export const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
   {
     auth: {
-      storage: localStorage,
+      // 웹 정적 렌더링(Node)에는 localStorage가 없다. 그때는 Supabase 기본값(메모리)을 쓴다.
+      storage: globalThis.localStorage,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
