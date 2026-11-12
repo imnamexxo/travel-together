@@ -94,7 +94,7 @@ def candidate_out(c: PlaceCandidate) -> PlaceCandidateOut:
     return PlaceCandidateOut(**c.__dict__)
 
 
-def _out(item: PlanItem) -> PlanItemOut:
+def plan_item_out(item: PlanItem) -> PlanItemOut:
     return PlanItemOut(
         id=item.id,
         date=item.date,
@@ -109,7 +109,7 @@ def _out(item: PlanItem) -> PlanItemOut:
     )
 
 
-def _check_in_period(trip: Trip, day: dt.date) -> None:
+def check_in_period(trip: Trip, day: dt.date) -> None:
     if not trip.start_date <= day <= trip.end_date:
         raise ApiError(
             422,
@@ -132,7 +132,7 @@ def _renumber(items: list[PlanItem]) -> None:
         item.position = position
 
 
-def _slot_into_day(session: Session, item: PlanItem) -> None:
+def slot_into_day(session: Session, item: PlanItem) -> None:
     """그날 일정에 넣는다. 시간이 있으면 더 늦은 항목이나 시간 없는 항목 앞, 시간이 없으면 맨 뒤."""
     others = [i for i in _day_items(session, item.trip_id, item.date) if i.id != item.id]
     index = len(others)
@@ -150,7 +150,7 @@ def _get_item(session: Session, trip_id: uuid.UUID, item_id: uuid.UUID) -> PlanI
 
 
 def _apply(session: Session, searcher: PlaceSearcher, item: PlanItem, body: PlanItemIn, trip: Trip) -> None:
-    _check_in_period(trip, body.date)
+    check_in_period(trip, body.date)
     item.date = body.date
     item.time = body.time
     item.title = body.title
@@ -188,7 +188,7 @@ def list_plan_items(
     items = session.scalars(
         select(PlanItem).where(PlanItem.trip_id == trip_id).order_by(PlanItem.date, PlanItem.position)
     ).all()
-    return [_out(i) for i in items]
+    return [plan_item_out(i) for i in items]
 
 
 @router.post("/plan-items", status_code=status.HTTP_201_CREATED, responses={**NOT_FOUND, **EXTERNAL})
@@ -205,9 +205,9 @@ def create_plan_item(
     _apply(session, searcher, item, body, me.trip)
     session.add(item)
     session.flush()
-    _slot_into_day(session, item)
+    slot_into_day(session, item)
     session.commit()
-    return _out(item)
+    return plan_item_out(item)
 
 
 # "/plan-items/{item_id}"보다 먼저 선언해야 "order"를 id로 읽지 않는다.
@@ -229,7 +229,7 @@ def reorder_plan_items(
         )
     _renumber([items[i] for i in body.item_ids])
     session.commit()
-    return [_out(items[i]) for i in body.item_ids]
+    return [plan_item_out(items[i]) for i in body.item_ids]
 
 
 @router.put("/plan-items/{item_id}", responses={**NOT_FOUND, **EXTERNAL})
@@ -248,11 +248,11 @@ def update_plan_item(
     _apply(session, searcher, item, body, me.trip)
     if (item.date, item.time) != (old_day, old_time):
         session.flush()
-        _slot_into_day(session, item)
+        slot_into_day(session, item)
         if item.date != old_day:
             _renumber(_day_items(session, trip_id, old_day))
     session.commit()
-    return _out(item)
+    return plan_item_out(item)
 
 
 @router.delete(

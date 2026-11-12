@@ -2251,10 +2251,221 @@
           }
         }
       }
+    },
+    "/trips/{trip_id}/suggestions": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Ask For Suggestions",
+        "description": "여행지·취향으로 날짜별 추천 일정을 받는다. 같은 입력이면 저장된 결과를 200으로 바로 돌려준다.",
+        "operationId": "ask_for_suggestions_trips__trip_id__suggestions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionAsk"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "오늘 추천 횟수를 다 씀",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Gemini 실패·형식 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{trip_id}/suggestions/{request_id}/adopt": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Adopt Suggestions",
+        "description": "고른 추천 일정만 일정 항목으로 만든다. 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다.",
+        "operationId": "adopt_suggestions_trips__trip_id__suggestions__request_id__adopt_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Request Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdoptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanItemOut"
+                  },
+                  "title": "Response Adopt Suggestions Trips  Trip Id  Suggestions  Request Id  Adopt Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·추천 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdoptRequest": {
+        "properties": {
+          "item_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Item Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_ids"
+        ],
+        "title": "AdoptRequest"
+      },
       "ErrorDetail": {
         "properties": {
           "field": {
@@ -3314,6 +3525,76 @@
         ],
         "title": "ShareOut"
       },
+      "SuggestedItemOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "place_name": {
+            "type": "string",
+            "title": "Place Name"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "stay_minutes": {
+            "type": "integer",
+            "title": "Stay Minutes"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "needs_check"
+            ],
+            "title": "Status"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceCandidateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "adopted": {
+            "type": "boolean",
+            "title": "Adopted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "date",
+          "order",
+          "place_name",
+          "region",
+          "stay_minutes",
+          "description",
+          "status",
+          "place",
+          "adopted"
+        ],
+        "title": "SuggestedItemOut"
+      },
       "SuggestedTransferOut": {
         "properties": {
           "from_member_id": {
@@ -3348,6 +3629,64 @@
           "amount"
         ],
         "title": "SuggestedTransferOut"
+      },
+      "SuggestionAsk": {
+        "properties": {
+          "destination": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Destination"
+          },
+          "preferences": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Preferences",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "destination"
+        ],
+        "title": "SuggestionAsk"
+      },
+      "SuggestionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "preferences": {
+            "type": "string",
+            "title": "Preferences"
+          },
+          "reused": {
+            "type": "boolean",
+            "title": "Reused"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "destination",
+          "preferences",
+          "reused",
+          "items"
+        ],
+        "title": "SuggestionOut"
       },
       "TransferCreate": {
         "properties": {

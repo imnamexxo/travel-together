@@ -14,6 +14,7 @@ import ExpenseScreen from '@/app/trips/[tripId]/expenses/[expenseId]';
 import NewExpenseScreen from '@/app/trips/[tripId]/expenses/new';
 import MembersScreen from '@/app/trips/[tripId]/members';
 import TripSettingsScreen from '@/app/trips/[tripId]/settings';
+import SuggestionsScreen from '@/app/trips/[tripId]/suggestions';
 import SettlementScreen from '@/app/trips/[tripId]/(tabs)/settlement';
 import JoinTripScreen from '@/app/trips/join';
 import NewTripScreen from '@/app/trips/new';
@@ -45,6 +46,7 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       'trips/[tripId]/(tabs)/settlement': SettlementScreen,
       'trips/[tripId]/members': MembersScreen,
       'trips/[tripId]/settings': TripSettingsScreen,
+      'trips/[tripId]/suggestions': SuggestionsScreen,
       'trips/[tripId]/expenses/new': NewExpenseScreen,
       'trips/[tripId]/expenses/[expenseId]': ExpenseScreen,
     },

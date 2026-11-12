@@ -414,10 +414,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask For Suggestions
+         * @description 여행지·취향으로 날짜별 추천 일정을 받는다. 같은 입력이면 저장된 결과를 200으로 바로 돌려준다.
+         */
+        post: operations["ask_for_suggestions_trips__trip_id__suggestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/suggestions/{request_id}/adopt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adopt Suggestions
+         * @description 고른 추천 일정만 일정 항목으로 만든다. 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다.
+         */
+        post: operations["adopt_suggestions_trips__trip_id__suggestions__request_id__adopt_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdoptRequest */
+        AdoptRequest: {
+            /** Item Ids */
+            item_ids: string[];
+        };
         /** ErrorDetail */
         ErrorDetail: {
             /** Field */
@@ -785,6 +830,37 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /** SuggestedItemOut */
+        SuggestedItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Order */
+            order: number;
+            /** Place Name */
+            place_name: string;
+            /** Region */
+            region: string;
+            /** Stay Minutes */
+            stay_minutes: number;
+            /** Description */
+            description: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "verified" | "needs_check";
+            place: components["schemas"]["PlaceCandidateOut"] | null;
+            /** Adopted */
+            adopted: boolean;
+        };
         /** SuggestedTransferOut */
         SuggestedTransferOut: {
             /**
@@ -803,6 +879,32 @@ export interface components {
             to_name: string;
             /** Amount */
             amount: number;
+        };
+        /** SuggestionAsk */
+        SuggestionAsk: {
+            /** Destination */
+            destination: string;
+            /**
+             * Preferences
+             * @default
+             */
+            preferences: string;
+        };
+        /** SuggestionOut */
+        SuggestionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Destination */
+            destination: string;
+            /** Preferences */
+            preferences: string;
+            /** Reused */
+            reused: boolean;
+            /** Items */
+            items: components["schemas"]["SuggestedItemOut"][];
         };
         /** TransferCreate */
         TransferCreate: {
@@ -2477,6 +2579,131 @@ export interface operations {
                 };
             };
             /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ask_for_suggestions_trips__trip_id__suggestions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestionAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 오늘 추천 횟수를 다 씀 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gemini 실패·형식 오류 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    adopt_suggestions_trips__trip_id__suggestions__request_id__adopt_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdoptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·추천 없음 */
             404: {
                 headers: {
                     [name: string]: unknown;

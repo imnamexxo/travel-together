@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, PlanItemInput, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -240,5 +240,19 @@ export function useReorderPlanItems(tripId: string) {
   return useMutation({
     mutationFn: ({ date, itemIds }: { date: string; itemIds: string[] }) => api.reorderPlanItems(tripId, date, itemIds),
     onSettled: refresh,
+  });
+}
+
+export function useAskSuggestions(tripId: string) {
+  const api = useApi();
+  return useMutation({ mutationFn: (ask: SuggestionAsk) => api.askSuggestions(tripId, ask) });
+}
+
+export function useAdoptSuggestions(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshPlan(tripId);
+  return useMutation({
+    mutationFn: ({ requestId, itemIds }: { requestId: string; itemIds: string[] }) => api.adoptSuggestions(tripId, requestId, itemIds),
+    onSuccess: refresh,
   });
 }

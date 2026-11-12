@@ -229,3 +229,54 @@ class PlanItem(Base):
 
     place: Mapped[Place | None] = relationship()
     created_by: Mapped[Member | None] = relationship()
+
+
+class SuggestionRequest(Base):
+    """추천 일정 요청 한 번. 입력 해시가 같으면 결과를 다시 쓴다. 하루 요청 수 제한도 이 표로 센다."""
+
+    __tablename__ = "suggestion_requests"
+    __table_args__ = (UniqueConstraint("trip_id", "input_hash", name="suggestion_requests_input_unique"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    input_hash: Mapped[str] = mapped_column(String(64))
+    destination: Mapped[str] = mapped_column(String(60))
+    preferences: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    items: Mapped[list["SuggestedItem"]] = relationship(
+        back_populates="request",
+        order_by=lambda: [SuggestedItem.date, SuggestedItem.order],
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class SuggestedItem(Base):
+    """AI가 제안했지만 아직 채택되지 않은 일정 후보. 카카오로 확인된 장소 정보를 함께 둔다.
+
+    확인된 장소도 채택할 때까지는 places에 넣지 않는다(지도에 계획한 곳으로 보이지 않게).
+    """
+
+    __tablename__ = "suggested_items"
+    __table_args__ = (CheckConstraint("status IN ('verified', 'needs_check')", name="suggested_items_status_valid"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("suggestion_requests.id", ondelete="CASCADE"))
+    date: Mapped[date] = mapped_column(Date)
+    order: Mapped[int] = mapped_column(Integer)
+    place_name: Mapped[str] = mapped_column(String(100))
+    region: Mapped[str] = mapped_column(String(60))
+    stay_minutes: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20))
+    kakao_place_id: Mapped[str | None] = mapped_column(String(30))
+    kakao_name: Mapped[str | None] = mapped_column(String(100))
+    kakao_address: Mapped[str | None] = mapped_column(String(200))
+    kakao_road_address: Mapped[str | None] = mapped_column(String(200))
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    kakao_category: Mapped[str | None] = mapped_column(String(100))
+    adopted_plan_item_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plan_items.id", ondelete="SET NULL"))
+
+    request: Mapped[SuggestionRequest] = relationship(back_populates="items")

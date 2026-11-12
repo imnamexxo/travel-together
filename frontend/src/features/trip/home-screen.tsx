@@ -60,7 +60,7 @@ export default function HomeScreen() {
       </View>
       <Text style={s.title}>{trip.name}</Text><Text style={s.subtitle}>{formatPeriod(trip.start_date, trip.end_date)}  ·  {trip.member_count}명</Text>
       <TravelNotes />
-      <View style={s.between}><Text style={s.heading}>여행 일정</Text><Pressable accessibilityRole="button" style={s.action} onPress={() => Alert.alert('추천 일정', 'AI 추천 기능은 다음 단계에서 연결할 예정이에요.')}><Text style={s.link}>✧ 추천 일정</Text></Pressable></View>
+      <View style={s.between}><Text style={s.heading}>여행 일정</Text><Pressable accessibilityRole="button" style={s.action} onPress={() => router.push(`/trips/${trip.id}/suggestions`)}><Text style={s.link}>✧ 추천 일정</Text></Pressable></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.days}>{days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="tab" accessibilityState={{ selected: day === index }} accessibilityLabel={`${index + 1}일 차 ${entry.date}${index === todayIndex ? ' 오늘' : ''}`} onPress={() => setDay(index)} style={[s.day, index === day && s.selected, index === todayIndex && index !== day && s.today]}><Text style={[s.dayTitle, index === day && s.white]}>{index === todayIndex ? '오늘' : `${index + 1}일 차`}</Text><Text style={[s.dayDate, index === day && s.white]}>{entry.date} ({entry.weekday})</Text></Pressable>)}</ScrollView>
       <Text style={s.date}>{days[day].title}</Text>
       <View style={s.timeline}>
