@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
 from app.auth import AuthenticatedUser, InvalidToken
+from app.place_search import PlaceCandidate, PlaceSearchUnavailable
 from app.config import BACKEND_DIR, Settings, normalize_database_url
 from app.main import create_app
 
@@ -40,6 +41,26 @@ class FakeAuthVerifier:
             return self._users[token]
         except KeyError:
             raise InvalidToken()
+
+
+class FakePlaceSearcher:
+    """등록해 둔 장소 중 이름에 검색어가 들어간 것을 돌려준다. 받은 검색어를 기록한다."""
+
+    def __init__(self) -> None:
+        self.places: list[PlaceCandidate] = []
+        self.queries: list[str] = []
+        self.unavailable = False
+
+    def add(self, kakao_place_id: str, name: str, *, lat: float = 33.5, lng: float = 126.5, address: str = "제주시") -> PlaceCandidate:
+        candidate = PlaceCandidate(kakao_place_id, name, address, None, lat, lng, "여행 > 관광명소")
+        self.places.append(candidate)
+        return candidate
+
+    def search(self, query: str, *, near: tuple[float, float] | None = None) -> list[PlaceCandidate]:
+        self.queries.append(query)
+        if self.unavailable:
+            raise PlaceSearchUnavailable("down")
+        return [p for p in self.places if query in p.name]
 
 
 def bearer(token: str) -> dict[str, str]:
@@ -92,9 +113,15 @@ def auth() -> FakeAuthVerifier:
 
 
 @pytest.fixture
-def client(engine, database_url: str, auth: FakeAuthVerifier) -> TestClient:
+def places() -> FakePlaceSearcher:
+    return FakePlaceSearcher()
+
+
+@pytest.fixture
+def client(engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher) -> TestClient:
     settings = Settings(
         database_url=database_url, supabase_url="", supabase_jwt_secret=""
     )
-    with TestClient(create_app(settings=settings, auth_verifier=auth)) as client:
+    app = create_app(settings=settings, auth_verifier=auth, place_searcher=places)
+    with TestClient(app) as client:
         yield client

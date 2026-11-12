@@ -1,4 +1,5 @@
 import uuid
+import datetime as dt
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -6,10 +7,12 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
     Table,
+    Time,
     UniqueConstraint,
     Uuid,
     func,
@@ -184,3 +187,45 @@ class Transfer(Base):
 
     from_member: Mapped[Member] = relationship(foreign_keys=[from_member_id])
     to_member: Mapped[Member] = relationship(foreign_keys=[to_member_id])
+
+
+class Place(Base):
+    """여행 안의 실제 장소. 카카오 검증을 통과한 것만 만든다. 한 여행에서 같은 카카오 장소는 하나다."""
+
+    __tablename__ = "places"
+    __table_args__ = (UniqueConstraint("trip_id", "kakao_place_id", name="places_one_per_kakao_place"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    kakao_place_id: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(String(100))
+    address: Mapped[str] = mapped_column(String(200))
+    road_address: Mapped[str | None] = mapped_column(String(200))
+    # 장소의 좌표다. 사람의 위치가 아니다(ADR-0003).
+    latitude: Mapped[float] = mapped_column(Float)
+    longitude: Mapped[float] = mapped_column(Float)
+    category: Mapped[str | None] = mapped_column(String(100))
+
+
+class PlanItem(Base):
+    """플래너의 하루 일정 한 칸."""
+
+    __tablename__ = "plan_items"
+    __table_args__ = (CheckConstraint("estimated_cost IS NULL OR estimated_cost >= 0", name="plan_items_cost_not_negative"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    date: Mapped[date] = mapped_column(Date)
+    # 하루 안의 순서(0부터).
+    position: Mapped[int] = mapped_column(Integer)
+    time: Mapped[dt.time | None] = mapped_column(Time)
+    title: Mapped[str] = mapped_column(String(80))
+    memo: Mapped[str] = mapped_column(String(300), default="")
+    estimated_cost: Mapped[int | None] = mapped_column(Integer)
+    place_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("places.id"))
+    # 만든 멤버가 나가도 일정 항목은 남는다(그때부터는 총무만 지울 수 있다).
+    created_by_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("members.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    place: Mapped[Place | None] = relationship()
+    created_by: Mapped[Member | None] = relationship()

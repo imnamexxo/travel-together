@@ -11,7 +11,7 @@ from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.invites import new_invite_code
-from app.models import TRIP_NAME_MAX, Member, Trip
+from app.models import TRIP_NAME_MAX, Member, PlanItem, Trip
 from app.permissions import require_member, require_organizer
 from app.profiles import ensure_profile
 
@@ -87,12 +87,16 @@ def _check_dates(start: date, end: date) -> None:
         )
 
 
-def _dates_with_plan_items_outside(trip: Trip, start: date, end: date) -> list[date]:
-    """새 기간 밖으로 밀려나는 일정 항목의 날짜.
-
-    일정 항목은 #7에서 생긴다. 그때 이 함수가 실제 날짜를 돌려주고 테스트도 함께 추가한다.
-    """
-    return []
+def _dates_with_plan_items_outside(session: Session, trip: Trip, start: date, end: date) -> list[date]:
+    """새 기간 밖으로 밀려나는 일정 항목의 날짜(겹치지 않게, 이른 순)."""
+    return list(
+        session.scalars(
+            select(PlanItem.date)
+            .where(PlanItem.trip_id == trip.id, (PlanItem.date < start) | (PlanItem.date > end))
+            .distinct()
+            .order_by(PlanItem.date)
+        )
+    )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -181,7 +185,7 @@ def update_trip(
     start = body.start_date or trip.start_date
     end = body.end_date or trip.end_date
     _check_dates(start, end)
-    stranded = _dates_with_plan_items_outside(trip, start, end)
+    stranded = _dates_with_plan_items_outside(session, trip, start, end)
     if stranded:
         raise ApiError(
             409,
