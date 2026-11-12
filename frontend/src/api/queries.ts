@@ -11,6 +11,7 @@ export const queryKeys = {
   inviteCode: (tripId: string) => ['trips', tripId, 'invite-code'] as const,
   expenses: (tripId: string) => ['trips', tripId, 'expenses'] as const,
   expense: (tripId: string, expenseId: string) => ['trips', tripId, 'expenses', expenseId] as const,
+  settlement: (tripId: string) => ['trips', tripId, 'settlement'] as const,
 };
 
 export function useMe() {
@@ -123,10 +124,13 @@ export function useExpense(tripId: string, expenseId: string | undefined) {
   });
 }
 
-/** 지출이 바뀌면 그 여행의 지출 목록·상세(와 정산)를 모두 다시 불러온다. */
+/** 지출이 바뀌면 그 여행의 지출 목록·상세와 정산 결과를 다시 불러온다. */
 function useRefreshExpenses(tripId: string) {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.expenses(tripId) });
+  return () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.expenses(tripId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.settlement(tripId) }),
+  ]);
 }
 
 type SaveExpense = { expenseId?: string; input: ExpenseInput; idempotencyKey: string };
@@ -153,4 +157,9 @@ export function useDeleteExpense(tripId: string) {
   const api = useApi();
   const refresh = useRefreshExpenses(tripId);
   return useMutation({ mutationFn: (expenseId: string) => api.deleteExpense(tripId, expenseId), onSuccess: refresh });
+}
+
+export function useSettlement(tripId: string) {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.settlement(tripId), queryFn: () => api.getSettlement(tripId) });
 }

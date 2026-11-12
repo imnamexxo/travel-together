@@ -1,21 +1,26 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useExpenses, useSettlement } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
 import ExpenseList from '@/features/expenses/expense-list';
 import { useCurrentTrip } from '@/features/trip/current-trip';
-import PreviewBalance from './preview-balance';
+import BalanceView from './balance-view';
 
 export default function SettlementScreen() {
   const { trip } = useCurrentTrip();
   const [tab, setTab] = useState<'balance' | 'expenses'>('balance');
+  const settlement = useSettlement(trip.id);
+  const expenses = useExpenses(trip.id);
+  const refreshing = settlement.isRefetching || expenses.isRefetching;
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
-    <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void settlement.refetch(); void expenses.refetch(); }} tintColor={C.primary} />}>
       <Text style={s.eyebrow}>{trip.name}</Text><Text style={s.title}>여행 정산</Text>
       <View style={s.tabs}>{([{ key: 'balance', title: '정산 현황' }, { key: 'expenses', title: '지출 내역' }] as const).map((entry) => <Pressable key={entry.key} accessibilityRole="tab" accessibilityState={{ selected: tab === entry.key }} onPress={() => setTab(entry.key)} style={[s.tab, tab === entry.key && s.tabActive]}><Text style={[s.tabText, tab === entry.key && s.tabActiveText]}>{entry.title}</Text></Pressable>)}</View>
-      {tab === 'balance' ? <PreviewBalance /> : <ExpenseList />}
+      {tab === 'balance' ? <BalanceView /> : <ExpenseList />}
     </ScrollView>
   </SafeAreaView>;
 }

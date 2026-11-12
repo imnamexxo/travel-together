@@ -16,6 +16,7 @@ export type ExpenseSummary = components['schemas']['ExpenseSummary'];
 export type Expense = components['schemas']['ExpenseOut'];
 export type ExpenseInput = components['schemas']['ExpenseIn'];
 export type ExpenseStatus = Expense['status'];
+export type Settlement = components['schemas']['SettlementOut'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -66,6 +67,8 @@ export interface ApiClient {
   /** 확정 조건이 깨지면 422 ApiError(details에 깨진 조건)를 던진다. */
   confirmExpense(tripId: string, expenseId: string): Promise<Expense>;
   deleteExpense(tripId: string, expenseId: string): Promise<void>;
+  /** 서버가 계산한 정산 결과. 앱은 이 값을 그대로 보여주고 다시 계산하지 않는다. */
+  getSettlement(tripId: string): Promise<Settlement>;
 }
 
 type ApiClientOptions = {
@@ -133,5 +136,6 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     updateExpense: (tripId, expenseId, input) => request<Expense>('PUT', expense(tripId, expenseId), input),
     confirmExpense: (tripId, expenseId) => request<Expense>('POST', `${expense(tripId, expenseId)}/confirm`),
     deleteExpense: (tripId, expenseId) => request<void>('DELETE', expense(tripId, expenseId)),
+    getSettlement: (tripId) => request<Settlement>('GET', `${trip(tripId)}/settlement`),
   };
 }

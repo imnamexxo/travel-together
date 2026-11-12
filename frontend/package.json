@@ -58,7 +58,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "jest && node --test src/features/auth/validation.test.mjs src/features/settlement/preview-data.test.mjs",
+    "test": "jest && node --test src/features/auth/validation.test.mjs",
     "gen:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts"
   },
   "private": true,

@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Settlement, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -86,6 +86,8 @@ type FakeApiOptions = {
   joinable?: Record<string, TripDetail>;
   /** 여행 id → 지출 */
   expenses?: Record<string, Expense[]>;
+  /** 여행 id → 서버가 계산했다고 치는 정산 결과. 없으면 지출이 없는 정산이다. */
+  settlements?: Record<string, Settlement>;
 };
 
 export function expense(overrides: Partial<Expense> = {}): Expense {
@@ -98,7 +100,7 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {} }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {} }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -198,6 +200,10 @@ export function fakeApi(
     }),
     deleteExpense: jest.fn(async (tripId, expenseId) => {
       expenseStore[tripId] = expensesOf(tripId).filter((e) => e.id !== expenseId);
+    }),
+    getSettlement: jest.fn(async (tripId) => settlements[tripId] ?? {
+      confirmed_total: 0, confirmed_count: 0, is_settled: true, suggested_transfers: [], shares: [],
+      members: membersOf(tripId).map((m) => ({ member_id: m.member_id, display_name: m.display_name, join_order: m.join_order, paid: 0, owed: 0, sent: 0, received: 0, balance: 0 })),
     }),
     ...overrides,
   } as jest.Mocked<ApiClient>;
