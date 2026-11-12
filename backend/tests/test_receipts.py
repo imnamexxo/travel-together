@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import text
 
-from app.receipt_reader import GeminiReceiptReader, ReceiptDraft, ReceiptLine, ReceiptUnreadable, parse_receipt
+from app.receipt_reader import GeminiReceiptReader, ReceiptDraft, ReceiptShape, ReceiptLine, ReceiptUnreadable, parse_receipt
 from tests.conftest import bearer
 from tests.jpeg_samples import jpeg
 
@@ -168,7 +168,7 @@ def test_gemini_receipt_reader_sends_image_and_schema():
     draft = GeminiReceiptReader("key", "gemini-flash-latest", client=SimpleNamespace(models=Models())).read(b"jpegbytes")
 
     assert (draft.merchant_name, draft.total_amount, draft.items[0].amount) == ("카페", 9000, 9000)
-    assert calls[0]["config"].response_schema is ReceiptDraft
+    assert calls[0]["config"].response_schema is ReceiptShape
     assert calls[0]["contents"][0].inline_data.data == b"jpegbytes"
 
 

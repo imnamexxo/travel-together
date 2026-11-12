@@ -29,6 +29,22 @@ class ReceiptDraft(BaseModel):
     items: list[ReceiptLine] = Field(default=[], max_length=100)
 
 
+class ReceiptLineShape(BaseModel):
+    name: str
+    quantity: int | None
+    amount: int | None
+
+
+class ReceiptShape(BaseModel):
+    """Gemini에 보내는 응답 모양. 패턴·길이·범위 제한은 모델에 따라 400으로 거절될 수 있어 타입만 둔다.
+    받은 답은 ReceiptDraft로 다시 엄격하게 검사한다."""
+
+    merchant_name: str | None
+    paid_at_local: str | None
+    total_amount: int | None
+    items: list[ReceiptLineShape]
+
+
 class ReceiptUnreadable(Exception):
     """분석하지 못했다(키 없음, 네트워크, 형식 오류). 영수증은 저장하고 빈 초안으로 이어간다."""
 
@@ -89,7 +105,7 @@ class GeminiReceiptReader:
                 contents=[types.Part.from_bytes(data=image, mime_type="image/jpeg"), PROMPT],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=ReceiptDraft,
+                    response_schema=ReceiptShape,
                     temperature=0,
                 ),
             )
