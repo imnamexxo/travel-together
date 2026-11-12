@@ -81,7 +81,7 @@ export interface paths {
         post?: never;
         /**
          * Delete Trip
-         * @description 총무가 여행을 통째로 지운다. 여행에 속한 데이터는 DB cascade로, 사진 파일은 저장소에서 지운다.
+         * @description 총무가 여행을 통째로 지운다. 여행에 속한 데이터는 DB cascade로, 사진·영수증 파일은 저장소에서 지운다.
          */
         delete: operations["delete_trip_trips__trip_id__delete"];
         options?: never;
@@ -518,6 +518,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Receipt
+         * @description 총무가 영수증을 올리면 지출 초안(항상 draft)을 만든다.
+         *
+         *     같은 멱등 키면 처음 만든 초안을 200으로 돌려준다. 같은 이미지면 Gemini를 다시 부르지 않는다.
+         *     분석에 실패해도 영수증은 저장하고 빈 초안을 만든다(직접 입력으로 이어간다).
+         */
+        post: operations["upload_receipt_trips__trip_id__receipts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -544,6 +567,16 @@ export interface components {
              * @description 앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다
              */
             place_id?: string | null;
+        };
+        /** Body_upload_receipt_trips__trip_id__receipts_post */
+        Body_upload_receipt_trips__trip_id__receipts_post: {
+            /**
+             * File
+             * @description 영수증 JPEG
+             */
+            file: string;
+            /** Idempotency Key */
+            idempotency_key: string;
         };
         /** ErrorDetail */
         ErrorDetail: {
@@ -638,6 +671,13 @@ export interface components {
             default_sharer_ids: string[];
             /** Items */
             items: components["schemas"]["LineItemOut"][];
+            /** Receipt Url */
+            receipt_url?: string | null;
+            /**
+             * Has Receipt
+             * @default false
+             */
+            has_receipt: boolean;
         };
         /** ExpenseSummary */
         ExpenseSummary: {
@@ -918,6 +958,15 @@ export interface components {
             id: string;
             /** Display Name */
             display_name: string;
+        };
+        /** ReceiptUploadOut */
+        ReceiptUploadOut: {
+            expense: components["schemas"]["ExpenseOut"];
+            /**
+             * Analysis
+             * @enum {string}
+             */
+            analysis: "read" | "reused" | "failed";
         };
         /** SettlementOut */
         SettlementOut: {
@@ -3107,6 +3156,95 @@ export interface operations {
                 };
             };
             /** @description 카카오 장소 검색 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_receipt_trips__trip_id__receipts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_receipt_trips__trip_id__receipts_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptUploadOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 파일이 너무 큼 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description JPEG가 아님 */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 저장소 실패 */
             502: {
                 headers: {
                     [name: string]: unknown;

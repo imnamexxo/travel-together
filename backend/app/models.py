@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Text,
     Time,
     UniqueConstraint,
     Uuid,
@@ -129,6 +130,8 @@ class Expense(Base):
     merchant_name: Mapped[str | None] = mapped_column(String(50))
     total_amount: Mapped[int | None] = mapped_column(Integer)
     idempotency_key: Mapped[str] = mapped_column(String(100))
+    # 영수증으로 만든 지출이면 그 영수증(#14)
+    receipt_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("receipts.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -137,6 +140,7 @@ class Expense(Base):
     )
 
     payer: Mapped[Member | None] = relationship()
+    receipt: Mapped["Receipt | None"] = relationship()
     default_sharers: Mapped[list[Member]] = relationship(
         secondary=expense_default_sharers, order_by=Member.join_order
     )
@@ -302,3 +306,18 @@ class Photo(Base):
 
     uploader: Mapped[Member] = relationship()
     place: Mapped[Place | None] = relationship()
+
+
+class Receipt(Base):
+    """지출의 증빙 이미지. 같은 이미지(해시)는 분석 결과를 다시 쓴다."""
+
+    __tablename__ = "receipts"
+    __table_args__ = (UniqueConstraint("trip_id", "image_hash", name="receipts_one_per_image"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    storage_key: Mapped[str] = mapped_column(String(200), unique=True)
+    image_hash: Mapped[str] = mapped_column(String(64))
+    # Gemini가 돌려준 지출 초안(JSON). 분석에 실패했으면 비어 있다.
+    analysis: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

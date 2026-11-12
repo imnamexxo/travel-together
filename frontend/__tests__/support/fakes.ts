@@ -99,6 +99,8 @@ type FakeApiOptions = {
   /** 여행 id → 사진 */
   photos?: Record<string, Photo[]>;
   photoLimit?: number;
+  /** 영수증 분석 결과로 돌려줄 지출 초안 내용과 분석 상태 */
+  receipt?: { expense: Partial<Expense>; analysis: 'read' | 'reused' | 'failed' };
 };
 
 export function photo(overrides: Partial<Photo> = {}): Photo {
@@ -122,14 +124,14 @@ export function planItem(overrides: Partial<PlanItem> = {}): PlanItem {
 export function expense(overrides: Partial<Expense> = {}): Expense {
   return {
     id: 'expense-1', status: 'draft', payer_member_id: 'member-1', paid_at: '2026-11-12T06:30:00Z', merchant_name: '편의점',
-    total_amount: 30000, default_sharer_ids: ['member-1'], items: [], ...overrides,
+    total_amount: 30000, default_sharer_ids: ['member-1'], items: [], receipt_url: null, has_receipt: false, ...overrides,
   };
 }
 
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200 }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -166,6 +168,7 @@ export function fakeApi(
     id, status: 'draft', payer_member_id: input.payer_member_id ?? null, paid_at: input.paid_at ?? null,
     merchant_name: input.merchant_name ?? null, total_amount: input.total_amount ?? null, default_sharer_ids: input.default_sharer_ids ?? [],
     items: (input.items ?? []).map((item, i) => ({ id: `${id}-item-${i}`, name: item.name, quantity: item.quantity ?? null, amount: item.amount ?? null, sharer_ids: item.sharer_ids ?? [] })),
+    receipt_url: null, has_receipt: false,
   });
   const dropTrip = (tripId: string) => {
     const index = store.findIndex((t) => t.id === tripId);
@@ -233,8 +236,10 @@ export function fakeApi(
     }),
     updateExpense: jest.fn(async (tripId, expenseId, input) => {
       const list = expensesOf(tripId);
-      const updated = fromInput(expenseId, input);
-      list[list.findIndex((e) => e.id === expenseId)] = updated;
+      const index = list.findIndex((e) => e.id === expenseId);
+      // 영수증은 지출을 고쳐도 그대로 남는다.
+      const updated = { ...fromInput(expenseId, input), has_receipt: list[index].has_receipt, receipt_url: list[index].receipt_url };
+      list[index] = updated;
       return updated;
     }),
     confirmExpense: jest.fn(async (tripId, expenseId) => {
@@ -302,6 +307,14 @@ export function fakeApi(
     }),
     deletePhoto: jest.fn(async (tripId, photoId) => {
       photoStore[tripId] = photosOf(tripId).filter((p) => p.id !== photoId);
+    }),
+    uploadReceipt: jest.fn(async (tripId, upload, idempotencyKey) => {
+      const existing = keys.get(idempotencyKey);
+      if (existing) return { expense: findExpense(tripId, existing), analysis: 'reused' as const };
+      const created = expense({ id: `expense-${expensesOf(tripId).length + 1}`, status: 'draft', has_receipt: true, receipt_url: `https://storage.test/receipt-of-${upload.uri}`, ...receipt?.expense });
+      expensesOf(tripId).unshift(created);
+      keys.set(idempotencyKey, created.id);
+      return { expense: created, analysis: receipt?.analysis ?? 'read' };
     }),
     linkPhotoPlace: jest.fn(async (tripId, photoId, link) => {
       const target = photosOf(tripId).find((p) => p.id === photoId)!;
