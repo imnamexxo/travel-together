@@ -11,7 +11,9 @@ from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.invites import new_invite_code
-from app.models import TRIP_NAME_MAX, Member, PlanItem, Trip
+from app.models import TRIP_NAME_MAX, Member, Photo, PlanItem, Trip
+from app.photos import delete_files, get_storage
+from app.storage import ObjectStorage
 from app.permissions import require_member, require_organizer
 from app.profiles import ensure_profile
 
@@ -205,8 +207,11 @@ def delete_trip(
     trip_id: uuid.UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    storage: ObjectStorage = Depends(get_storage),
 ) -> None:
-    """총무가 여행을 통째로 지운다. 멤버 등 여행에 속한 데이터는 함께 지워진다(DB cascade)."""
+    """총무가 여행을 통째로 지운다. 여행에 속한 데이터는 DB cascade로, 사진 파일은 저장소에서 지운다."""
     me = require_organizer(session, trip_id, user)
+    keys = list(session.scalars(select(Photo.storage_key).where(Photo.trip_id == trip_id)))
     session.delete(me.trip)
     session.commit()
+    delete_files(storage, keys)

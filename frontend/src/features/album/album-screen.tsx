@@ -1,26 +1,36 @@
 import { useRef, useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import type { Photo } from '@/api/client';
+import { useDeletePhoto, usePhotos } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
+import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
-import { usePreviewTrip, type PreviewPhoto as Photo } from '@/features/trip/preview-state';
-import { previewPlaces } from '@/features/trip/places';
+import { pickPhotos } from './photo-prep';
+import { usePhotoUploads } from './use-photo-uploads';
 
-type Mode = 'all' | 'date' | 'place';
+type Mode = 'all' | 'date' | 'uploader';
 type AlbumRow = { kind: 'heading'; id: string; title: string; count: number } | { kind: 'photos'; id: string; photos: Photo[] };
-const places = previewPlaces.map((place) => place.name);
-const limit = 200;
+const DEFAULT_LIMIT = 200;
+
+/** 사진의 여행 날짜(촬영 시각 기준, 한국 시간). 촬영 시각이 없거나 여행 기간 밖이면 -1. */
+export function photoDayIndex(photo: Photo, days: TripDay[]): number {
+  return photo.taken_at ? days.findIndex((d) => d.iso === toKstParts(photo.taken_at!).date) : -1;
+}
 
 function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
   const groups = new Map<string, Photo[]>();
-  const ordered = mode === 'date' ? [...photos].sort((a, b) => (a.day ?? 99) - (b.day ?? 99)) : photos;
+  const ordered = mode === 'date' ? [...photos].sort((a, b) => {
+    const [da, db] = [photoDayIndex(a, days), photoDayIndex(b, days)];
+    return (da < 0 ? 99 : da) - (db < 0 ? 99 : db);
+  }) : photos;
   for (const photo of ordered) {
-    const key = mode === 'date' ? (photo.day === null ? '날짜 미지정' : `${photo.day + 1}일 차 · ${days[photo.day]?.title ?? ''}`)
-      : mode === 'place' ? (photo.place ?? '장소 미연결') : '모든 사진';
+    const index = photoDayIndex(photo, days);
+    const key = mode === 'date' ? (index < 0 ? '날짜 미지정' : `${index + 1}일 차 · ${days[index].title}`)
+      : mode === 'uploader' ? `${photo.uploader_name}님이 올린 사진` : '모든 사진';
     groups.set(key, [...(groups.get(key) ?? []), photo]);
   }
   return [...groups.entries()].flatMap(([title, group]) => {
@@ -31,70 +41,55 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
 }
 
 export default function AlbumScreen() {
-  const { photos, setPhotos } = usePreviewTrip();
-  const { trip, days } = useCurrentTrip();
+  const { trip, days, isOrganizer } = useCurrentTrip();
+  const photoList = usePhotos(trip.id);
+  const remove = useDeletePhoto(trip.id);
+  const uploader = usePhotoUploads(trip.id);
   const [mode, setMode] = useState<Mode>('all');
   const [day, setDay] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [failedImages, setFailedImages] = useState<string[]>([]);
-  const picking = useRef(false);
-  const sequence = useRef(0);
+  const [picking, setPicking] = useState(false);
+  const pickingRef = useRef(false);
   const { width, height } = useWindowDimensions();
   const contentWidth = Math.min(width, 600);
   const tile = (contentWidth - 48 - 8) / 3;
-  const filtered = photos.filter((photo) => day === null || photo.day === day);
+  const photos = photoList.data?.photos ?? [];
+  const limit = photoList.data?.limit ?? DEFAULT_LIMIT;
+  const remaining = Math.max(limit - photos.length, 0);
+  const filtered = photos.filter((photo) => day === null || photoDayIndex(photo, days) === day);
   const rows = makeRows(filtered, mode, days);
   const selected = photos.find((photo) => photo.id === selectedId);
   const selectedIndex = filtered.findIndex((photo) => photo.id === selectedId);
-  const unlinked = photos.filter((photo) => photo.place === null).length;
+  const canDelete = (photo: Photo) => isOrganizer || photo.uploader_member_id === trip.me.member_id;
+  const failed = uploader.uploads.filter((u) => u.status === 'failed');
+  const doneCount = uploader.uploads.filter((u) => u.status === 'done').length;
 
   async function addPhotos() {
-    if (picking.current) return;
-    const remaining = limit - photos.length;
-    if (remaining <= 0) { Alert.alert('사진이 가득 찼어요', '이 여행에는 사진을 최대 200장까지 담을 수 있어요.'); return; }
-    picking.current = true; setBusy(true);
+    if (pickingRef.current || uploader.busy) return;
+    if (remaining <= 0) { Alert.alert('사진이 가득 찼어요', `이 여행에는 사진을 최대 ${limit}장까지 담을 수 있어요.`); return; }
+    pickingRef.current = true; setPicking(true);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: remaining,
-        orderedSelection: true, quality: 0.8, exif: false,
-      });
-      if (result.canceled) return;
-      const additions: Photo[] = result.assets.slice(0, remaining).map((asset) => ({
-        id: `photo-${Date.now()}-${sequence.current++}`, uri: asset.uri,
-        assetId: asset.assetId ?? null, day, place: null,
-      }));
-      setPhotos((current) => {
-        const known = new Set(current.map((photo) => photo.assetId ?? photo.uri));
-        const unique = additions.filter((photo) => {
-          const key = photo.assetId ?? photo.uri;
-          if (known.has(key)) return false;
-          known.add(key); return true;
-        });
-        return [...unique, ...current].slice(0, limit);
-      });
+      const picked = await pickPhotos(remaining);
+      if (picked?.length) uploader.start(picked);
     } catch {
       Alert.alert('사진을 불러오지 못했어요', '사진 선택 권한과 기기의 사진 상태를 확인하고 다시 시도해주세요.');
-    } finally { picking.current = false; setBusy(false); }
-  }
-
-  function updateSelected(change: Partial<Pick<Photo, 'day' | 'place'>>) {
-    setPhotos((current) => current.map((photo) => photo.id === selectedId ? { ...photo, ...change } : photo));
-    if (change.day !== undefined && day !== null && change.day !== day) setDay(null);
+    } finally { pickingRef.current = false; setPicking(false); }
   }
 
   function removeSelected() {
     if (!selected) return;
     const id = selected.id;
-    Alert.alert('앨범에서 삭제할까요?', '기기의 원본 사진은 삭제되지 않아요.', [
+    Alert.alert('사진을 지울까요?', '모든 멤버의 앨범에서 지워져요. 기기의 원본 사진은 그대로예요.', [
       { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => {
-        setSelectedId(null); setPhotos((current) => current.filter((photo) => photo.id !== id));
-        setFailedImages((current) => current.filter((entry) => entry !== id));
-      } },
+      { text: '지우기', style: 'destructive', onPress: () => remove.mutate(id, {
+        onSuccess: () => setSelectedId(null),
+        onError: (e) => Alert.alert('지우지 못했어요', e.message),
+      }) },
     ]);
   }
 
+  const busy = picking || uploader.busy;
   const header = <>
     <View style={s.titleRow}>
       <View style={s.titleCopy}><Text style={s.eyebrow}>{trip.name}</Text><Text style={s.title}>여행의 순간</Text></View>
@@ -102,8 +97,16 @@ export default function AlbumScreen() {
         {busy ? <ActivityIndicator color={C.onPrimary} /> : <Text style={s.plusText}>＋</Text>}
       </Pressable>
     </View>
-    <Text style={s.subtitle}>{photos.length}장의 사진{unlinked > 0 ? ` · 장소 미연결 ${unlinked}장` : ''}</Text>
-    <View style={s.modes}>{([{ key: 'all', title: '전체' }, { key: 'date', title: '날짜별' }, { key: 'place', title: '장소별' }] as const).map((entry) => (
+    <Text style={s.subtitle}>{photos.length}장의 사진 · {remaining <= 20 ? `남은 장수 ${remaining}장` : `${limit}장까지 담을 수 있어요`}</Text>
+    {uploader.uploads.length > 0 && <View style={s.uploadBox}>
+      <Text style={s.uploadTitle}>{uploader.busy ? `사진 올리는 중 · ${doneCount + failed.length + 1}/${uploader.uploads.length}` : `${uploader.uploads.length}장 중 ${doneCount}장 올렸어요${failed.length ? ` · ${failed.length}장 실패` : ''}`}</Text>
+      {failed.map((u) => <Text key={u.key} style={s.uploadError}>사진 {uploader.uploads.indexOf(u) + 1}: {u.error}</Text>)}
+      <View style={s.uploadActions}>
+        {!uploader.busy && failed.length > 0 && <Pressable accessibilityRole="button" onPress={uploader.retryFailed} style={s.uploadButton}><Text style={s.uploadButtonText}>실패한 사진 다시 올리기</Text></Pressable>}
+        {!uploader.busy && <Pressable accessibilityRole="button" accessibilityLabel="업로드 결과 닫기" onPress={uploader.clear} style={s.navButton}><Text style={s.navText}>닫기</Text></Pressable>}
+      </View>
+    </View>}
+    <View style={s.modes}>{([{ key: 'all', title: '전체' }, { key: 'date', title: '날짜별' }, { key: 'uploader', title: '올린 사람' }] as const).map((entry) => (
       <Pressable key={entry.key} accessibilityRole="tab" accessibilityState={{ selected: mode === entry.key }} onPress={() => setMode(entry.key)} style={[s.mode, mode === entry.key && s.modeSelected]}>
         <Text style={[s.modeText, mode === entry.key && s.modeTextSelected]}>{entry.title}</Text>
       </Pressable>
@@ -112,22 +115,24 @@ export default function AlbumScreen() {
       <Pressable accessibilityRole="button" accessibilityState={{ selected: day === null }} onPress={() => setDay(null)} style={[s.chip, day === null && s.chipSelected]}><Text style={[s.chipText, day === null && s.chipTextSelected]}>모든 날짜</Text></Pressable>
       {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => setDay(index)} style={[s.chip, day === index && s.chipSelected]}><Text style={[s.chipText, day === index && s.chipTextSelected]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
     </ScrollView>
-    {day !== null && <Text style={s.filterHint}>추가하는 사진은 {day + 1}일 차로 분류돼요.</Text>}
   </>;
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <FlatList data={rows} keyExtractor={(row) => row.id} showsVerticalScrollIndicator={false}
       contentContainerStyle={s.content} ListHeaderComponent={header}
-      ListEmptyComponent={<View style={s.empty}>
-        <View style={s.emptyIcon}><SymbolView name={{ ios: 'photo.on.rectangle.angled', android: 'photo_library', web: 'photo_library' }} size={34} tintColor={C.accent} /></View>
-        <Text style={s.emptyTitle}>{photos.length ? '이날의 사진은 아직 없어요' : '우리의 첫 사진을 담아볼까요?'}</Text>
-        <Text style={s.emptyText}>바다도, 함께 먹은 한 끼도.{ '\n' }여행의 순간을 차곡차곡 모아보세요.</Text>
-        <Pressable accessibilityRole="button" disabled={busy} onPress={addPhotos} style={s.emptyButton}><Text style={s.emptyButtonText}>{busy ? '사진 선택 중…' : '사진 추가'}</Text></Pressable>
-      </View>}
-      ListFooterComponent={<Text style={s.footer}>기기 내 미리보기 · 앱 재시작 시 초기화돼요{ '\n' }{photos.length}/200장 · 서버 공유는 아직 연결되지 않았어요</Text>}
+      refreshing={photoList.isRefetching} onRefresh={() => photoList.refetch()}
+      ListEmptyComponent={photoList.isPending ? <ActivityIndicator style={s.empty} color={C.primary} />
+        : photoList.isError ? <View style={s.empty}><Text style={s.emptyText}>{photoList.error.message}</Text><Pressable accessibilityRole="button" onPress={() => photoList.refetch()} style={s.emptyButton}><Text style={s.emptyButtonText}>다시 시도</Text></Pressable></View>
+        : <View style={s.empty}>
+          <View style={s.emptyIcon}><SymbolView name={{ ios: 'photo.on.rectangle.angled', android: 'photo_library', web: 'photo_library' }} size={34} tintColor={C.accent} /></View>
+          <Text style={s.emptyTitle}>{photos.length ? '이날의 사진은 아직 없어요' : '우리의 첫 사진을 담아볼까요?'}</Text>
+          <Text style={s.emptyText}>바다도, 함께 먹은 한 끼도.{ '\n' }여행의 순간을 차곡차곡 모아보세요.</Text>
+          <Pressable accessibilityRole="button" disabled={busy} onPress={addPhotos} style={s.emptyButton}><Text style={s.emptyButtonText}>{busy ? '사진 올리는 중…' : '사진 추가'}</Text></Pressable>
+        </View>}
+      ListFooterComponent={<Text style={s.footer}>{photos.length}/{limit}장 · 사진은 줄여서 올리고 위치 정보는 지워서 보내요.{ '\n' }촬영 위치는 서버에 저장되지 않아요.</Text>}
       renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}><Text style={s.groupTitle}>{row.title}</Text><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
-        {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`${photo.place ?? '장소 미연결'} 사진 크게 보기`} onPress={() => setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }]}>
-          <Image source={{ uri: photo.uri }} style={s.thumbnail} resizeMode="cover" onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
+        {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`${photo.uploader_name}님 사진 크게 보기`} onPress={() => setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }]}>
+          <Image source={{ uri: photo.url }} style={s.thumbnail} resizeMode="cover" onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
           {failedImages.includes(photo.id) && <View style={s.imageError}><Text style={s.imageErrorText}>사진 확인 필요</Text></View>}
         </Pressable>)}
       </View>}
@@ -138,10 +143,10 @@ export default function AlbumScreen() {
           <View style={s.detailNav}>
             <Pressable accessibilityRole="button" onPress={() => setSelectedId(null)} style={s.navButton}><Text style={s.navText}>닫기</Text></Pressable>
             <Text style={s.detailTitle}>사진 기록</Text>
-            <Pressable accessibilityRole="button" onPress={removeSelected} style={s.navButton}><Text style={s.deleteText}>삭제</Text></Pressable>
+            {canDelete(selected) ? <Pressable accessibilityRole="button" accessibilityLabel="사진 지우기" disabled={remove.isPending} onPress={removeSelected} style={s.navButton}><Text style={s.deleteText}>지우기</Text></Pressable> : <View style={s.navButton} />}
           </View>
           <ScrollView maximumZoomScale={3} minimumZoomScale={1} centerContent style={{ height: Math.min(height * 0.45, 440), backgroundColor: C.surface }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-            <Image source={{ uri: selected.uri }} style={{ width: contentWidth, height: Math.min(height * 0.45, 440) }} resizeMode="contain" />
+            <Image source={{ uri: selected.url }} style={{ width: contentWidth, height: Math.min(height * 0.45, 440) }} resizeMode="contain" />
           </ScrollView>
           <View style={s.detailsBody}>
             <View style={s.detailNav}>
@@ -149,16 +154,10 @@ export default function AlbumScreen() {
               <Text style={s.count}>{selectedIndex + 1} / {filtered.length}</Text>
               <Pressable accessibilityRole="button" accessibilityLabel="다음 사진" disabled={selectedIndex < 0 || selectedIndex >= filtered.length - 1} onPress={() => setSelectedId(filtered[selectedIndex + 1].id)} style={s.navButton}><Text style={[s.navText, selectedIndex >= filtered.length - 1 && s.disabled]}>다음 ›</Text></Pressable>
             </View>
-            <Text style={s.fieldTitle}>여행 날짜</Text><Text style={s.helper}>촬영일 자동 인식 전에는 직접 선택해주세요.</Text>
-            <View style={s.detailChips}>
-              <Pressable accessibilityRole="button" accessibilityState={{ selected: selected.day === null }} onPress={() => updateSelected({ day: null })} style={[s.chip, selected.day === null && s.chipSelected]}><Text style={[s.chipText, selected.day === null && s.chipTextSelected]}>미지정</Text></Pressable>
-              {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: selected.day === index }} onPress={() => updateSelected({ day: index })} style={[s.chip, selected.day === index && s.chipSelected]}><Text style={[s.chipText, selected.day === index && s.chipTextSelected]}>{index + 1}일 차</Text></Pressable>)}
-            </View>
-            <Text style={s.fieldTitle}>연결된 장소</Text><Text style={s.helper}>예시 장소 중 선택할 수 있어요. 자동 연결은 추후 제공돼요.</Text>
-            <View style={s.detailChips}>
-              {[null, ...places].map((place) => <Pressable key={place ?? 'none'} accessibilityRole="button" accessibilityState={{ selected: selected.place === place }} onPress={() => updateSelected({ place })} style={[s.chip, selected.place === place && s.chipSelected]}><Text style={[s.chipText, selected.place === place && s.chipTextSelected]}>{place ?? '미연결'}</Text></Pressable>)}
-            </View>
-            <Text style={s.helper}>변경 사항은 현재 미리보기에 바로 반영됩니다.</Text>
+            <Text style={s.fieldTitle}>올린 사람</Text><Text style={s.helper}>{selected.uploader_name}</Text>
+            <Text style={s.fieldTitle}>촬영 시각</Text>
+            <Text style={s.helper}>{selected.taken_at ? (() => { const t = toKstParts(selected.taken_at); const index = photoDayIndex(selected, days); return `${index >= 0 ? `${index + 1}일 차 · ` : ''}${t.date} ${t.time}`; })() : '촬영 시각 정보가 없는 사진이에요.'}</Text>
+            {!canDelete(selected) && <Text style={s.helper}>사진은 올린 사람과 총무만 지울 수 있어요.</Text>}
           </View>
         </ScrollView>}
       </SafeAreaView>
@@ -175,13 +174,16 @@ const s = StyleSheet.create({
   plus: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
   plusText: { fontSize: 26, lineHeight: 30, color: C.onPrimary }, pressed: { opacity: 0.6 },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 13 },
+  uploadBox: { marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: C.banner, gap: 6 },
+  uploadTitle: { fontSize: 13, fontWeight: '600', color: C.primary }, uploadError: { fontSize: 12, color: C.error, lineHeight: 18 },
+  uploadActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  uploadButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 10, backgroundColor: C.background }, uploadButtonText: { fontSize: 13, fontWeight: '600', color: C.accent },
   modes: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border, marginTop: 24 },
   mode: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 46, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   modeSelected: { borderBottomColor: C.primary }, modeText: { fontSize: 14, color: C.textMuted }, modeTextSelected: { color: C.primary, fontWeight: '600' },
   chips: { flexDirection: 'row', gap: 8, paddingTop: 18, paddingBottom: 6 },
   chip: { borderRadius: 18, paddingHorizontal: 13, minHeight: 36, justifyContent: 'center', backgroundColor: C.surface },
   chipSelected: { backgroundColor: C.banner }, chipText: { fontSize: 12, color: C.textSecondary }, chipTextSelected: { color: C.primary, fontWeight: '600' },
-  filterHint: { fontSize: 11, color: C.textMuted, marginTop: 8 },
   groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 24, paddingBottom: 12 },
   groupTitle: { fontSize: 14, fontWeight: '600', color: C.text }, count: { fontSize: 12, color: C.textMuted },
   photoRow: { flexDirection: 'row', gap: 4, marginBottom: 4 }, tile: { backgroundColor: C.surface, borderRadius: 4, overflow: 'hidden' }, thumbnail: { width: '100%', height: '100%' },
@@ -194,5 +196,5 @@ const s = StyleSheet.create({
   detailNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8, gap: 12 },
   navButton: { minWidth: 44, minHeight: 48, justifyContent: 'center', alignItems: 'center' }, navText: { fontSize: 14, color: C.accent }, deleteText: { fontSize: 14, color: C.error }, detailTitle: { fontSize: 16, fontWeight: '600', color: C.text },
   detailsBody: { paddingHorizontal: 24 }, disabled: { color: C.inactive }, fieldTitle: { fontSize: 14, fontWeight: '600', color: C.text, marginTop: 24 },
-  helper: { fontSize: 12, color: C.textMuted, lineHeight: 20, marginTop: 8 }, detailChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  helper: { fontSize: 12, color: C.textMuted, lineHeight: 20, marginTop: 8 },
 });

@@ -17,6 +17,7 @@ class Settings:
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-latest"
     supabase_service_role_key: str = ""
+    storage_bucket: str = "trip-media"
 
 
 def normalize_database_url(url: str) -> str:
@@ -37,4 +38,5 @@ def load_settings() -> Settings:
         gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),
         gemini_model=os.getenv("GEMINI_MODEL", "").strip() or "gemini-flash-latest",
         supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip(),
+        storage_bucket=os.getenv("SUPABASE_STORAGE_BUCKET", "").strip() or "trip-media",
     )

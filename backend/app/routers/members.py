@@ -10,7 +10,9 @@ from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from app.expenses import has_money_records
 from app.invites import new_invite_code, normalize_code
-from app.models import MAX_MEMBERS, Member, Trip
+from app.models import MAX_MEMBERS, Member, Photo, Trip
+from app.photos import delete_files, get_storage
+from app.storage import ObjectStorage
 from app.permissions import require_member, require_organizer
 from app.profiles import ensure_profile
 from app.routers.trips import TripDetail, member_count_of, trip_detail
@@ -125,8 +127,8 @@ def join_trip(
     return trip_detail(trip, me, count + 1)
 
 
-def _remove(session: Session, member: Member, verb: str) -> None:
-    """멤버를 여행에서 뺀다. 나간 멤버의 사진 삭제는 앨범(#9)에서 여기에 더한다."""
+def _remove(session: Session, storage: ObjectStorage, member: Member, verb: str) -> None:
+    """멤버를 여행에서 뺀다. 그 멤버가 올린 사진도 지운다."""
     if member.is_organizer:
         raise ApiError(409, "organizer_cannot_leave", "총무는 여행에서 나갈 수 없습니다.")
     # 잔액이 깨지지 않도록, 지출이나 송금 기록에 엮인 멤버는 뺄 수 없다.
@@ -134,8 +136,13 @@ def _remove(session: Session, member: Member, verb: str) -> None:
         raise ApiError(
             409, "member_has_expenses", f"지출의 결제자·분담 대상이거나 송금 기록이 있어 {verb} 수 없습니다."
         )
+    photos = list(session.scalars(select(Photo).where(Photo.uploader_member_id == member.id)))
+    keys = [p.storage_key for p in photos]
+    for photo in photos:
+        session.delete(photo)
     session.delete(member)
     session.commit()
+    delete_files(storage, keys)
 
 
 @router.delete(
@@ -147,9 +154,10 @@ def leave_trip(
     trip_id: uuid.UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    storage: ObjectStorage = Depends(get_storage),
 ) -> None:
     """내가 여행에서 나간다. 총무는 나갈 수 없다."""
-    _remove(session, require_member(session, trip_id, user), "나갈")
+    _remove(session, storage, require_member(session, trip_id, user), "나갈")
 
 
 @router.delete(
@@ -162,10 +170,11 @@ def remove_member(
     member_id: uuid.UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    storage: ObjectStorage = Depends(get_storage),
 ) -> None:
     """총무가 다른 멤버를 내보낸다."""
     organizer = require_organizer(session, trip_id, user)
     target = next((m for m in organizer.trip.members if m.id == member_id), None)
     if target is None:
         raise ApiError(404, "member_not_found", "멤버를 찾을 수 없습니다.")
-    _remove(session, target, "내보낼")
+    _remove(session, storage, target, "내보낼")

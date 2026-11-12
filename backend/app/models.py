@@ -280,3 +280,25 @@ class SuggestedItem(Base):
     adopted_plan_item_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plan_items.id", ondelete="SET NULL"))
 
     request: Mapped[SuggestionRequest] = relationship(back_populates="items")
+
+
+class Photo(Base):
+    """멤버가 여행 앨범에 올린 사진. 촬영 위치 좌표는 갖지 않는다(ADR-0003)."""
+
+    __tablename__ = "photos"
+    __table_args__ = (CheckConstraint("link_type IS NULL OR link_type IN ('auto', 'manual')", name="photos_link_type_valid"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    # 멤버가 나가면 그 멤버의 사진을 먼저 지운다(members._remove).
+    uploader_member_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("members.id", **MEMBER_FK))
+    storage_key: Mapped[str] = mapped_column(String(200), unique=True)
+    taken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    # 사진이 연결된 장소(#10). auto: 앱이 촬영 위치로 찾아 줌, manual: 사용자가 고름.
+    place_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("places.id"))
+    link_type: Mapped[str | None] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    uploader: Mapped[Member] = relationship()
+    place: Mapped[Place | None] = relationship()
