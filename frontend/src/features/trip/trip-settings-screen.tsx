@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import { useDeleteTrip, useLeaveTrip, useUpdateTrip } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
+import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
 import { validateNewTrip, type NewTripErrors } from './new-trip-validation';
 
@@ -19,7 +20,7 @@ export default function TripSettingsScreen() {
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
-        <Pressable accessibilityRole="button" accessibilityLabel="플래너로 돌아가기" onPress={() => router.navigate(`/trips/${trip.id}`)} style={s.back}><Text style={s.backText}>‹ 플래너</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="플래너로 돌아가기" onPress={() => goBack(`/trips/${trip.id}`)} style={s.back}><Text style={s.backText}>‹ 플래너</Text></Pressable>
         <Text style={s.eyebrow}>{trip.name}</Text>
         <Text style={s.title}>여행 설정</Text>
         {isOrganizer ? <>

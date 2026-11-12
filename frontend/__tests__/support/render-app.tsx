@@ -6,12 +6,15 @@ import TripListScreen from '@/app/index';
 import LoginScreen from '@/app/login';
 import SignupScreen from '@/app/signup';
 import TripLayout from '@/app/trips/[tripId]/_layout';
-import AlbumScreen from '@/app/trips/[tripId]/album';
-import PlannerScreen from '@/app/trips/[tripId]/index';
-import MapScreen from '@/app/trips/[tripId]/map';
+import TripTabsLayout from '@/app/trips/[tripId]/(tabs)/_layout';
+import AlbumScreen from '@/app/trips/[tripId]/(tabs)/album';
+import PlannerScreen from '@/app/trips/[tripId]/(tabs)/index';
+import MapScreen from '@/app/trips/[tripId]/(tabs)/map';
+import ExpenseScreen from '@/app/trips/[tripId]/expenses/[expenseId]';
+import NewExpenseScreen from '@/app/trips/[tripId]/expenses/new';
 import MembersScreen from '@/app/trips/[tripId]/members';
 import TripSettingsScreen from '@/app/trips/[tripId]/settings';
-import SettlementScreen from '@/app/trips/[tripId]/settlement';
+import SettlementScreen from '@/app/trips/[tripId]/(tabs)/settlement';
 import JoinTripScreen from '@/app/trips/join';
 import NewTripScreen from '@/app/trips/new';
 import type { AuthService } from '@/auth/auth-service';
@@ -35,12 +38,15 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       'trips/new': NewTripScreen,
       'trips/join': JoinTripScreen,
       'trips/[tripId]/_layout': TripLayout,
-      'trips/[tripId]/index': PlannerScreen,
-      'trips/[tripId]/album': AlbumScreen,
-      'trips/[tripId]/map': MapScreen,
-      'trips/[tripId]/settlement': SettlementScreen,
+      'trips/[tripId]/(tabs)/_layout': TripTabsLayout,
+      'trips/[tripId]/(tabs)/index': PlannerScreen,
+      'trips/[tripId]/(tabs)/album': AlbumScreen,
+      'trips/[tripId]/(tabs)/map': MapScreen,
+      'trips/[tripId]/(tabs)/settlement': SettlementScreen,
       'trips/[tripId]/members': MembersScreen,
       'trips/[tripId]/settings': TripSettingsScreen,
+      'trips/[tripId]/expenses/new': NewExpenseScreen,
+      'trips/[tripId]/expenses/[expenseId]': ExpenseScreen,
     },
     { initialUrl },
   );
