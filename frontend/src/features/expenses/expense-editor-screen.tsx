@@ -8,6 +8,7 @@ import { useConfirmExpense, useDeleteExpense, useExpense, useMembers, useSaveExp
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
+import ExpensePlacePicker from './expense-place-picker';
 import {
   STATUS_LABEL, emptyForm, formFromExpense, itemsTotal, newItem, toggleDefaultSharer, toggleItemSharer, toInput, totalAmount,
   type ExpenseForm, type FormErrors,
@@ -154,6 +155,9 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
 
         <View style={s.labelRow}><Text style={s.label}>상호</Text>{missing(form.merchant)}</View>
         {input('상호', form.merchant, (v) => update({ merchant: v }), { placeholder: '예: 제주 편의점', maxLength: 50 })}
+        <Text style={s.label}>장소 (선택)</Text>
+        <ExpensePlacePicker tripId={trip.id} merchant={form.merchant} value={form.place} onChange={(place) => update({ place })} editable={editable} />
+        {fieldError('place')}
         <View style={s.row}>
           <View style={s.flex}><View style={s.labelRow}><Text style={s.label}>결제 날짜</Text>{missing(form.date)}</View>{input('결제 날짜', form.date, (v) => update({ date: v }), { placeholder: '2026-11-12', maxLength: 10, keyboardType: 'numbers-and-punctuation' })}{fieldError('date')}</View>
           <View style={s.flex}><Text style={s.label}>결제 시각</Text>{input('결제 시각', form.time, (v) => update({ time: v }), { placeholder: '14:30', maxLength: 5, keyboardType: 'numbers-and-punctuation' })}{fieldError('time')}</View>

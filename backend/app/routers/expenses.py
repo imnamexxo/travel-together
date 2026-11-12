@@ -14,6 +14,9 @@ from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.expenses import broken_conditions
 from app.models import Expense, LineItem, Member, Trip
 from app.permissions import require_member, require_organizer
+from app.place_search import PlaceSearcher
+from app.places import get_place_searcher, place_for
+from app.routers.planner import PlaceOut, PlaceRef, place_out
 from app.photos import SIGNED_URL_SECONDS, get_storage
 from app.storage import ObjectStorage, StorageUnavailable
 
@@ -45,6 +48,8 @@ class ExpenseIn(BaseModel):
     total_amount: Amount | None = None
     default_sharer_ids: list[uuid.UUID] = []
     items: list[LineItemIn] = Field(default=[], max_length=100)
+    # 장소 후보에서 고른 카카오 장소. 비우면 장소 없음. 서버가 카카오로 확인하고 같은 장소는 재사용한다.
+    place: PlaceRef | None = None
 
 
 class ExpenseCreate(ExpenseIn):
@@ -72,6 +77,7 @@ class ExpenseOut(BaseModel):
     # 영수증으로 만든 지출이면 원본 이미지의 짧게 열리는 서명 URL(지출 조회 때만 채운다)
     receipt_url: str | None = None
     has_receipt: bool = False
+    place: PlaceOut | None = None
 
 
 class ExpenseSummary(BaseModel):
@@ -82,6 +88,7 @@ class ExpenseSummary(BaseModel):
     total_amount: int | None
     payer_name: str | None
     item_count: int
+    place: PlaceOut | None = None
 
 
 def _utc(value: datetime | None) -> datetime | None:
@@ -110,6 +117,7 @@ def expense_out(expense: Expense, receipt_url: str | None = None) -> ExpenseOut:
         ],
         receipt_url=receipt_url,
         has_receipt=expense.receipt_id is not None,
+        place=place_out(expense.place) if expense.place else None,
     )
 
 
@@ -122,7 +130,7 @@ def _get_expense(session: Session, trip_id: uuid.UUID, expense_id: uuid.UUID) ->
     return expense
 
 
-def _apply(expense: Expense, body: ExpenseIn, trip: Trip) -> None:
+def _apply(session: Session, searcher: PlaceSearcher, expense: Expense, body: ExpenseIn, trip: Trip) -> None:
     """요청 내용으로 지출·품목·분담 대상을 통째로 바꾼다. 멤버 id는 이 여행의 멤버여야 한다."""
     members = {m.id: m for m in trip.members}
     unknown: list[ErrorDetail] = []
@@ -145,6 +153,7 @@ def _apply(expense: Expense, body: ExpenseIn, trip: Trip) -> None:
     expense.merchant_name = body.merchant_name or None
     expense.total_amount = body.total_amount
     expense.default_sharers = default_sharers
+    expense.place = place_for(session, searcher, trip.id, body.place.kakao_place_id, body.place.name) if body.place else None
     expense.items = [
         LineItem(position=i, name=item.name, quantity=item.quantity, amount=item.amount, sharers=sharers)
         for i, (item, sharers) in enumerate(zip(body.items, item_sharers, strict=True))
@@ -175,6 +184,7 @@ def list_expenses(
             total_amount=e.total_amount,
             payer_name=e.payer.profile.display_name if e.payer else None,
             item_count=len(e.items),
+            place=place_out(e.place) if e.place else None,
         )
         for e in expenses
     ]
@@ -206,6 +216,7 @@ def create_expense(
     response: Response,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    searcher: PlaceSearcher = Depends(get_place_searcher),
 ) -> ExpenseOut:
     """총무가 지출 초안을 만든다. 같은 멱등 키로 다시 보내면 처음 만든 지출을 200으로 돌려준다."""
     organizer = require_organizer(session, trip_id, user)
@@ -217,7 +228,7 @@ def create_expense(
         return expense_out(existing)
 
     expense = Expense(trip_id=trip_id, idempotency_key=body.idempotency_key)
-    _apply(expense, body, organizer.trip)
+    _apply(session, searcher, expense, body, organizer.trip)
     session.add(expense)
     try:
         session.commit()
@@ -242,11 +253,12 @@ def update_expense(
     body: ExpenseIn,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    searcher: PlaceSearcher = Depends(get_place_searcher),
 ) -> ExpenseOut:
     """지출 내용을 통째로 바꾼다. 확정된 지출도 고칠 수 있고, 고치면 다시 초안이 된다."""
     organizer = require_organizer(session, trip_id, user)
     expense = _get_expense(session, trip_id, expense_id)
-    _apply(expense, body, organizer.trip)
+    _apply(session, searcher, expense, body, organizer.trip)
     session.commit()
     return expense_out(expense)
 

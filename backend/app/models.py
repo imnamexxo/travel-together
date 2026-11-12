@@ -132,6 +132,8 @@ class Expense(Base):
     idempotency_key: Mapped[str] = mapped_column(String(100))
     # 영수증으로 만든 지출이면 그 영수증(#14)
     receipt_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("receipts.id", ondelete="SET NULL"))
+    # 총무가 후보에서 고른 장소(#17). 자동으로 붙이지 않는다.
+    place_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("places.id"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -141,6 +143,7 @@ class Expense(Base):
 
     payer: Mapped[Member | None] = relationship()
     receipt: Mapped["Receipt | None"] = relationship()
+    place: Mapped["Place | None"] = relationship()
     default_sharers: Mapped[list[Member]] = relationship(
         secondary=expense_default_sharers, order_by=Member.join_order
     )

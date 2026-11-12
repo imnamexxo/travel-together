@@ -194,6 +194,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/expenses/place-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Expense Place Candidates
+         * @description 지출에 붙일 장소 후보. 위치 좌표 없이 검색어로만 찾는다(ADR-0003). 고르기 전에는 붙이지 않는다.
+         */
+        get: operations["expense_place_candidates_trips__trip_id__expenses_place_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{trip_id}/expenses": {
         parameters: {
             query?: never;
@@ -620,6 +640,7 @@ export interface components {
              * @default []
              */
             items: components["schemas"]["LineItemIn"][];
+            place?: components["schemas"]["PlaceRef"] | null;
             /** Idempotency Key */
             idempotency_key: string;
         };
@@ -646,6 +667,7 @@ export interface components {
              * @default []
              */
             items: components["schemas"]["LineItemIn"][];
+            place?: components["schemas"]["PlaceRef"] | null;
         };
         /** ExpenseOut */
         ExpenseOut: {
@@ -678,6 +700,26 @@ export interface components {
              * @default false
              */
             has_receipt: boolean;
+            place?: components["schemas"]["PlaceOut"] | null;
+        };
+        /** ExpensePlaceCandidate */
+        ExpensePlaceCandidate: {
+            /** Kakao Place Id */
+            kakao_place_id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address: string;
+            /** Road Address */
+            road_address: string | null;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Category */
+            category: string | null;
+            /** In Trip */
+            in_trip: boolean;
         };
         /** ExpenseSummary */
         ExpenseSummary: {
@@ -701,6 +743,7 @@ export interface components {
             payer_name: string | null;
             /** Item Count */
             item_count: number;
+            place?: components["schemas"]["PlaceOut"] | null;
         };
         /** Health */
         Health: {
@@ -1861,6 +1904,76 @@ export interface operations {
             };
             /** @description 검증 실패 */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    expense_place_candidates_trips__trip_id__expenses_place_candidates_get: {
+        parameters: {
+            query: {
+                /** @description 영수증 상호 또는 총무가 입력한 검색어 */
+                query: string;
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpensePlaceCandidate"][];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 카카오 실패 */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

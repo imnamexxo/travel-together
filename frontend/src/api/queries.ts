@@ -16,6 +16,7 @@ export const queryKeys = {
   planItems: (tripId: string) => ['trips', tripId, 'plan-items'] as const,
   placeSearch: (tripId: string, query: string) => ['trips', tripId, 'place-search', query] as const,
   photos: (tripId: string) => ['trips', tripId, 'photos'] as const,
+  expensePlaceCandidates: (tripId: string, query: string) => ['trips', tripId, 'expense-place-candidates', query] as const,
 };
 
 export function useMe() {
@@ -298,5 +299,16 @@ export function useUploadReceipt(tripId: string) {
   return useMutation({
     mutationFn: ({ uri, idempotencyKey }: { uri: string; idempotencyKey: string }) => api.uploadReceipt(tripId, { uri }, idempotencyKey),
     onSuccess: refresh,
+  });
+}
+
+/** 검색어를 정했을 때만 부른다. 자동으로 장소를 붙이지 않는다. */
+export function useExpensePlaceCandidates(tripId: string, query: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.expensePlaceCandidates(tripId, query),
+    queryFn: () => api.getExpensePlaceCandidates(tripId, query),
+    enabled: query.length > 0,
+    retry: false,
   });
 }
