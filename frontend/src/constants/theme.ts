@@ -7,6 +7,26 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/** Shared palette for the travel screens. Change these values to recolor the app. */
+export const TravelColors = {
+  background: '#FFFFFF',
+  primary: '#223858',
+  accent: '#365F8A',
+  text: '#202C3E',
+  textSecondary: '#5F6F83',
+  textMuted: '#6E7E92',
+  onPrimary: '#FFFFFF',
+  surface: '#F4F6F9',
+  banner: '#EDF2F8',
+  border: '#DBE3ED',
+  divider: '#E7ECF3',
+  inactive: '#8D9AAF',
+  waveBack: '#D7E2EF',
+  waveFront: '#ADBED5',
+  sun: '#D9C9B1',
+  error: '#B1443F',
+} as const;
+
 export const Colors = {
   light: {
     text: '#000000',

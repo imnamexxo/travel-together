@@ -1,18 +1,31 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { PreviewSessionProvider, usePreviewSession } from '@/features/auth/preview-session';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function Navigation() {
+  const { isPreview } = usePreviewSession();
+  return <Stack screenOptions={{ headerShown: false }}>
+    <Stack.Protected guard={!isPreview}>
+      <Stack.Screen name="login" />
+      <Stack.Screen name="signup" />
+    </Stack.Protected>
+    <Stack.Protected guard={isPreview}>
+      <Stack.Screen name="(tabs)" />
+    </Stack.Protected>
+  </Stack>;
+}
+
+export default function RootLayout() {
+  useEffect(() => { void SplashScreen.hideAsync(); }, []);
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+    <ThemeProvider value={DefaultTheme}>
+      <StatusBar style="dark" />
+      <PreviewSessionProvider><Navigation /></PreviewSessionProvider>
     </ThemeProvider>
   );
 }
