@@ -5,7 +5,8 @@ import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TravelColors as C } from '@/constants/theme';
-import { demoTrip } from '@/features/trip/demo';
+import { useCurrentTrip } from '@/features/trip/current-trip';
+import type { TripDay } from '@/features/trip/trip-dates';
 import { usePreviewTrip, type PreviewPhoto as Photo } from '@/features/trip/preview-state';
 import { previewPlaces } from '@/features/trip/places';
 
@@ -14,11 +15,11 @@ type AlbumRow = { kind: 'heading'; id: string; title: string; count: number } | 
 const places = previewPlaces.map((place) => place.name);
 const limit = 200;
 
-function makeRows(photos: Photo[], mode: Mode): AlbumRow[] {
+function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
   const groups = new Map<string, Photo[]>();
   const ordered = mode === 'date' ? [...photos].sort((a, b) => (a.day ?? 99) - (b.day ?? 99)) : photos;
   for (const photo of ordered) {
-    const key = mode === 'date' ? (photo.day === null ? '날짜 미지정' : `${photo.day + 1}일 차 · ${demoTrip.days[photo.day].title}`)
+    const key = mode === 'date' ? (photo.day === null ? '날짜 미지정' : `${photo.day + 1}일 차 · ${days[photo.day]?.title ?? ''}`)
       : mode === 'place' ? (photo.place ?? '장소 미연결') : '모든 사진';
     groups.set(key, [...(groups.get(key) ?? []), photo]);
   }
@@ -31,6 +32,7 @@ function makeRows(photos: Photo[], mode: Mode): AlbumRow[] {
 
 export default function AlbumScreen() {
   const { photos, setPhotos } = usePreviewTrip();
+  const { trip, days } = useCurrentTrip();
   const [mode, setMode] = useState<Mode>('all');
   const [day, setDay] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function AlbumScreen() {
   const contentWidth = Math.min(width, 600);
   const tile = (contentWidth - 48 - 8) / 3;
   const filtered = photos.filter((photo) => day === null || photo.day === day);
-  const rows = makeRows(filtered, mode);
+  const rows = makeRows(filtered, mode, days);
   const selected = photos.find((photo) => photo.id === selectedId);
   const selectedIndex = filtered.findIndex((photo) => photo.id === selectedId);
   const unlinked = photos.filter((photo) => photo.place === null).length;
@@ -95,7 +97,7 @@ export default function AlbumScreen() {
 
   const header = <>
     <View style={s.titleRow}>
-      <View style={s.titleCopy}><Text style={s.eyebrow}>{demoTrip.name}</Text><Text style={s.title}>여행의 순간</Text></View>
+      <View style={s.titleCopy}><Text style={s.eyebrow}>{trip.name}</Text><Text style={s.title}>여행의 순간</Text></View>
       <Pressable accessibilityRole="button" accessibilityLabel="사진 추가" disabled={busy} onPress={addPhotos} style={({ pressed }) => [s.plus, pressed && s.pressed]}>
         {busy ? <ActivityIndicator color={C.onPrimary} /> : <Text style={s.plusText}>＋</Text>}
       </Pressable>
@@ -108,7 +110,7 @@ export default function AlbumScreen() {
     ))}</View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
       <Pressable accessibilityRole="button" accessibilityState={{ selected: day === null }} onPress={() => setDay(null)} style={[s.chip, day === null && s.chipSelected]}><Text style={[s.chipText, day === null && s.chipTextSelected]}>모든 날짜</Text></Pressable>
-      {demoTrip.days.map((entry, index) => <Pressable key={entry.date} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => setDay(index)} style={[s.chip, day === index && s.chipSelected]}><Text style={[s.chipText, day === index && s.chipTextSelected]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
+      {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => setDay(index)} style={[s.chip, day === index && s.chipSelected]}><Text style={[s.chipText, day === index && s.chipTextSelected]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
     </ScrollView>
     {day !== null && <Text style={s.filterHint}>추가하는 사진은 {day + 1}일 차로 분류돼요.</Text>}
   </>;
@@ -150,7 +152,7 @@ export default function AlbumScreen() {
             <Text style={s.fieldTitle}>여행 날짜</Text><Text style={s.helper}>촬영일 자동 인식 전에는 직접 선택해주세요.</Text>
             <View style={s.detailChips}>
               <Pressable accessibilityRole="button" accessibilityState={{ selected: selected.day === null }} onPress={() => updateSelected({ day: null })} style={[s.chip, selected.day === null && s.chipSelected]}><Text style={[s.chipText, selected.day === null && s.chipTextSelected]}>미지정</Text></Pressable>
-              {demoTrip.days.map((entry, index) => <Pressable key={entry.date} accessibilityRole="button" accessibilityState={{ selected: selected.day === index }} onPress={() => updateSelected({ day: index })} style={[s.chip, selected.day === index && s.chipSelected]}><Text style={[s.chipText, selected.day === index && s.chipTextSelected]}>{index + 1}일 차</Text></Pressable>)}
+              {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: selected.day === index }} onPress={() => updateSelected({ day: index })} style={[s.chip, selected.day === index && s.chipSelected]}><Text style={[s.chipText, selected.day === index && s.chipTextSelected]}>{index + 1}일 차</Text></Pressable>)}
             </View>
             <Text style={s.fieldTitle}>연결된 장소</Text><Text style={s.helper}>예시 장소 중 선택할 수 있어요. 자동 연결은 추후 제공돼요.</Text>
             <View style={s.detailChips}>

@@ -2,13 +2,15 @@ import { renderRouter } from 'expo-router/testing-library';
 
 import type { ApiClient } from '@/api/client';
 import { AppProviders } from '@/app-providers';
-import TabLayout from '@/app/(tabs)/_layout';
-import AlbumScreen from '@/app/(tabs)/album';
-import PlannerScreen from '@/app/(tabs)/index';
-import MapScreen from '@/app/(tabs)/map';
-import SettlementScreen from '@/app/(tabs)/settlement';
+import TripListScreen from '@/app/index';
 import LoginScreen from '@/app/login';
 import SignupScreen from '@/app/signup';
+import TripLayout from '@/app/trips/[tripId]/_layout';
+import AlbumScreen from '@/app/trips/[tripId]/album';
+import PlannerScreen from '@/app/trips/[tripId]/index';
+import MapScreen from '@/app/trips/[tripId]/map';
+import SettlementScreen from '@/app/trips/[tripId]/settlement';
+import NewTripScreen from '@/app/trips/new';
 import type { AuthService } from '@/auth/auth-service';
 import { RootNavigator } from '@/components/root-navigator';
 
@@ -16,7 +18,7 @@ import { RootNavigator } from '@/components/root-navigator';
  * 실제 화면과 라우팅을 그리되, 인증 서비스와 API 클라이언트만 가짜로 넣는다.
  * (실제 루트 레이아웃은 Supabase를 불러오므로 쓰지 않는다.)
  */
-export function renderApp({ auth, api }: { auth: AuthService; api: ApiClient }) {
+export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; api: ApiClient; initialUrl?: string }) {
   return renderRouter(
     {
       _layout: () => (
@@ -26,12 +28,14 @@ export function renderApp({ auth, api }: { auth: AuthService; api: ApiClient }) 
       ),
       login: LoginScreen,
       signup: SignupScreen,
-      '(tabs)/_layout': TabLayout,
-      '(tabs)/index': PlannerScreen,
-      '(tabs)/album': AlbumScreen,
-      '(tabs)/map': MapScreen,
-      '(tabs)/settlement': SettlementScreen,
+      index: TripListScreen,
+      'trips/new': NewTripScreen,
+      'trips/[tripId]/_layout': TripLayout,
+      'trips/[tripId]/index': PlannerScreen,
+      'trips/[tripId]/album': AlbumScreen,
+      'trips/[tripId]/map': MapScreen,
+      'trips/[tripId]/settlement': SettlementScreen,
     },
-    { initialUrl: '/' },
+    { initialUrl },
   );
 }
