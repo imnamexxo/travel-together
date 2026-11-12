@@ -2721,6 +2721,105 @@
           }
         }
       }
+    },
+    "/trips/{trip_id}/photos/{photo_id}/place": {
+      "put": {
+        "tags": [
+          "photos"
+        ],
+        "summary": "Link Photo Place",
+        "description": "멤버 누구나 사진의 장소를 바꾸거나 해제한다. 수동 연결은 이후 자동으로 바뀌지 않는다.",
+        "operationId": "link_photo_place_trips__trip_id__photos__photo_id__place_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "photo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Photo Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoPlaceLink"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·사진 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "카카오 장소 검색 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2763,6 +2862,19 @@
             ],
             "title": "Taken At",
             "description": "촬영 시각(시간대 포함 ISO). 모르면 비운다"
+          },
+          "place_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Id",
+            "description": "앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다"
           }
         },
         "type": "object",
@@ -3457,6 +3569,31 @@
           "uploader_name": {
             "type": "string",
             "title": "Uploader Name"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "link_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Type"
           }
         },
         "type": "object",
@@ -3466,9 +3603,40 @@
           "taken_at",
           "uploaded_at",
           "uploader_member_id",
-          "uploader_name"
+          "uploader_name",
+          "place",
+          "link_type"
         ],
         "title": "PhotoOut"
+      },
+      "PhotoPlaceLink": {
+        "properties": {
+          "place_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Id"
+          },
+          "kakao_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PhotoPlaceLink",
+        "description": "사진의 장소를 바꾼다. 둘 다 비우면 연결을 해제한다."
       },
       "PlaceCandidateOut": {
         "properties": {

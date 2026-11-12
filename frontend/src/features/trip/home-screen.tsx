@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { PlanItem } from '@/api/client';
-import { queryKeys, useMe, usePlanItems } from '@/api/queries';
+import { queryKeys, useMe, usePhotos, usePlanItems } from '@/api/queries';
+import { photoDayIndex } from '@/features/album/album-screen';
 import TravelNotes from './travel-notes';
 import { useAuth } from '@/auth/auth-context';
 import { useCurrentTrip } from './current-trip';
@@ -27,12 +28,15 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { trip, days, isOrganizer } = useCurrentTrip();
   const planItems = usePlanItems(trip.id);
+  const photos = usePhotos(trip.id).data?.photos ?? [];
   const todayIndex = days.findIndex((d) => d.iso === todayInKorea());
   // 여행 중이면 오늘을 먼저 보여준다.
   const [selectedDay, setDay] = useState(Math.max(todayIndex, 0));
   const day = Math.min(selectedDay, days.length - 1);
   const [editing, setEditing] = useState<Editing>(null);
   const plans = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
+  // 일정 항목의 장소에 연결된 그날의 사진 수
+  const photoCount = (item: PlanItem) => item.place ? photos.filter((p) => p.place?.id === item.place!.id && photoDayIndex(p, days) === day).length : 0;
 
   function refresh() {
     void planItems.refetch();
@@ -66,6 +70,7 @@ export default function HomeScreen() {
           : !plans.length && <View style={s.empty}><Text style={s.itemTitle}>아직 정해진 일정이 없어요</Text><Text style={s.caption}>함께 가고 싶은 곳을 담아보세요.</Text></View>}
         {plans.map((item, index) => {
           const time = item.time?.slice(0, 5) ?? '';
+          const photosHere = photoCount(item);
           return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} onPress={() => setEditing({ item })} style={({ pressed }) => [s.row, pressed && s.pressed]}>
             <Text style={s.time}>{time || '—'}</Text><View style={s.rail}><View style={[s.dot, index === 0 && s.activeDot]} />{index < plans.length - 1 && <View style={s.line} />}</View>
             <View style={s.item}>
@@ -74,6 +79,7 @@ export default function HomeScreen() {
               <View style={s.meta}>
                 {!!item.place && item.place.name !== item.title && <Text style={s.metaText}>📍 {item.place.name}</Text>}
                 {item.estimated_cost != null && item.estimated_cost > 0 && <Text style={s.metaText}>예상 {money(item.estimated_cost)}</Text>}
+                {photosHere > 0 && <Text style={s.photoText}>사진 {photosHere}장</Text>}
               </View>
             </View>
           </Pressable>;

@@ -104,7 +104,7 @@ type FakeApiOptions = {
 export function photo(overrides: Partial<Photo> = {}): Photo {
   return {
     id: 'photo-1', url: 'https://storage.test/photo-1.jpg', taken_at: '2026-11-12T06:30:00Z', uploaded_at: '2026-11-12T07:00:00Z',
-    uploader_member_id: 'member-1', uploader_name: '민지', ...overrides,
+    uploader_member_id: 'member-1', uploader_name: '민지', place: null, link_type: null, ...overrides,
   };
 }
 
@@ -295,12 +295,22 @@ export function fakeApi(
     listPhotos: jest.fn(async (tripId) => ({ photos: [...photosOf(tripId)], count: photosOf(tripId).length, limit: photoLimit })),
     uploadPhoto: jest.fn(async (tripId, upload) => {
       const me = trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1';
-      const created = photo({ id: `uploaded-${photosOf(tripId).length + 1}`, url: upload.uri, taken_at: upload.takenAt, uploader_member_id: me, uploader_name: profile.display_name });
+      const linked = upload.placeId ? plansOf(tripId).find((i) => i.place?.id === upload.placeId)?.place ?? null : null;
+      const created = photo({ id: `uploaded-${photosOf(tripId).length + 1}`, url: upload.uri, taken_at: upload.takenAt, uploader_member_id: me, uploader_name: profile.display_name, place: linked, link_type: linked ? 'auto' : null });
       photosOf(tripId).push(created);
       return created;
     }),
     deletePhoto: jest.fn(async (tripId, photoId) => {
       photoStore[tripId] = photosOf(tripId).filter((p) => p.id !== photoId);
+    }),
+    linkPhotoPlace: jest.fn(async (tripId, photoId, link) => {
+      const target = photosOf(tripId).find((p) => p.id === photoId)!;
+      const known = plansOf(tripId).map((i) => i.place).filter((p) => p !== null);
+      const candidate = link.kakao_place ? placeCandidates.find((c) => c.kakao_place_id === link.kakao_place!.kakao_place_id) : undefined;
+      target.place = link.place_id ? known.find((p) => p.id === link.place_id) ?? null
+        : candidate ? place({ id: `place-${candidate.kakao_place_id}`, kakao_place_id: candidate.kakao_place_id, name: candidate.name }) : null;
+      target.link_type = target.place ? 'manual' : null;
+      return { ...target };
     }),
     reorderPlanItems: jest.fn(async (tripId, date, itemIds) => {
       for (const item of plansOf(tripId)) if (item.date === date) item.position = itemIds.indexOf(item.id);

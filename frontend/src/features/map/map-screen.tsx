@@ -6,15 +6,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import { usePhotos, usePlanItems } from '@/api/queries';
-import type { PlanItem } from '@/api/client';
+import { photoDayIndex } from '@/features/album/album-screen';
+import type { Photo, PlanItem } from '@/api/client';
 import PlaceMap from './place-map';
 
 type Filter = 'all' | 'visited' | 'planned';
+// 사진을 아직 못 받았을 때 매번 새 배열을 만들지 않도록(useMemo가 매번 다시 계산하지 않게).
+const NO_PHOTOS: Photo[] = [];
 export default function MapScreen() {
   const { trip, days } = useCurrentTrip();
   const planItems = usePlanItems(trip.id);
   const photoList = usePhotos(trip.id);
-  const photos = photoList.data?.photos ?? [];
+  const photos = photoList.data?.photos ?? NO_PHOTOS;
   const [day, setDay] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -28,17 +31,20 @@ export default function MapScreen() {
       entry.plans.push({ ...item, day: dayOf(item) });
       byPlace.set(item.place.id, entry);
     }
+    // 일정에 없던 곳도 사진을 직접 연결했으면 들른 곳으로 핀이 생긴다.
+    for (const photo of photos) {
+      if (photo.place && !byPlace.has(photo.place.id)) byPlace.set(photo.place.id, { place: photo.place, plans: [] });
+    }
     return [...byPlace.values()].map(({ place, plans }) => {
-      // 사진의 장소 연결은 #10에서 생긴다. 그전까지 모든 사진은 장소 미연결이다.
-      const linkedPhotos: typeof photos = [];
+      const linkedPhotos = photos.filter((photo) => photo.place?.id === place.id && (day === null || photoDayIndex(photo, days) === day));
       const dayPlans = plans.filter((item) => day === null || item.day === day).sort((a, b) => a.day - b.day || a.position - b.position);
       return { id: place.id, name: place.name, area: place.road_address ?? place.address, latitude: place.latitude, longitude: place.longitude, photos: linkedPhotos, plans: dayPlans, visited: linkedPhotos.length > 0 };
     }).filter((place) => (place.plans.length > 0 || place.photos.length > 0)
       && (filter === 'all' || (filter === 'visited' ? place.visited : !place.visited)));
-  }, [planItems.data, day, filter, days]);
+  }, [planItems.data, photos, day, filter, days]);
   const pins = useMemo(() => places.map(({ id, name, latitude, longitude, visited }) => ({ id, name, latitude, longitude, visited })), [places]);
   const selected = places.find((place) => place.id === selectedId) ?? places[0];
-  const unlinkedPhotos = photos.length;
+  const unlinkedPhotos = photos.filter((photo) => !photo.place).length;
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <View style={s.heading}>

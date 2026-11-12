@@ -1,14 +1,15 @@
 /**
  * 기기에서 사진을 고르고 올릴 준비를 한다(네이티브 모듈은 이 파일에만 둔다. 테스트에서는 통째로 가짜로 바꾼다).
  *
- * 줄이기 전에 원본 EXIF에서 촬영 시각만 읽는다. 긴 변 1600px JPEG로 다시 저장하면 EXIF가 모두 빠진다.
- * 촬영 위치(GPS)는 서버로 보내지 않는다(ADR-0003).
+ * 줄이기 전에 원본 EXIF에서 촬영 시각과 촬영 위치를 읽는다. 위치는 휴대폰 안에서 장소를 찾는 데만 쓰고
+ * 서버로 보내지 않는다(ADR-0003). 긴 변 1600px JPEG로 다시 저장하면 EXIF가 모두 빠진다.
  */
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { takenAtFromExif } from './exif-time';
+import { gpsFromExif, type Gps } from './photo-location';
 
 export type PickedPhoto = {
   /** 기기 안에서 사진을 구분하는 값(같은 사진을 두 번 고르지 않게) */
@@ -17,6 +18,8 @@ export type PickedPhoto = {
   width: number;
   height: number;
   takenAt: string | null;
+  /** 자동 연결 계산에만 쓰고 서버로 보내지 않는다. */
+  gps: Gps | null;
 };
 
 const LONG_EDGE = 1600;
@@ -33,6 +36,7 @@ export async function pickPhotos(limit: number): Promise<PickedPhoto[] | null> {
     width: asset.width,
     height: asset.height,
     takenAt: takenAtFromExif(asset.exif),
+    gps: gpsFromExif(asset.exif),
   }));
 }
 

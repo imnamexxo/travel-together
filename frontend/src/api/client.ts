@@ -29,7 +29,8 @@ export type SuggestionAsk = components['schemas']['SuggestionAsk'];
 export type Photo = components['schemas']['PhotoOut'];
 export type PhotoList = components['schemas']['PhotoList'];
 /** 올릴 사진: 기기 안의 JPEG 파일과 촬영 시각. 위치 좌표는 넣지 않는다(ADR-0003). */
-export type PhotoUpload = { uri: string; takenAt: string | null };
+export type PhotoUpload = { uri: string; takenAt: string | null; placeId?: string | null };
+export type PhotoPlaceLink = components['schemas']['PhotoPlaceLink'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -100,6 +101,8 @@ export interface ApiClient {
   listPhotos(tripId: string): Promise<PhotoList>;
   uploadPhoto(tripId: string, photo: PhotoUpload): Promise<Photo>;
   deletePhoto(tripId: string, photoId: string): Promise<void>;
+  /** 사진의 장소를 바꾼다(수동). 둘 다 비우면 해제. */
+  linkPhotoPlace(tripId: string, photoId: string, link: PhotoPlaceLink): Promise<Photo>;
 }
 
 type ApiClientOptions = {
@@ -187,8 +190,10 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
       // React Native의 FormData는 {uri, name, type}으로 기기 파일을 보낸다.
       form.append('file', { uri: photo.uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
       if (photo.takenAt) form.append('taken_at', photo.takenAt);
+      if (photo.placeId) form.append('place_id', photo.placeId);
       return request<Photo>('POST', `${trip(tripId)}/photos`, form);
     },
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
+    linkPhotoPlace: (tripId, photoId, link) => request<Photo>('PUT', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}/place`, link),
   };
 }
