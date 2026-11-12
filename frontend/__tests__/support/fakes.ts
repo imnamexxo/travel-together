@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Member, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -73,13 +73,32 @@ export function tripDetail(overrides: Partial<TripDetail> = {}): TripDetail {
   };
 }
 
-/** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. 여행은 내가 멤버인 것만 넣는다. */
+export function member(overrides: Partial<Member> = {}): Member {
+  return { member_id: 'member-1', display_name: '민지', join_order: 1, is_organizer: true, is_me: true, ...overrides };
+}
+
+type FakeApiOptions = {
+  /** 내가 멤버인 여행 */
+  trips?: TripDetail[];
+  /** 여행 id → 멤버 목록. 없으면 나 혼자다. */
+  members?: Record<string, Member[]>;
+  /** 초대 코드 → 들어갈 수 있는(아직 멤버가 아닌) 여행 */
+  joinable?: Record<string, TripDetail>;
+};
+
+/** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [] as TripDetail[] } = {},
+  { trips = [], members = {}, joinable = {} }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
+  const codes = new Map<string, string>();
+  let issued = 0;
+  const codeOf = (tripId: string) => {
+    if (!codes.has(tripId)) codes.set(tripId, `CODE${String(++issued).padStart(4, '2')}`);
+    return codes.get(tripId)!;
+  };
   const summary = (trip: TripDetail): TripSummary => ({
     id: trip.id,
     name: trip.name,
@@ -99,6 +118,18 @@ export function fakeApi(
     getTrip: jest.fn(async (tripId) => {
       const trip = store.find((t) => t.id === tripId);
       if (!trip) throw new ApiError(404, 'trip_not_found', '여행을 찾을 수 없습니다.');
+      return trip;
+    }),
+    listMembers: jest.fn(async (tripId) => members[tripId] ?? [member()]),
+    getInviteCode: jest.fn(async (tripId) => ({ code: codeOf(tripId) })),
+    reissueInviteCode: jest.fn(async (tripId) => {
+      codes.delete(tripId);
+      return { code: codeOf(tripId) };
+    }),
+    joinTrip: jest.fn(async (code) => {
+      const trip = joinable[code];
+      if (!trip) throw new ApiError(404, 'invalid_invite_code', '초대 코드가 맞지 않습니다. 총무에게 새 코드를 받아 주세요.');
+      if (!store.some((t) => t.id === trip.id)) store.unshift(trip);
       return trip;
     }),
     ...overrides,
