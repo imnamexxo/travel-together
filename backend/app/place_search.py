@@ -4,10 +4,15 @@
 좌표는 장소의 위치이거나 검색 기준점이다. 사람의 위치를 받지 않는다(ADR-0003).
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Protocol
 
 import httpx
+
+from app.storage import describe
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -23,6 +28,11 @@ class PlaceCandidate:
 
 class PlaceSearchUnavailable(Exception):
     """카카오에 묻지 못했다(키 없음, 네트워크, 카카오 오류)."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        # 앱에는 짧은 문구만 가므로, 원인(키 없음, 401, 버킷 없음 등)은 Render 로그에서 본다. 키 값은 담기지 않는다.
+        logger.warning("카카오 장소 검색 실패: %s", reason)
 
 
 class PlaceSearcher(Protocol):
@@ -50,7 +60,7 @@ class KakaoPlaceSearcher:
             response.raise_for_status()
             documents = response.json()["documents"]
         except (httpx.HTTPError, KeyError, ValueError) as exc:
-            raise PlaceSearchUnavailable(str(exc)) from exc
+            raise PlaceSearchUnavailable(describe(exc)) from exc
         return [
             PlaceCandidate(
                 kakao_place_id=str(d["id"]),

@@ -4,11 +4,14 @@
 응답 형식은 google-genai의 응답 스키마 지정으로 강제하고, 받은 뒤에도 다시 검사한다.
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Protocol
 
 from pydantic import BaseModel, Field, ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class SuggestedStop(BaseModel):
@@ -40,6 +43,11 @@ class SuggestionFormatError(Exception):
 
 class SuggestionUnavailable(Exception):
     """Gemini에 묻지 못했다(키 없음, 네트워크, 할당량)."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        # 앱에는 짧은 문구만 가므로, 원인(키 없음, 401, 버킷 없음 등)은 Render 로그에서 본다. 키 값은 담기지 않는다.
+        logger.warning("Gemini 추천 요청 실패: %s", reason)
 
 
 class PlanSuggester(Protocol):

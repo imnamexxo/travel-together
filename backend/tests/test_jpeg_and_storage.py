@@ -86,3 +86,13 @@ def test_errors_and_missing_key_are_unavailable():
         storage_with(lambda request: httpx.Response(403, json={"error": "denied"})).upload("k", b"x", "image/jpeg")
     with pytest.raises(StorageUnavailable):
         SupabaseStorage("https://proj.supabase.co", "", "trip-media").upload("k", b"x", "image/jpeg")
+
+
+def test_failure_reason_is_logged_without_the_key(caplog):
+    storage = storage_with(lambda request: httpx.Response(400, json={"statusCode": "404", "error": "Bucket not found"}))
+
+    with pytest.raises(StorageUnavailable):
+        storage.upload("a.jpg", b"x", "image/jpeg")
+
+    assert "Supabase 저장소 요청 실패" in caplog.text and "Bucket not found" in caplog.text
+    assert "sb_secret_x" not in caplog.text
