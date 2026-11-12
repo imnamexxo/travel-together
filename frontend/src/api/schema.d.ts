@@ -498,6 +498,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/photos/{photo_id}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Link Photo Place
+         * @description 멤버 누구나 사진의 장소를 바꾸거나 해제한다. 수동 연결은 이후 자동으로 바뀌지 않는다.
+         */
+        put: operations["link_photo_place_trips__trip_id__photos__photo_id__place_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -519,6 +539,11 @@ export interface components {
              * @description 촬영 시각(시간대 포함 ISO). 모르면 비운다
              */
             taken_at?: string | null;
+            /**
+             * Place Id
+             * @description 앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다
+             */
+            place_id?: string | null;
         };
         /** ErrorDetail */
         ErrorDetail: {
@@ -764,6 +789,18 @@ export interface components {
             uploader_member_id: string;
             /** Uploader Name */
             uploader_name: string;
+            place: components["schemas"]["PlaceOut"] | null;
+            /** Link Type */
+            link_type: ("auto" | "manual") | null;
+        };
+        /**
+         * PhotoPlaceLink
+         * @description 사진의 장소를 바꾼다. 둘 다 비우면 연결을 해제한다.
+         */
+        PhotoPlaceLink: {
+            /** Place Id */
+            place_id?: string | null;
+            kakao_place?: components["schemas"]["PlaceRef"] | null;
         };
         /** PlaceCandidateOut */
         PlaceCandidateOut: {
@@ -3008,6 +3045,69 @@ export interface operations {
             };
             /** @description 검증 실패 */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    link_photo_place_trips__trip_id__photos__photo_id__place_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                photo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoPlaceLink"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotoOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·사진 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 카카오 장소 검색 실패 */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

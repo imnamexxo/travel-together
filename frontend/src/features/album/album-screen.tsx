@@ -1,18 +1,19 @@
 import { useRef, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { Photo } from '@/api/client';
-import { useDeletePhoto, usePhotos } from '@/api/queries';
+import type { Photo, PhotoPlaceLink, Place } from '@/api/client';
+import { useDeletePhoto, useLinkPhotoPlace, usePhotos, usePlaceSearch, usePlanItems } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
+import { autoPlaceId } from './photo-location';
 import { pickPhotos } from './photo-prep';
 import { usePhotoUploads } from './use-photo-uploads';
 
-type Mode = 'all' | 'date' | 'uploader';
+type Mode = 'all' | 'date' | 'place' | 'uploader';
 type AlbumRow = { kind: 'heading'; id: string; title: string; count: number } | { kind: 'photos'; id: string; photos: Photo[] };
 const DEFAULT_LIMIT = 200;
 
@@ -30,6 +31,7 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
   for (const photo of ordered) {
     const index = photoDayIndex(photo, days);
     const key = mode === 'date' ? (index < 0 ? '날짜 미지정' : `${index + 1}일 차 · ${days[index].title}`)
+      : mode === 'place' ? (photo.place?.name ?? '장소 미연결')
       : mode === 'uploader' ? `${photo.uploader_name}님이 올린 사진` : '모든 사진';
     groups.set(key, [...(groups.get(key) ?? []), photo]);
   }
@@ -43,6 +45,7 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
 export default function AlbumScreen() {
   const { trip, days, isOrganizer } = useCurrentTrip();
   const photoList = usePhotos(trip.id);
+  const planItems = usePlanItems(trip.id);
   const remove = useDeletePhoto(trip.id);
   const uploader = usePhotoUploads(trip.id);
   const [mode, setMode] = useState<Mode>('all');
@@ -64,6 +67,7 @@ export default function AlbumScreen() {
   const canDelete = (photo: Photo) => isOrganizer || photo.uploader_member_id === trip.me.member_id;
   const failed = uploader.uploads.filter((u) => u.status === 'failed');
   const doneCount = uploader.uploads.filter((u) => u.status === 'done').length;
+  const unlinked = photos.filter((photo) => !photo.place).length;
 
   async function addPhotos() {
     if (pickingRef.current || uploader.busy) return;
@@ -71,7 +75,11 @@ export default function AlbumScreen() {
     pickingRef.current = true; setPicking(true);
     try {
       const picked = await pickPhotos(remaining);
-      if (picked?.length) uploader.start(picked);
+      if (!picked?.length) return;
+      // 일정을 아직 못 받았으면 받아 온 뒤 장소를 찾는다.
+      const items = planItems.data ?? (await planItems.refetch()).data ?? [];
+      // 촬영 위치는 여기서 장소를 찾는 데만 쓰고 버린다. 서버에는 장소 id만 간다.
+      uploader.start(picked, (p) => autoPlaceId(p.gps, p.takenAt, items));
     } catch {
       Alert.alert('사진을 불러오지 못했어요', '사진 선택 권한과 기기의 사진 상태를 확인하고 다시 시도해주세요.');
     } finally { pickingRef.current = false; setPicking(false); }
@@ -97,7 +105,7 @@ export default function AlbumScreen() {
         {busy ? <ActivityIndicator color={C.onPrimary} /> : <Text style={s.plusText}>＋</Text>}
       </Pressable>
     </View>
-    <Text style={s.subtitle}>{photos.length}장의 사진 · {remaining <= 20 ? `남은 장수 ${remaining}장` : `${limit}장까지 담을 수 있어요`}</Text>
+    <Text style={s.subtitle}>{photos.length}장의 사진 · {remaining <= 20 ? `남은 장수 ${remaining}장` : `${limit}장까지 담을 수 있어요`}{unlinked > 0 ? ` · 장소 미연결 ${unlinked}장` : ''}</Text>
     {uploader.uploads.length > 0 && <View style={s.uploadBox}>
       <Text style={s.uploadTitle}>{uploader.busy ? `사진 올리는 중 · ${doneCount + failed.length + 1}/${uploader.uploads.length}` : `${uploader.uploads.length}장 중 ${doneCount}장 올렸어요${failed.length ? ` · ${failed.length}장 실패` : ''}`}</Text>
       {failed.map((u) => <Text key={u.key} style={s.uploadError}>사진 {uploader.uploads.indexOf(u) + 1}: {u.error}</Text>)}
@@ -106,7 +114,7 @@ export default function AlbumScreen() {
         {!uploader.busy && <Pressable accessibilityRole="button" accessibilityLabel="업로드 결과 닫기" onPress={uploader.clear} style={s.navButton}><Text style={s.navText}>닫기</Text></Pressable>}
       </View>
     </View>}
-    <View style={s.modes}>{([{ key: 'all', title: '전체' }, { key: 'date', title: '날짜별' }, { key: 'uploader', title: '올린 사람' }] as const).map((entry) => (
+    <View style={s.modes}>{([{ key: 'all', title: '전체' }, { key: 'date', title: '날짜별' }, { key: 'place', title: '장소별' }, { key: 'uploader', title: '올린 사람' }] as const).map((entry) => (
       <Pressable key={entry.key} accessibilityRole="tab" accessibilityState={{ selected: mode === entry.key }} onPress={() => setMode(entry.key)} style={[s.mode, mode === entry.key && s.modeSelected]}>
         <Text style={[s.modeText, mode === entry.key && s.modeTextSelected]}>{entry.title}</Text>
       </Pressable>
@@ -157,12 +165,57 @@ export default function AlbumScreen() {
             <Text style={s.fieldTitle}>올린 사람</Text><Text style={s.helper}>{selected.uploader_name}</Text>
             <Text style={s.fieldTitle}>촬영 시각</Text>
             <Text style={s.helper}>{selected.taken_at ? (() => { const t = toKstParts(selected.taken_at); const index = photoDayIndex(selected, days); return `${index >= 0 ? `${index + 1}일 차 · ` : ''}${t.date} ${t.time}`; })() : '촬영 시각 정보가 없는 사진이에요.'}</Text>
+            <PlaceSection photo={selected} />
             {!canDelete(selected) && <Text style={s.helper}>사진은 올린 사람과 총무만 지울 수 있어요.</Text>}
           </View>
         </ScrollView>}
       </SafeAreaView>
     </Modal>
   </SafeAreaView>;
+}
+
+/** 사진 상세의 장소: 연결된 장소와 그날 그 장소의 일정, 연결 바꾸기·해제, 일정에 없던 곳 검색해 연결. */
+function PlaceSection({ photo }: { photo: Photo }) {
+  const { trip, days } = useCurrentTrip();
+  const planItems = usePlanItems(trip.id);
+  const link = useLinkPhotoPlace(trip.id);
+  const [query, setQuery] = useState('');
+  const [submitted, setSubmitted] = useState('');
+  const search = usePlaceSearch(trip.id, submitted);
+  const [error, setError] = useState<string | null>(null);
+  const tripPlaces = [...new Map((planItems.data ?? []).filter((i) => i.place).map((i) => [i.place!.id, i.place as Place])).values()];
+  const dayIso = photo.taken_at ? toKstParts(photo.taken_at).date : null;
+  const plansHere = (planItems.data ?? []).filter((i) => photo.place && i.place?.id === photo.place.id && (!dayIso || i.date === dayIso));
+  const dayNumber = (iso: string) => days.findIndex((d) => d.iso === iso) + 1;
+
+  function change(body: PhotoPlaceLink) {
+    setError(null);
+    link.mutate({ photoId: photo.id, link: body }, {
+      onSuccess: () => { setQuery(''); setSubmitted(''); },
+      onError: (e) => setError(e.message),
+    });
+  }
+
+  return <>
+    <Text style={s.fieldTitle}>연결된 장소</Text>
+    <Text style={s.helper}>{photo.place ? `${photo.place.name}${photo.link_type === 'auto' ? ' · 촬영 위치로 자동 연결' : ' · 직접 연결'}` : '장소에 연결되지 않은 사진이에요. 촬영 날짜로만 분류돼요.'}</Text>
+    {plansHere.map((i) => <Text key={i.id} style={s.helper}>📅 {dayNumber(i.date)}일 차 {i.time?.slice(0, 5) ?? ''} {i.title}</Text>)}
+    <View style={s.detailChips}>
+      {tripPlaces.map((p) => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${p.name}에 연결`} accessibilityState={{ selected: photo.place?.id === p.id, disabled: link.isPending }} disabled={link.isPending} onPress={() => change({ place_id: p.id })} style={[s.chip, photo.place?.id === p.id && s.chipSelected]}><Text style={[s.chipText, photo.place?.id === p.id && s.chipTextSelected]}>{p.name}</Text></Pressable>)}
+      {!!photo.place && <Pressable accessibilityRole="button" accessibilityLabel="장소 연결 해제" disabled={link.isPending} onPress={() => change({})} style={s.chip}><Text style={s.chipText}>연결 해제</Text></Pressable>}
+    </View>
+    <Text style={s.helper}>일정에 없던 곳이면 검색해서 연결하세요. 지도에 들른 곳으로 남아요.</Text>
+    <View style={s.searchRow}>
+      <TextInput accessibilityLabel="사진 장소 검색" value={query} onChangeText={setQuery} placeholder="예: 성산일출봉" returnKeyType="search" onSubmitEditing={() => setSubmitted(query.trim())} style={s.searchInput} maxLength={100} />
+      <Pressable accessibilityRole="button" accessibilityLabel="사진 장소 검색하기" onPress={() => setSubmitted(query.trim())} style={s.searchButton}><Text style={s.searchButtonText}>검색</Text></Pressable>
+    </View>
+    {!!submitted && (search.isPending ? <ActivityIndicator color={C.primary} /> : search.isError ? <Text style={s.errorText}>{search.error.message}</Text>
+      : !search.data.length ? <Text style={s.helper}>검색 결과가 없어요.</Text>
+      : search.data.map((c) => <Pressable key={c.kakao_place_id} accessibilityRole="button" accessibilityLabel={`${c.name}로 연결`} disabled={link.isPending} onPress={() => change({ kakao_place: { kakao_place_id: c.kakao_place_id, name: c.name } })} style={s.result}>
+        <Text style={s.resultName}>{c.name}</Text><Text style={s.helper}>{c.road_address ?? c.address}</Text>
+      </Pressable>))}
+    {!!error && <Text accessibilityRole="alert" style={s.errorText}>{error}</Text>}
+  </>;
 }
 
 const s = StyleSheet.create({
@@ -197,4 +250,9 @@ const s = StyleSheet.create({
   navButton: { minWidth: 44, minHeight: 48, justifyContent: 'center', alignItems: 'center' }, navText: { fontSize: 14, color: C.accent }, deleteText: { fontSize: 14, color: C.error }, detailTitle: { fontSize: 16, fontWeight: '600', color: C.text },
   detailsBody: { paddingHorizontal: 24 }, disabled: { color: C.inactive }, fieldTitle: { fontSize: 14, fontWeight: '600', color: C.text, marginTop: 24 },
   helper: { fontSize: 12, color: C.textMuted, lineHeight: 20, marginTop: 8 },
+  detailChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  searchRow: { flexDirection: 'row', gap: 8, marginTop: 10 }, searchInput: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 14, fontSize: 15, color: C.text },
+  searchButton: { minHeight: 46, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.primary, justifyContent: 'center' }, searchButtonText: { color: C.onPrimary, fontWeight: '600' },
+  result: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, resultName: { fontSize: 14, fontWeight: '600', color: C.text },
+  errorText: { fontSize: 12, color: C.error, marginTop: 8 },
 });

@@ -23,7 +23,7 @@ function signedIn() {
   return auth;
 }
 
-const picked = (key: string, takenAt: string | null = '2026-11-12T15:30:00+09:00'): PickedPhoto => ({ key, uri: `file:///original/${key}.heic`, width: 4000, height: 3000, takenAt });
+const picked = (key: string, takenAt: string | null = '2026-11-12T15:30:00+09:00'): PickedPhoto => ({ key, uri: `file:///original/${key}.heic`, width: 4000, height: 3000, takenAt, gps: null });
 const organizerTrip = tripDetail({ me: { member_id: 'm1', join_order: 1, is_organizer: true } });
 const memberTrip = tripDetail({ me: { member_id: 'm2', join_order: 2, is_organizer: false } });
 
@@ -47,11 +47,11 @@ test('고른 사진을 줄여서 촬영 시각과 함께 한 장씩 올린다', 
 
   expect(await screen.findByText('2장 중 2장 올렸어요')).toBeOnTheScreen();
   expect(api.uploadPhoto.mock.calls).toEqual([
-    ['trip-jeju', { uri: 'file:///resized/a.jpg', takenAt: '2026-11-12T15:30:00+09:00' }],
-    ['trip-jeju', { uri: 'file:///resized/b.jpg', takenAt: null }],
+    ['trip-jeju', { uri: 'file:///resized/a.jpg', takenAt: '2026-11-12T15:30:00+09:00', placeId: null }],
+    ['trip-jeju', { uri: 'file:///resized/b.jpg', takenAt: null, placeId: null }],
   ]);
   expect(mockPick).toHaveBeenCalledWith(200);
-  expect(await screen.findByText('2장의 사진 · 200장까지 담을 수 있어요')).toBeOnTheScreen();
+  expect(await screen.findByText(/^2장의 사진 · 200장까지 담을 수 있어요/)).toBeOnTheScreen();
 });
 
 test('일부가 실패하면 장별 결과가 보이고, 실패한 사진만 다시 올린다', async () => {
@@ -96,7 +96,7 @@ test('200장에 가까워지면 남은 장수가 보이고, 가득 차면 고르
   const alert = spyOnAlerts();
   render({ photoLimit: 2, photos: { 'trip-jeju': [photo({ id: 'p1' }), photo({ id: 'p2' })] } });
 
-  expect(await screen.findByText('2장의 사진 · 남은 장수 0장')).toBeOnTheScreen();
+  expect(await screen.findByText(/^2장의 사진 · 남은 장수 0장/)).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '사진 추가' }));
 
   expect(alert).toHaveBeenCalledWith('사진이 가득 찼어요', '이 여행에는 사진을 최대 2장까지 담을 수 있어요.');

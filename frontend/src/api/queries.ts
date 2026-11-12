@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -276,5 +276,18 @@ export function useDeletePhoto(tripId: string) {
   return useMutation({
     mutationFn: (photoId: string) => api.deletePhoto(tripId, photoId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.photos(tripId) }),
+  });
+}
+
+export function useLinkPhotoPlace(tripId: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ photoId, link }: { photoId: string; link: PhotoPlaceLink }) => api.linkPhotoPlace(tripId, photoId, link),
+    // 사진으로 새 장소가 생길 수 있으므로 사진과 일정(지도)을 다시 불러온다.
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos(tripId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.planItems(tripId) }),
+    ]),
   });
 }
