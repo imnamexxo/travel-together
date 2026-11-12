@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ErrorResponse
-from app.models import Expense
+from app.models import Expense, Transfer
 from app.permissions import require_member
-from app.settlement import ExpenseIn, ItemIn, MemberIn, settle
+from app.settlement import ExpenseIn, ItemIn, MemberIn, TransferIn, settle
 
 router = APIRouter(prefix="/trips/{trip_id}/settlement", tags=["settlement"], responses=ERROR_RESPONSES)
 
@@ -60,7 +60,10 @@ def get_settlement(
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> SettlementOut:
-    """확정된 지출과 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다."""
+    """확정된 지출과 기록된 송금으로 계산한 정산 결과. 초안·확인 필요 지출은 들어가지 않는다.
+
+    송금이 기록된 뒤 지출이 바뀌면 여기서 다시 계산된다(재정산). 기록된 송금은 바뀌지 않는다.
+    """
     me = require_member(session, trip_id, user)
     members = me.trip.members
     names = {m.id: m.profile.display_name for m in members}
@@ -81,6 +84,10 @@ def get_settlement(
                 items=[ItemIn(i.id, i.name, i.amount or 0, [s.id for s in i.sharers]) for i in e.items],
             )
             for e in confirmed
+        ],
+        transfers=[
+            TransferIn(t.from_member_id, t.to_member_id, t.amount)
+            for t in session.scalars(select(Transfer).where(Transfer.trip_id == trip_id))
         ],
     )
     order = {m.id: m.join_order for m in members}

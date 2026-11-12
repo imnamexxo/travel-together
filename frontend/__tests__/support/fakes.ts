@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Settlement, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Settlement, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -88,6 +88,8 @@ type FakeApiOptions = {
   expenses?: Record<string, Expense[]>;
   /** 여행 id → 서버가 계산했다고 치는 정산 결과. 없으면 지출이 없는 정산이다. */
   settlements?: Record<string, Settlement>;
+  /** 여행 id → 기록된 송금 */
+  transfers?: Record<string, Transfer[]>;
 };
 
 export function expense(overrides: Partial<Expense> = {}): Expense {
@@ -100,7 +102,7 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {} }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {} }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -118,6 +120,8 @@ export function fakeApi(
     payer_name: membersOf(tripId).find((m) => m.member_id === e.payer_member_id)?.display_name ?? null, item_count: e.items.length,
   });
   const keys = new Map<string, string>();
+  const transferStore: Record<string, Transfer[]> = Object.fromEntries(Object.entries(transfers).map(([id, list]) => [id, [...list]]));
+  const transfersOf = (tripId: string) => (transferStore[tripId] ??= []);
   const fromInput = (id: string, input: Parameters<ApiClient['updateExpense']>[2]): Expense => ({
     id, status: 'draft', payer_member_id: input.payer_member_id ?? null, paid_at: input.paid_at ?? null,
     merchant_name: input.merchant_name ?? null, total_amount: input.total_amount ?? null, default_sharer_ids: input.default_sharer_ids ?? [],
@@ -204,6 +208,19 @@ export function fakeApi(
     getSettlement: jest.fn(async (tripId) => settlements[tripId] ?? {
       confirmed_total: 0, confirmed_count: 0, is_settled: true, suggested_transfers: [], shares: [],
       members: membersOf(tripId).map((m) => ({ member_id: m.member_id, display_name: m.display_name, join_order: m.join_order, paid: 0, owed: 0, sent: 0, received: 0, balance: 0 })),
+    }),
+    listTransfers: jest.fn(async (tripId) => transfersOf(tripId)),
+    recordTransfer: jest.fn(async (tripId, input) => {
+      const name = (id: string) => membersOf(tripId).find((m) => m.member_id === id)?.display_name ?? '?';
+      const recorded: Transfer = {
+        id: `transfer-${transfersOf(tripId).length + 1}`, from_member_id: input.from_member_id, from_name: name(input.from_member_id),
+        to_member_id: input.to_member_id, to_name: name(input.to_member_id), amount: input.amount, recorded_at: '2026-11-14T03:00:00Z',
+      };
+      transfersOf(tripId).unshift(recorded);
+      return recorded;
+    }),
+    deleteTransfer: jest.fn(async (tripId, transferId) => {
+      transferStore[tripId] = transfersOf(tripId).filter((t) => t.id !== transferId);
     }),
     ...overrides,
   } as jest.Mocked<ApiClient>;

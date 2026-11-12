@@ -1,4 +1,4 @@
-"""지출 규칙: 확정 조건, 멤버가 지출에 엮였는지."""
+"""지출 규칙: 확정 조건, 멤버가 지출·송금에 엮였는지."""
 
 import uuid
 
@@ -6,7 +6,7 @@ from sqlalchemy import exists, or_, select
 from sqlalchemy.orm import Session
 
 from app.errors import ErrorDetail
-from app.models import Expense, expense_default_sharers, line_item_sharers
+from app.models import Expense, Transfer, expense_default_sharers, line_item_sharers
 
 
 def won(amount: int) -> str:
@@ -51,8 +51,8 @@ def broken_conditions(expense: Expense) -> list[ErrorDetail]:
     return broken
 
 
-def is_involved_in_expenses(session: Session, member_id: uuid.UUID) -> bool:
-    """결제자나 분담 대상(기본 분담 대상 포함)으로 지정된 적이 있는가. 지출 상태와 상관없다."""
+def has_money_records(session: Session, member_id: uuid.UUID) -> bool:
+    """결제자·분담 대상(기본 분담 대상 포함)이거나 송금 기록에 있는가. 지출 상태와 상관없다."""
     return bool(
         session.scalar(
             select(
@@ -60,6 +60,7 @@ def is_involved_in_expenses(session: Session, member_id: uuid.UUID) -> bool:
                     exists().where(Expense.payer_member_id == member_id),
                     exists().where(line_item_sharers.c.member_id == member_id),
                     exists().where(expense_default_sharers.c.member_id == member_id),
+                    exists().where((Transfer.from_member_id == member_id) | (Transfer.to_member_id == member_id)),
                 )
             )
         )

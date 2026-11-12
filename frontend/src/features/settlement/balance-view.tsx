@@ -1,10 +1,11 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Settlement } from '@/api/client';
-import { useSettlement } from '@/api/queries';
+import { useDeleteTransfer, useRecordTransfer, useSettlement, useTransfers } from '@/api/queries';
+import { toKstParts } from '@/features/expenses/expense-form';
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 
@@ -20,10 +21,14 @@ export function transferGuide(tripName: string, settlement: Settlement): string 
 
 /** 정산 현황. 서버가 계산한 결과만 그린다. 금액을 앱에서 다시 계산하지 않는다. */
 export default function BalanceView() {
-  const { trip } = useCurrentTrip();
+  const { trip, isOrganizer } = useCurrentTrip();
   const settlement = useSettlement(trip.id);
+  const transfers = useTransfers(trip.id);
+  const recordTransfer = useRecordTransfer(trip.id);
+  const deleteTransfer = useDeleteTransfer(trip.id);
   const [basisOpen, setBasisOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [partial, setPartial] = useState<Suggestion | null>(null);
 
   if (settlement.isPending) return <ActivityIndicator style={s.loading} color={C.primary} />;
   if (settlement.isError) return <View style={s.empty}>
@@ -38,6 +43,31 @@ export default function BalanceView() {
     (groups[share.expense_id] ??= []).push(share);
     return groups;
   }, {});
+
+  function record(suggestion: Suggestion, amount: number) {
+    setNotice(null);
+    recordTransfer.mutate(
+      { from_member_id: suggestion.from_member_id, to_member_id: suggestion.to_member_id, amount },
+      {
+        onSuccess: () => { setPartial(null); setNotice(`${suggestion.from_name} → ${suggestion.to_name} ${money(amount)} 송금을 기록했어요.`); },
+        onError: (e) => setNotice(e.message),
+      },
+    );
+  }
+
+  function confirmRecord(suggestion: Suggestion) {
+    Alert.alert('송금 완료로 기록할까요?', `${suggestion.from_name} → ${suggestion.to_name} ${money(suggestion.amount)}\n앱은 실제로 송금하지 않아요. 은행 앱에서 보낸 뒤 기록해 주세요.`, [
+      { text: '취소', style: 'cancel' },
+      { text: '기록', onPress: () => record(suggestion, suggestion.amount) },
+    ]);
+  }
+
+  function confirmDelete(transferId: string, label: string) {
+    Alert.alert('송금 기록을 지울까요?', `${label}\n잘못 기록한 경우에만 지워 주세요. 잔액이 다시 계산돼요.`, [
+      { text: '취소', style: 'cancel' },
+      { text: '지우기', style: 'destructive', onPress: () => deleteTransfer.mutate(transferId, { onError: (e) => setNotice(e.message) }) },
+    ]);
+  }
 
   async function copyGuide() {
     await Clipboard.setStringAsync(transferGuide(trip.name, data));
@@ -59,6 +89,10 @@ export default function BalanceView() {
       : <>
         {data.suggested_transfers.map((transfer) => <View key={`${transfer.from_member_id}-${transfer.to_member_id}`} style={s.transfer}>
           <View style={s.rowBetween}><Text style={s.transferNames}>{transfer.from_name} <Text style={s.arrow}>→</Text> {transfer.to_name}</Text><Text style={s.transferAmount}>{money(transfer.amount)}</Text></View>
+          {isOrganizer && <View style={s.recordActions}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} 금액 직접 입력`} disabled={recordTransfer.isPending} onPress={() => setPartial(transfer)} style={s.partialButton}><Text style={s.partialText}>금액 직접 입력</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} ${money(transfer.amount)} 송금 완료로 기록`} disabled={recordTransfer.isPending} onPress={() => confirmRecord(transfer)} style={s.recordButton}><Text style={s.recordText}>송금 완료로 기록</Text></Pressable>
+          </View>}
         </View>)}
         <Pressable accessibilityRole="button" onPress={copyGuide} style={s.copyButton}><Text style={s.link}>송금 안내문 복사</Text></Pressable>
         {!!notice && <Text style={s.helper}>{notice}</Text>}
@@ -71,6 +105,21 @@ export default function BalanceView() {
       <Text style={s.memberName}>{member.display_name}{member.member_id === trip.me.member_id ? ' (나)' : ''}</Text>
       <Text style={s.memberBalance}>{member.balance === 0 ? (data.confirmed_count ? '정산 완료' : '0원') : `${money(Math.abs(member.balance))} ${member.balance > 0 ? '받을 금액' : '보낼 금액'}`}</Text>
     </View>)}
+
+    <Text style={s.sectionTitle}>송금 기록</Text>
+    {transfers.isPending ? <ActivityIndicator color={C.primary} />
+      : transfers.isError ? <Text style={s.helper}>{transfers.error.message}</Text>
+      : !transfers.data.length ? <Text style={s.helper}>아직 기록된 송금이 없어요.</Text>
+      : transfers.data.map((t) => {
+        const label = `${t.from_name} → ${t.to_name} ${money(t.amount)}`;
+        const when = toKstParts(t.recorded_at);
+        return <View key={t.id} style={s.history}>
+          <View style={s.historyCopy}><Text style={s.historyTitle}>{t.from_name} → {t.to_name}</Text><Text style={s.helper}>{money(t.amount)} · {when.date.slice(5).replace('-', '.')} {when.time} 기록</Text></View>
+          {isOrganizer && <Pressable accessibilityRole="button" accessibilityLabel={`${label} 기록 지우기`} disabled={deleteTransfer.isPending} onPress={() => confirmDelete(t.id, label)} style={s.textAction}><Text style={s.link}>지우기</Text></Pressable>}
+        </View>;
+      })}
+
+    {partial && <PartialTransferSheet suggestion={partial} busy={recordTransfer.isPending} onClose={() => setPartial(null)} onSubmit={(amount) => record(partial, amount)} />}
 
     <Modal visible={basisOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setBasisOpen(false)}>
       <SafeAreaView style={s.screen}>
@@ -92,6 +141,33 @@ export default function BalanceView() {
   </>;
 }
 
+type Suggestion = Settlement['suggested_transfers'][number];
+
+/** 일부만 보낸 경우: 보낸 멤버·받은 멤버는 송금 제안 그대로, 금액만 직접 입력한다. */
+function PartialTransferSheet({ suggestion, busy, onClose, onSubmit }: { suggestion: Suggestion; busy: boolean; onClose: () => void; onSubmit: (amount: number) => void }) {
+  const [amount, setAmount] = useState(String(suggestion.amount));
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    if (!/^\d+$/.test(amount.trim()) || Number(amount) <= 0) { setError('0보다 큰 원 단위 숫자로 입력해주세요.'); return; }
+    onSubmit(Number(amount));
+  }
+
+  return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <SafeAreaView style={s.screen}><KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
+        <View style={s.rowBetween}><Pressable accessibilityRole="button" onPress={onClose} style={s.textAction}><Text style={s.link}>취소</Text></Pressable><Text style={s.sheetTitle}>송금 기록</Text><View style={s.navSpacer} /></View>
+        <Text style={s.detailName}>{suggestion.from_name} → {suggestion.to_name}</Text>
+        <Text style={s.helper}>제안 금액은 {money(suggestion.amount)}이에요. 실제로 보낸 금액을 입력하세요.</Text>
+        <Text style={s.label}>보낸 금액 (원)</Text>
+        <TextInput accessibilityLabel="보낸 금액" value={amount} onChangeText={setAmount} keyboardType="number-pad" maxLength={9} style={s.input} />
+        {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={[s.primaryButton, busy && s.pressed]}><Text style={s.primaryText}>기록</Text></Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView></SafeAreaView>
+  </Modal>;
+}
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, maxWidth: 600, width: '100%', alignSelf: 'center' },
   loading: { marginTop: 24 },
@@ -100,6 +176,12 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginTop: 25, marginBottom: 12 },
   transfer: { paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, transferNames: { fontSize: 15, fontWeight: '500', color: C.text }, arrow: { color: C.textMuted }, transferAmount: { fontSize: 17, fontWeight: '600', color: C.primary },
   copyButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: 8 },
+  recordActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10 },
+  recordButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 9, backgroundColor: C.banner }, recordText: { fontSize: 12, color: C.accent },
+  partialButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12 }, partialText: { fontSize: 12, color: C.textSecondary },
+  history: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, historyCopy: { flex: 1 }, historyTitle: { fontSize: 13, color: C.text },
+  label: { fontSize: 13, color: C.textSecondary, marginTop: 24, marginBottom: 10 }, input: { backgroundColor: C.surface, borderRadius: 12, padding: 16, minHeight: 52, color: C.text, fontSize: 18 }, error: { fontSize: 12, color: C.error, lineHeight: 20, marginTop: 10 },
+  primaryButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 24 }, primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.6 },
   helper: { fontSize: 11, lineHeight: 19, color: C.textMuted, marginTop: 6 },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54 }, avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.banner, alignItems: 'center', justifyContent: 'center' }, avatarText: { fontSize: 12, color: C.primary }, memberName: { fontSize: 13, color: C.text, flex: 1 }, memberBalance: { fontSize: 12, color: C.textSecondary, flexShrink: 1, textAlign: 'right' },
   textAction: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
