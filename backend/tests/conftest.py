@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, text
 from app.auth import AuthenticatedUser, InvalidToken
 from app.gemini import PlanRequest, SuggestedStop
 from app.place_search import PlaceCandidate, PlaceSearchUnavailable
+from app.storage import StorageUnavailable
 from app.config import BACKEND_DIR, Settings, normalize_database_url
 from app.main import create_app
 
@@ -90,6 +91,31 @@ class FakePlanSuggester:
         return response
 
 
+class FakeStorage:
+    """메모리 안의 객체 저장소. 서명 URL은 키와 만료를 그대로 담은 가짜 주소다."""
+
+    def __init__(self) -> None:
+        self.files: dict[str, bytes] = {}
+        self.unavailable = False
+
+    def _check(self) -> None:
+        if self.unavailable:
+            raise StorageUnavailable("down")
+
+    def upload(self, key: str, data: bytes, content_type: str) -> None:
+        self._check()
+        self.files[key] = data
+
+    def delete(self, keys: list[str]) -> None:
+        self._check()
+        for key in keys:
+            self.files.pop(key, None)
+
+    def signed_urls(self, keys: list[str], expires_in: int) -> dict[str, str]:
+        self._check()
+        return {key: f"https://storage.test/{key}?expires_in={expires_in}" for key in keys if key in self.files}
+
+
 def bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
@@ -150,12 +176,18 @@ def suggester() -> FakePlanSuggester:
 
 
 @pytest.fixture
+def storage() -> FakeStorage:
+    return FakeStorage()
+
+
+@pytest.fixture
 def client(
-    engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher, suggester: FakePlanSuggester
+    engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher, suggester: FakePlanSuggester,
+    storage: FakeStorage,
 ) -> TestClient:
     settings = Settings(
         database_url=database_url, supabase_url="", supabase_jwt_secret=""
     )
-    app = create_app(settings=settings, auth_verifier=auth, place_searcher=places, plan_suggester=suggester)
+    app = create_app(settings=settings, auth_verifier=auth, place_searcher=places, plan_suggester=suggester, storage=storage)
     with TestClient(app) as client:
         yield client

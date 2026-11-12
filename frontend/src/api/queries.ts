@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -15,6 +15,7 @@ export const queryKeys = {
   transfers: (tripId: string) => ['trips', tripId, 'transfers'] as const,
   planItems: (tripId: string) => ['trips', tripId, 'plan-items'] as const,
   placeSearch: (tripId: string, query: string) => ['trips', tripId, 'place-search', query] as const,
+  photos: (tripId: string) => ['trips', tripId, 'photos'] as const,
 };
 
 export function useMe() {
@@ -254,5 +255,26 @@ export function useAdoptSuggestions(tripId: string) {
   return useMutation({
     mutationFn: ({ requestId, itemIds }: { requestId: string; itemIds: string[] }) => api.adoptSuggestions(tripId, requestId, itemIds),
     onSuccess: refresh,
+  });
+}
+
+/** 서명 URL이 10분이면 만료되므로 그보다 자주 새로 받는다. */
+export function usePhotos(tripId: string) {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.photos(tripId), queryFn: () => api.listPhotos(tripId), staleTime: 4 * 60 * 1000, refetchInterval: 8 * 60 * 1000 });
+}
+
+/** 한 장씩 올린다. 다 올린 뒤 목록을 다시 불러오는 것은 부르는 쪽이 한다(여러 장을 올릴 때 한 번만). */
+export function useUploadPhoto(tripId: string) {
+  const api = useApi();
+  return useMutation({ mutationFn: (photo: PhotoUpload) => api.uploadPhoto(tripId, photo) });
+}
+
+export function useDeletePhoto(tripId: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (photoId: string) => api.deletePhoto(tripId, photoId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.photos(tripId) }),
   });
 }

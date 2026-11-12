@@ -26,6 +26,10 @@ export type PlanItemInput = components['schemas']['PlanItemIn'];
 export type Suggestion = components['schemas']['SuggestionOut'];
 export type SuggestedItem = components['schemas']['SuggestedItemOut'];
 export type SuggestionAsk = components['schemas']['SuggestionAsk'];
+export type Photo = components['schemas']['PhotoOut'];
+export type PhotoList = components['schemas']['PhotoList'];
+/** 올릴 사진: 기기 안의 JPEG 파일과 촬영 시각. 위치 좌표는 넣지 않는다(ADR-0003). */
+export type PhotoUpload = { uri: string; takenAt: string | null };
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 type ErrorResponse = components['schemas']['ErrorResponse'];
 
@@ -93,6 +97,9 @@ export interface ApiClient {
   askSuggestions(tripId: string, ask: SuggestionAsk): Promise<Suggestion>;
   /** 고른 추천 일정만 일정 항목으로 만든다. 만든 일정 항목을 돌려준다. */
   adoptSuggestions(tripId: string, requestId: string, itemIds: string[]): Promise<PlanItem[]>;
+  listPhotos(tripId: string): Promise<PhotoList>;
+  uploadPhoto(tripId: string, photo: PhotoUpload): Promise<Photo>;
+  deletePhoto(tripId: string, photoId: string): Promise<void>;
 }
 
 type ApiClientOptions = {
@@ -115,14 +122,16 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     const token = await getAccessToken();
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    // FormData는 fetch가 경계 문자열과 함께 Content-Type을 정한다.
+    if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
     let response: Response;
     try {
       response = await fetchFn(`${baseUrl.replace(/\/$/, '')}${path}`, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       });
     } catch {
       throw new ApiError(0, 'network_error', '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.');
@@ -172,5 +181,14 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     reorderPlanItems: (tripId, date, itemIds) => request<PlanItem[]>('PUT', `${trip(tripId)}/plan-items/order`, { date, item_ids: itemIds }),
     askSuggestions: (tripId, ask) => request<Suggestion>('POST', `${trip(tripId)}/suggestions`, ask),
     adoptSuggestions: (tripId, requestId, itemIds) => request<PlanItem[]>('POST', `${trip(tripId)}/suggestions/${encodeURIComponent(requestId)}/adopt`, { item_ids: itemIds }),
+    listPhotos: (tripId) => request<PhotoList>('GET', `${trip(tripId)}/photos`),
+    uploadPhoto: (tripId, photo) => {
+      const form = new FormData();
+      // React Native의 FormData는 {uri, name, type}으로 기기 파일을 보낸다.
+      form.append('file', { uri: photo.uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
+      if (photo.takenAt) form.append('taken_at', photo.takenAt);
+      return request<Photo>('POST', `${trip(tripId)}/photos`, form);
+    },
+    deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
   };
 }

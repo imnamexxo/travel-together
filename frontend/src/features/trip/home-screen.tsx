@@ -6,7 +6,6 @@ import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { PlanItem } from '@/api/client';
 import { queryKeys, useMe, usePlanItems } from '@/api/queries';
-import { usePreviewTrip } from './preview-state';
 import TravelNotes from './travel-notes';
 import { useAuth } from '@/auth/auth-context';
 import { useCurrentTrip } from './current-trip';
@@ -32,10 +31,8 @@ export default function HomeScreen() {
   // 여행 중이면 오늘을 먼저 보여준다.
   const [selectedDay, setDay] = useState(Math.max(todayIndex, 0));
   const day = Math.min(selectedDay, days.length - 1);
-  const { photos } = usePreviewTrip();
   const [editing, setEditing] = useState<Editing>(null);
   const plans = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
-  const photoCount = (item: PlanItem) => item.place ? photos.filter((photo) => photo.place === item.place?.name && photo.day === day).length : 0;
 
   function refresh() {
     void planItems.refetch();
@@ -69,7 +66,6 @@ export default function HomeScreen() {
           : !plans.length && <View style={s.empty}><Text style={s.itemTitle}>아직 정해진 일정이 없어요</Text><Text style={s.caption}>함께 가고 싶은 곳을 담아보세요.</Text></View>}
         {plans.map((item, index) => {
           const time = item.time?.slice(0, 5) ?? '';
-          const photosHere = photoCount(item);
           return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} onPress={() => setEditing({ item })} style={({ pressed }) => [s.row, pressed && s.pressed]}>
             <Text style={s.time}>{time || '—'}</Text><View style={s.rail}><View style={[s.dot, index === 0 && s.activeDot]} />{index < plans.length - 1 && <View style={s.line} />}</View>
             <View style={s.item}>
@@ -78,7 +74,6 @@ export default function HomeScreen() {
               <View style={s.meta}>
                 {!!item.place && item.place.name !== item.title && <Text style={s.metaText}>📍 {item.place.name}</Text>}
                 {item.estimated_cost != null && item.estimated_cost > 0 && <Text style={s.metaText}>예상 {money(item.estimated_cost)}</Text>}
-                {photosHere > 0 && <Text style={s.photoText}>사진 {photosHere}장</Text>}
               </View>
             </View>
           </Pressable>;

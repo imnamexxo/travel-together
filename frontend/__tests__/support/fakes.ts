@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpenseSummary, type Member, type Photo, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
 
 type FakeUser = { password: string; displayName: string };
@@ -96,7 +96,17 @@ type FakeApiOptions = {
   placeCandidates?: PlaceCandidate[];
   /** 추천 일정 요청에 돌려줄 결과 */
   suggestion?: Suggestion;
+  /** 여행 id → 사진 */
+  photos?: Record<string, Photo[]>;
+  photoLimit?: number;
 };
+
+export function photo(overrides: Partial<Photo> = {}): Photo {
+  return {
+    id: 'photo-1', url: 'https://storage.test/photo-1.jpg', taken_at: '2026-11-12T06:30:00Z', uploaded_at: '2026-11-12T07:00:00Z',
+    uploader_member_id: 'member-1', uploader_name: '민지', ...overrides,
+  };
+}
 
 export function place(overrides: Partial<NonNullable<PlanItem['place']>> = {}): NonNullable<PlanItem['place']> {
   return { id: 'place-1', kakao_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null, ...overrides };
@@ -119,7 +129,7 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200 }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
@@ -137,6 +147,8 @@ export function fakeApi(
     payer_name: membersOf(tripId).find((m) => m.member_id === e.payer_member_id)?.display_name ?? null, item_count: e.items.length,
   });
   const keys = new Map<string, string>();
+  const photoStore: Record<string, Photo[]> = Object.fromEntries(Object.entries(photos).map(([id, list]) => [id, [...list]]));
+  const photosOf = (tripId: string) => (photoStore[tripId] ??= []);
   const planStore: Record<string, PlanItem[]> = Object.fromEntries(Object.entries(planItems).map(([id, list]) => [id, [...list]]));
   const plansOf = (tripId: string) => (planStore[tripId] ??= []);
   const planFrom = (tripId: string, id: string, input: Parameters<ApiClient['createPlanItem']>[1], base?: PlanItem): PlanItem => {
@@ -279,6 +291,16 @@ export function fakeApi(
       }));
       plansOf(tripId).push(...created);
       return created;
+    }),
+    listPhotos: jest.fn(async (tripId) => ({ photos: [...photosOf(tripId)], count: photosOf(tripId).length, limit: photoLimit })),
+    uploadPhoto: jest.fn(async (tripId, upload) => {
+      const me = trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1';
+      const created = photo({ id: `uploaded-${photosOf(tripId).length + 1}`, url: upload.uri, taken_at: upload.takenAt, uploader_member_id: me, uploader_name: profile.display_name });
+      photosOf(tripId).push(created);
+      return created;
+    }),
+    deletePhoto: jest.fn(async (tripId, photoId) => {
+      photoStore[tripId] = photosOf(tripId).filter((p) => p.id !== photoId);
     }),
     reorderPlanItems: jest.fn(async (tripId, date, itemIds) => {
       for (const item of plansOf(tripId)) if (item.date === date) item.position = itemIds.indexOf(item.id);
