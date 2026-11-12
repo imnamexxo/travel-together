@@ -30,6 +30,22 @@ class SuggestedPlan(BaseModel):
     stops: list[SuggestedStop] = Field(min_length=1, max_length=60)
 
 
+class StopShape(BaseModel):
+    """Gemini에 보내는 응답 모양. 형식(format)·길이·범위 제한은 모델에 따라 400으로 거절될 수 있어 타입만 둔다.
+    받은 답은 SuggestedPlan으로 다시 엄격하게 검사한다."""
+
+    date: str
+    order: int
+    place_name: str
+    region: str
+    stay_minutes: int
+    description: str
+
+
+class PlanShape(BaseModel):
+    stops: list[StopShape]
+
+
 @dataclass(frozen=True)
 class PlanRequest:
     destination: str
@@ -104,6 +120,7 @@ def generate(client, model: str, *, sleep=time.sleep, **kwargs):
             return client.models.generate_content(model=name, **kwargs)
         except errors.APIError as exc:
             if exc.code not in BUSY_CODES or attempt == len(models) - 1:
+                logger.warning("Gemini %s 요청 실패(%s)", name, exc.code)
                 raise
             logger.warning("Gemini %s 바쁨(%s), 다시 묻습니다", name, exc.code)
             if exc.code == TIMEOUT_CODE and name != FALLBACK_MODEL:
@@ -142,7 +159,7 @@ class GeminiPlanSuggester:
                 contents=build_prompt(request),
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=SuggestedPlan,
+                    response_schema=PlanShape,
                     temperature=0.7,
                 ),
             )

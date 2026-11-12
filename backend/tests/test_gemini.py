@@ -9,7 +9,7 @@ import pytest
 from app.gemini import (
     GeminiPlanSuggester,
     PlanRequest,
-    SuggestedPlan,
+    PlanShape,
     SuggestionFormatError,
     SuggestionUnavailable,
     build_prompt,
@@ -51,7 +51,7 @@ def test_parses_and_sorts_stops_and_asks_for_json_schema():
     call = models.calls[0]
     assert call["model"] == "gemini-flash-latest"
     assert call["config"].response_mime_type == "application/json"
-    assert call["config"].response_schema is SuggestedPlan
+    assert call["config"].response_schema is PlanShape
     assert "2026-11-12, 2026-11-13" in call["contents"]
 
 
@@ -142,3 +142,13 @@ def test_timeout_goes_straight_to_the_lighter_model():
     assert busy_suggester(models, slept).suggest(REQUEST)
     assert models.models == ["gemini-flash-latest", "gemini-flash-lite-latest"]
     assert slept == []
+
+
+def test_schema_sent_to_gemini_has_only_types():
+    """format·길이·범위·패턴 제한은 모델에 따라 400(INVALID_ARGUMENT)이 되므로 보내지 않는다."""
+    from app.receipt_reader import ReceiptShape
+
+    for shape in (PlanShape, ReceiptShape):
+        text = json.dumps(shape.model_json_schema())
+        for keyword in ("format", "maxLength", "minLength", "minimum", "maximum", "pattern", "maxItems", "minItems"):
+            assert f'"{keyword}"' not in text, (shape.__name__, keyword)
