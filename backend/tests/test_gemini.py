@@ -78,3 +78,67 @@ def test_prompt_mentions_destination_preferences_and_real_places_rule():
     assert "여행지: 제주" in prompt
     assert "취향: 맛집 위주" in prompt
     assert "실제 상호" in prompt
+
+
+class SequenceModels:
+    """차례로 예외 또는 응답 텍스트를 돌려준다. 물은 모델 이름을 기록한다."""
+
+    def __init__(self, *results):
+        self.results, self.models = list(results), []
+
+    def generate_content(self, **kwargs):
+        self.models.append(kwargs["model"])
+        result = self.results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return SimpleNamespace(text=result)
+
+
+def busy():
+    from google.genai import errors
+
+    return errors.ServerError(503, {"error": {"code": 503, "message": "high demand", "status": "UNAVAILABLE"}})
+
+
+def busy_suggester(models, slept):
+    return GeminiPlanSuggester("key", "gemini-flash-latest", client=SimpleNamespace(models=models), sleep=slept.append)
+
+
+def test_busy_model_is_asked_again_after_a_short_wait():
+    models, slept = SequenceModels(busy(), plan_json(stop())), []
+
+    stops = busy_suggester(models, slept).suggest(REQUEST)
+
+    assert [s.place_name for s in stops] == ["동문시장"]
+    assert models.models == ["gemini-flash-latest", "gemini-flash-latest"]
+    assert slept == [1.5]
+
+
+def test_still_busy_falls_back_to_the_lighter_model_then_gives_up():
+    models, slept = SequenceModels(busy(), busy(), plan_json(stop())), []
+    assert busy_suggester(models, slept).suggest(REQUEST)
+    assert models.models == ["gemini-flash-latest", "gemini-flash-latest", "gemini-flash-lite-latest"]
+
+    with pytest.raises(SuggestionUnavailable):
+        busy_suggester(SequenceModels(busy(), busy(), busy()), []).suggest(REQUEST)
+
+
+def test_other_api_errors_are_not_retried():
+    from google.genai import errors
+
+    models = SequenceModels(errors.ClientError(400, {"error": {"code": 400, "message": "bad", "status": "INVALID_ARGUMENT"}}))
+
+    with pytest.raises(SuggestionUnavailable):
+        busy_suggester(models, []).suggest(REQUEST)
+    assert models.models == ["gemini-flash-latest"]
+
+
+def test_timeout_goes_straight_to_the_lighter_model():
+    from google.genai import errors
+
+    timeout = errors.ServerError(504, {"error": {"code": 504, "message": "Deadline expired", "status": "DEADLINE_EXCEEDED"}})
+    models, slept = SequenceModels(timeout, plan_json(stop())), []
+
+    assert busy_suggester(models, slept).suggest(REQUEST)
+    assert models.models == ["gemini-flash-latest", "gemini-flash-lite-latest"]
+    assert slept == []

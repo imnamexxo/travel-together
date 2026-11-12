@@ -5,9 +5,12 @@
 """
 
 import logging
+import time
 from typing import Protocol
 
 from pydantic import BaseModel, Field, ValidationError
+
+from app.gemini import TIMEOUT_MS, generate
 
 logger = logging.getLogger(__name__)
 
@@ -59,17 +62,18 @@ def parse_receipt(raw: str | None) -> ReceiptDraft:
 
 
 class GeminiReceiptReader:
-    def __init__(self, api_key: str, model: str, client=None):
+    def __init__(self, api_key: str, model: str, client=None, sleep=time.sleep):
         self._api_key = api_key
         self._model = model
         self._client = client
+        self._sleep = sleep
 
     def _get_client(self):
         if self._client is None:
             from google import genai
             from google.genai import types
 
-            self._client = genai.Client(api_key=self._api_key, http_options=types.HttpOptions(timeout=60_000))
+            self._client = genai.Client(api_key=self._api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
         return self._client
 
     def read(self, image: bytes) -> ReceiptDraft:
@@ -78,8 +82,10 @@ class GeminiReceiptReader:
         from google.genai import types
 
         try:
-            response = self._get_client().models.generate_content(
-                model=self._model,
+            response = generate(
+                self._get_client(),
+                self._model,
+                sleep=self._sleep,
                 contents=[types.Part.from_bytes(data=image, mime_type="image/jpeg"), PROMPT],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
