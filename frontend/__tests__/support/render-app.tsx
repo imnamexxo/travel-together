@@ -10,6 +10,7 @@ import AlbumScreen from '@/app/trips/[tripId]/album';
 import PlannerScreen from '@/app/trips/[tripId]/index';
 import MapScreen from '@/app/trips/[tripId]/map';
 import MembersScreen from '@/app/trips/[tripId]/members';
+import TripSettingsScreen from '@/app/trips/[tripId]/settings';
 import SettlementScreen from '@/app/trips/[tripId]/settlement';
 import JoinTripScreen from '@/app/trips/join';
 import NewTripScreen from '@/app/trips/new';
@@ -39,6 +40,7 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       'trips/[tripId]/map': MapScreen,
       'trips/[tripId]/settlement': SettlementScreen,
       'trips/[tripId]/members': MembersScreen,
+      'trips/[tripId]/settings': TripSettingsScreen,
     },
     { initialUrl },
   );

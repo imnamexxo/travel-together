@@ -53,8 +53,12 @@ class Trip(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+    # 여행을 지우면 멤버도 지워진다. DB의 ON DELETE CASCADE에 맡긴다.
     members: Mapped[list["Member"]] = relationship(
-        back_populates="trip", order_by="Member.join_order"
+        back_populates="trip",
+        order_by="Member.join_order",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 

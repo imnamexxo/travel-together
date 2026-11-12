@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useInviteCode, useMembers, useReissueInviteCode } from '@/api/queries';
+import type { Member } from '@/api/client';
+import { useInviteCode, useMembers, useReissueInviteCode, useRemoveMember } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 
@@ -31,14 +32,32 @@ export default function MembersScreen() {
           <Text style={s.muted}>{members.error.message}</Text>
           <Pressable accessibilityRole="button" onPress={() => members.refetch()} style={s.textButton}><Text style={s.link}>다시 시도</Text></Pressable>
         </View>
-        : members.data.map((member) => <View key={member.member_id} style={s.memberRow}>
-          <View style={s.avatar}><Text style={s.avatarText}>{member.display_name.slice(0, 1)}</Text></View>
-          <Text style={s.memberName}>{member.display_name}{member.is_me ? ' (나)' : ''}</Text>
-          {member.is_organizer && <Text style={s.badge}>총무</Text>}
-        </View>)}
+        : members.data.map((member) => <MemberRow key={member.member_id} member={member} canRemove={isOrganizer && !member.is_organizer} />)}
       {!isOrganizer && <Text style={s.hint}>친구를 초대하려면 총무에게 초대 코드를 받아 공유해 주세요.</Text>}
     </ScrollView>
   </SafeAreaView>;
+}
+
+function MemberRow({ member, canRemove }: { member: Member; canRemove: boolean }) {
+  const { trip } = useCurrentTrip();
+  const remove = useRemoveMember(trip.id);
+
+  function confirm() {
+    Alert.alert(`${member.display_name}님을 내보낼까요?`, '다시 들어오려면 초대 코드가 필요해요.', [
+      { text: '취소', style: 'cancel' },
+      { text: '내보내기', style: 'destructive', onPress: () => remove.mutate(member.member_id) },
+    ]);
+  }
+
+  return <View style={s.memberBlock}>
+    <View style={s.memberRow}>
+      <View style={s.avatar}><Text style={s.avatarText}>{member.display_name.slice(0, 1)}</Text></View>
+      <Text style={s.memberName}>{member.display_name}{member.is_me ? ' (나)' : ''}</Text>
+      {member.is_organizer && <Text style={s.badge}>총무</Text>}
+      {canRemove && <Pressable accessibilityRole="button" accessibilityLabel={`${member.display_name} 내보내기`} accessibilityState={{ disabled: remove.isPending }} disabled={remove.isPending} onPress={confirm} style={s.removeButton}><Text style={s.removeText}>내보내기</Text></Pressable>}
+    </View>
+    {remove.isError && <Text accessibilityRole="alert" style={s.removeError}>{remove.error.message}</Text>}
+  </View>;
 }
 
 function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string }) {
@@ -102,7 +121,11 @@ const s = StyleSheet.create({
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   heading: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   count: { fontSize: 12, color: C.textMuted },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider },
+  memberBlock: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 },
+  removeButton: { minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 4 },
+  removeText: { fontSize: 12, color: C.error },
+  removeError: { fontSize: 12, color: C.error, paddingBottom: 10 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 14, fontWeight: '600', color: C.primary },
   memberName: { flex: 1, fontSize: 15, color: C.text },

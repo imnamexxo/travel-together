@@ -122,3 +122,44 @@ def join_trip(
     session.add(me)
     session.commit()
     return trip_detail(trip, me, count + 1)
+
+
+def _remove(session: Session, member: Member) -> None:
+    """멤버를 여행에서 뺀다. 지출에 엮인 멤버를 막는 규칙과 사진 삭제는 해당 기능(#11, #9)에서 여기에 더한다."""
+    if member.is_organizer:
+        raise ApiError(409, "organizer_cannot_leave", "총무는 여행에서 나갈 수 없습니다.")
+    session.delete(member)
+    session.commit()
+
+
+@router.delete(
+    "/{trip_id}/members/me",
+    status_code=204,
+    responses={**NOT_FOUND, 409: {"model": ErrorResponse, "description": "나갈 수 없음"}},
+)
+def leave_trip(
+    trip_id: uuid.UUID,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> None:
+    """내가 여행에서 나간다. 총무는 나갈 수 없다."""
+    _remove(session, require_member(session, trip_id, user))
+
+
+@router.delete(
+    "/{trip_id}/members/{member_id}",
+    status_code=204,
+    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "내보낼 수 없음"}},
+)
+def remove_member(
+    trip_id: uuid.UUID,
+    member_id: uuid.UUID,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> None:
+    """총무가 다른 멤버를 내보낸다."""
+    organizer = require_organizer(session, trip_id, user)
+    target = next((m for m in organizer.trip.members if m.id == member_id), None)
+    if target is None:
+        raise ApiError(404, "member_not_found", "멤버를 찾을 수 없습니다.")
+    _remove(session, target)

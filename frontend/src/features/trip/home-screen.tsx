@@ -49,6 +49,7 @@ export default function HomeScreen() {
         ].filter(Boolean).join('\n'), [
           { text: '닫기', style: 'cancel' },
           { text: '멤버·초대 코드', onPress: () => router.navigate(`/trips/${trip.id}/members`) },
+          { text: '여행 설정', onPress: () => router.navigate(`/trips/${trip.id}/settings`) },
           { text: '내 여행 목록', onPress: () => router.replace('/') },
           { text: '로그아웃', onPress: () => Alert.alert('로그아웃할까요?', '예시 여행에서 추가한 일정·사진·메모는 초기화됩니다.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
         ])}><Text style={s.more}>•••</Text></Pressable>
