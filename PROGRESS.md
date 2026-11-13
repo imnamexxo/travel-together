@@ -68,6 +68,8 @@
 
 ### 2026-11-13
 
+- 영수증 크게 보기가 화면의 2배로 열려 너무 컸던 것 → 화면에 맞춰 열고, 두 손가락 확대(최대 5배)·끌어서 이동·두 번 탭 확대/원래대로(react-native-gesture-handler + reanimated, `zoomable-image.tsx`). ScrollView 확대는 iOS에서만 됐다.
+- 화면 로딩 줄이기: 서버가 요청마다 `GET /trips/{trip_id}/expenses 200 0.35초 DB 4번` 같은 로그를 남긴다(경로는 라우트 모양, /health 제외). 예시 여행으로 재 보니 항목마다 관계를 따로 묻고 있었다(N+1) → `app/loading.py`의 옵션으로 필요한 관계만 한 번에 읽음: 정산 DB 20→8번, 지출 목록 15→3번, 일정 11→2번, 멤버 7→3번, 송금 6→2번. 모델 전체에 `lazy="selectin"`을 거는 건 오히려 늘어서 쓰지 않음. 앱은 30초 안에 받은 데이터를 다시 쓰고(staleTime), 멤버를 내보내면 사진 목록도 새로 받음.
 - 화면 전환이 느린 주원인: 서버(오리건)와 DB(서울)가 멀어 DB 질의마다 태평양 왕복. Render 서버를 싱가포르에 새로 만듦(travel-together-api-sg, 환경 변수 그대로). expo.dev preview 환경의 `EXPO_PUBLIC_API_URL`을 새 주소로, `render.yaml`에 `region: singapore`.
 - 시연용 설치 APK: `eas.json`에 `preview` 프로필(내부 배포 APK, 개발 서버 없이 실행). 앱 JS를 EAS 서버에서 묶으므로 `EXPO_PUBLIC_API_URL`·`EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`(plaintext)와 `GOOGLE_MAPS_ANDROID_KEY`를 expo.dev의 preview 환경에도 넣음. 빌드: `npx eas-cli build --profile preview --platform android`.
 - 지도 시트가 손가락을 따라 움직이고 놓으면 부드럽게 펼침/접힘(Animated + PanResponder, 끌기 처리는 한 번만 만든다: 다시 만들면 끄는 도중 거리를 0부터 세어 튀었음). 내용이 짧으면 그만큼만 펼침. Android 핀 숫자가 빠지던 것 → 핀이 바뀌면 0.8초 동안 다시 그리게(`tracksViewChanges`) 했다가 멈춤.

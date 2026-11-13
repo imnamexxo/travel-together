@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import loading
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorResponse
@@ -58,7 +59,7 @@ def list_members(
             is_organizer=m.is_organizer,
             is_me=m.id == me.id,
         )
-        for m in me.trip.members
+        for m in loading.trip_members(session, trip_id)
     ]
 
 

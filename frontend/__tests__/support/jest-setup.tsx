@@ -18,3 +18,9 @@ jest.useFakeTimers({
   now: new Date('2026-11-12T03:00:00Z'),
   doNotFake: ['hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'],
 });
+
+// 확대 보기(제스처·애니메이션 네이티브 모듈)는 테스트에서 그냥 이미지로 그린다.
+jest.mock('@/features/expenses/zoomable-image', () => {
+  const { Image } = require('react-native');
+  return { __esModule: true, default: ({ uri, accessibilityLabel }: { uri: string; accessibilityLabel: string }) => <Image accessibilityLabel={accessibilityLabel} source={{ uri }} /> };
+});

@@ -6,6 +6,7 @@ from app.auth import AuthVerifier, SupabaseJwtVerifier
 from app.config import Settings, load_settings
 from app.db import make_sessionmaker
 from app.errors import install_error_handlers
+from app.request_log import install_request_log
 from app.gemini import GeminiPlanSuggester, PlanSuggester
 from app.place_search import KakaoPlaceSearcher, PlaceSearcher
 from app.receipt_reader import GeminiReceiptReader, ReceiptReader
@@ -40,6 +41,7 @@ def create_app(
     app.state.storage = storage or SupabaseStorage(settings.supabase_url, settings.supabase_service_role_key, settings.storage_bucket)
     app.state.receipt_reader = receipt_reader or GeminiReceiptReader(settings.gemini_api_key, settings.gemini_model)
     install_error_handlers(app)
+    install_request_log(app)
     app.include_router(health.router)
     app.include_router(me.router)
     app.include_router(trips.router)

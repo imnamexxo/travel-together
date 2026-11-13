@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import loading
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ErrorResponse
@@ -65,12 +66,13 @@ def get_settlement(
     송금이 기록된 뒤 지출이 바뀌면 여기서 다시 계산된다(재정산). 기록된 송금은 바뀌지 않는다.
     """
     me = require_member(session, trip_id, user)
-    members = me.trip.members
+    members = loading.trip_members(session, trip_id)
     names = {m.id: m.profile.display_name for m in members}
     confirmed = session.scalars(
         select(Expense)
         .where(Expense.trip_id == trip_id, Expense.status == "confirmed")
         .order_by(Expense.paid_at.asc().nulls_last(), Expense.created_at.asc())
+        .options(*loading.EXPENSE_FULL)
     ).all()
 
     result = settle(

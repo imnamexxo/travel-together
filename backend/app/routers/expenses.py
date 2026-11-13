@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import loading
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
@@ -123,7 +124,7 @@ def expense_out(expense: Expense, receipt_url: str | None = None) -> ExpenseOut:
 
 def _get_expense(session: Session, trip_id: uuid.UUID, expense_id: uuid.UUID) -> Expense:
     expense = session.scalars(
-        select(Expense).where(Expense.id == expense_id, Expense.trip_id == trip_id)
+        select(Expense).where(Expense.id == expense_id, Expense.trip_id == trip_id).options(*loading.EXPENSE_FULL)
     ).one_or_none()
     if expense is None:
         raise ApiError(404, "expense_not_found", "지출을 찾을 수 없습니다.")
@@ -174,6 +175,7 @@ def list_expenses(
         select(Expense)
         .where(Expense.trip_id == trip_id)
         .order_by(Expense.paid_at.desc().nulls_first(), Expense.created_at.desc())
+        .options(*loading.EXPENSE_SUMMARY)
     ).all()
     return [
         ExpenseSummary(

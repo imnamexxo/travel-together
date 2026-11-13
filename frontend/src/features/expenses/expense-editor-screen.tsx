@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, newIdempotencyKey, type Expense, type ExpenseStatus, type Member } from '@/api/client';
@@ -9,6 +9,7 @@ import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import ExpensePlacePicker from './expense-place-picker';
+import ZoomableImage from './zoomable-image';
 import {
   STATUS_LABEL, emptyForm, formFromExpense, itemsTotal, newItem, toggleDefaultSharer, toggleItemSharer, toInput, totalAmount,
   type ExpenseForm, type FormErrors,
@@ -72,7 +73,6 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
   const remove = useDeleteExpense(trip.id);
   const busy = save.isPending || confirm.isPending || remove.isPending;
   const editable = isOrganizer;
-  const { width: viewerWidth, height: viewerHeight } = useWindowDimensions();
 
   const total = totalAmount(form);
   const sum = itemsTotal(form);
@@ -219,12 +219,9 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
     {!!expense?.receipt_url && <Modal visible={receiptOpen} animationType="fade" onRequestClose={() => setReceiptOpen(false)}>
       <SafeAreaView style={s.viewer}>
         <Pressable accessibilityRole="button" onPress={() => setReceiptOpen(false)} style={s.viewerClose}><Text style={s.viewerCloseText}>닫기</Text></Pressable>
-        {/* 크게 그려 두고 상하좌우로 밀어서 본다. iOS는 두 손가락으로 확대도 된다. */}
-        <ScrollView maximumZoomScale={4} minimumZoomScale={1} contentContainerStyle={s.viewerContent}>
-          <ScrollView horizontal>
-            <Image accessibilityLabel="영수증 원본" source={{ uri: expense.receipt_url }} style={{ width: viewerWidth * 2, height: viewerHeight * 2 }} resizeMode="contain" />
-          </ScrollView>
-        </ScrollView>
+        {/* 화면에 맞춰 보여 주고, 두 손가락으로 확대·이동, 두 번 탭하면 확대/원래대로 */}
+        <ZoomableImage uri={expense.receipt_url} accessibilityLabel="영수증 원본" />
+        <Text style={s.viewerHint}>두 손가락으로 확대 · 두 번 탭하면 크게</Text>
       </SafeAreaView>
     </Modal>}
   </SafeAreaView>;
@@ -273,5 +270,5 @@ const s = StyleSheet.create({
   receiptImage: { width: '100%', height: 220 }, receiptHint: { fontSize: 11, color: C.textMuted, marginTop: 6 },
   receiptNotice: { fontSize: 13, lineHeight: 19, color: C.primary, marginTop: 12 },
   viewer: { flex: 1, backgroundColor: '#000' }, viewerClose: { alignSelf: 'flex-end', minHeight: 48, minWidth: 64, justifyContent: 'center', alignItems: 'center' },
-  viewerCloseText: { color: '#fff', fontSize: 15 }, viewerContent: { flexGrow: 1, justifyContent: 'center' },
+  viewerCloseText: { color: '#fff', fontSize: 15 }, viewerHint: { color: '#bbb', fontSize: 12, textAlign: 'center', paddingVertical: 10 },
 });
