@@ -68,6 +68,7 @@
 
 ### 2026-11-13
 
+- 지도 시트가 손가락을 따라 움직이고 놓으면 부드럽게 펼침/접힘(Animated + PanResponder, 끌기 처리는 한 번만 만든다: 다시 만들면 끄는 도중 거리를 0부터 세어 튀었음). 내용이 짧으면 그만큼만 펼침. Android 핀 숫자가 빠지던 것 → 핀이 바뀌면 0.8초 동안 다시 그리게(`tracksViewChanges`) 했다가 멈춤.
 - 추천이 느린 원인 확인(Render 로그): `gemini-flash-latest`가 시간 초과(504)될 때까지 기다린 뒤 `gemini-flash-lite-latest`가 1.6초에 답함. Gemini 답변 시간 제한 120초 → 30초, 생각 끄기를 거절한 모델은 기억해 다음부터 설정 없이 묻는다. Render에 `GEMINI_MODEL=gemini-flash-lite-latest`를 넣으면 처음부터 가벼운 모델을 쓴다(지우면 원래대로).
 - 실기기 피드백 반영: 입력칸 예시 글자가 흰색이라 안 보이던 것(추천 일정·일정 편집·앨범·지출 장소) → 회색. 지도 아래 장소 정보를 손잡이로 끌어 올리고 내리기(누르면 접기/펼치기). 지도 멤버 칩 아래가 잘리던 것.
 - 비밀번호 찾기: 이메일 → Supabase 재설정 메일(`resetPasswordForEmail`, 복귀 주소 `traveltogether://reset-password`) → 메일 링크가 앱의 새 비밀번호 화면을 연다 → `exchangeCodeForSession` + `updateUser`. PKCE라 요청한 휴대폰에서 링크를 열어야 한다. Supabase 기본 메일은 시간당 보낼 수 있는 수가 적다.
