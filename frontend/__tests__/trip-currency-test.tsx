@@ -91,3 +91,20 @@ test('해외 여행을 켜고 만들면 해외 여행으로 만든다', async ()
 
   await waitFor(() => expect(api.createTrip).toHaveBeenCalledWith(expect.objectContaining({ is_overseas: true })));
 });
+
+test('원이 아닌 통화를 고르면 해외 여행이 켜지고, 끄면 국내 검색만 된다고 알려 준다', async () => {
+  const api = fakeApi();
+  renderApp({ auth: signedIn(), api, initialUrl: '/trips/new' });
+
+  fireEvent.changeText(await screen.findByLabelText('여행 이름'), '오사카 여행');
+  await pickPeriod('2026-12-01', '2026-12-03');
+  fireEvent.press(screen.getByRole('button', { name: '통화' }));
+  fireEvent.press(screen.getByRole('button', { name: '엔 (일본)' }));
+  expect(screen.getByText('장소를 Google 지도에서 찾아요.')).toBeOnTheScreen();
+  fireEvent(screen.getByLabelText('해외 여행'), 'valueChange', false);
+  expect(screen.getByText('국내 여행은 장소를 카카오맵(국내)에서만 찾아요. 해외로 가면 해외 여행을 켜 주세요.')).toBeOnTheScreen();
+  fireEvent(screen.getByLabelText('해외 여행'), 'valueChange', true);
+  fireEvent.press(screen.getByRole('button', { name: '여행 만들기' }));
+
+  await waitFor(() => expect(api.createTrip).toHaveBeenCalledWith(expect.objectContaining({ currency: 'JPY', is_overseas: true })));
+});
