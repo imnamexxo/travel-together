@@ -18,7 +18,7 @@
 | 할 일 | 필요한 시점 | 상태 |
 |---|---|---|
 | Supabase 프로젝트 생성 | #3 | 완료 (`nttoauhqqsqhulbtgixn`, 서울 리전) |
-| Render 배포 | #3 | 완료 (https://travel-together-api-d4zr.onrender.com, oregon 리전) |
+| Render 배포 | #3 | 완료. 2026-11-13 싱가포르로 옮김: https://travel-together-api-sg.onrender.com (DB가 서울이라). 이전 오리건 서버 travel-together-api-d4zr는 확인 후 Suspend |
 | Expo 계정, EAS 개발 빌드, Android 실기기 | #3 | 완료 (EAS 계정 kang1031, 패키지 `com.kang1031.frontend`) |
 | 테스트용 PostgreSQL 준비 | #3 | 완료 (강동헌 PC: PostgreSQL 17.11 직접 설치, DB `divided_dev`·`divided_test`, 연결 정보는 `backend/.env`). 팀원 PC는 `backend/.env.example` 참고해 각자 준비 |
 | 카카오 디벨로퍼스 앱: REST API 키(#7), 같은 앱으로 카카오 로그인 설정(#23) | #7, #23 | REST 키 완료(Render·backend/.env에 `KAKAO_REST_API_KEY`). 카카오 로그인은 #23 때 |
@@ -68,6 +68,7 @@
 
 ### 2026-11-13
 
+- 화면 전환이 느린 주원인: 서버(오리건)와 DB(서울)가 멀어 DB 질의마다 태평양 왕복. Render 서버를 싱가포르에 새로 만듦(travel-together-api-sg, 환경 변수 그대로). expo.dev preview 환경의 `EXPO_PUBLIC_API_URL`을 새 주소로, `render.yaml`에 `region: singapore`.
 - 시연용 설치 APK: `eas.json`에 `preview` 프로필(내부 배포 APK, 개발 서버 없이 실행). 앱 JS를 EAS 서버에서 묶으므로 `EXPO_PUBLIC_API_URL`·`EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`(plaintext)와 `GOOGLE_MAPS_ANDROID_KEY`를 expo.dev의 preview 환경에도 넣음. 빌드: `npx eas-cli build --profile preview --platform android`.
 - 지도 시트가 손가락을 따라 움직이고 놓으면 부드럽게 펼침/접힘(Animated + PanResponder, 끌기 처리는 한 번만 만든다: 다시 만들면 끄는 도중 거리를 0부터 세어 튀었음). 내용이 짧으면 그만큼만 펼침. Android 핀 숫자가 빠지던 것 → 핀이 바뀌면 0.8초 동안 다시 그리게(`tracksViewChanges`) 했다가 멈춤.
 - 추천이 느린 원인 확인(Render 로그): `gemini-flash-latest`가 시간 초과(504)될 때까지 기다린 뒤 `gemini-flash-lite-latest`가 1.6초에 답함. Gemini 답변 시간 제한 120초 → 30초, 생각 끄기를 거절한 모델은 기억해 다음부터 설정 없이 묻는다. Render에 `GEMINI_MODEL=gemini-flash-lite-latest`를 넣으면 처음부터 가벼운 모델을 쓴다(지우면 원래대로).
