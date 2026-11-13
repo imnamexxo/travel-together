@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import type { AuthService, AuthSession, SignUpResult } from '@/auth/auth-service';
+import type { AuthService, AuthSession, SignUpResult, SocialProvider, SocialSignInResult } from '@/auth/auth-service';
 
 type AuthStatus = 'loading' | 'signedIn' | 'signedOut';
 
@@ -9,6 +9,7 @@ type AuthContextValue = {
   session: AuthSession | null;
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, displayName: string): Promise<SignUpResult>;
+  signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult>;
   signOut(): Promise<void>;
 };
 
@@ -41,6 +42,7 @@ export function AuthProvider({ service, children }: { service: AuthService; chil
     (email: string, password: string, displayName: string) => service.signUp(email, password, displayName),
     [service],
   );
+  const signInWithProvider = useCallback((provider: SocialProvider) => service.signInWithProvider(provider), [service]);
   const signOut = useCallback(() => service.signOut(), [service]);
 
   const value = useMemo<AuthContextValue>(
@@ -49,9 +51,10 @@ export function AuthProvider({ service, children }: { service: AuthService; chil
       session,
       signIn,
       signUp,
+      signInWithProvider,
       signOut,
     }),
-    [loaded, session, signIn, signUp, signOut],
+    [loaded, session, signIn, signUp, signInWithProvider, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

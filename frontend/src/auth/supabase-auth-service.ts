@@ -1,6 +1,7 @@
 import type { AuthError as SupabaseAuthError, Session, SupabaseClient } from '@supabase/supabase-js';
 
 import { AuthError, type AuthService, type AuthSession } from '@/auth/auth-service';
+import { openLoginPage, parseRedirect, redirectUrl } from '@/auth/oauth-redirect';
 
 const MESSAGES: Record<string, string> = {
   invalid_credentials: '이메일 또는 비밀번호가 맞지 않습니다.',
@@ -53,6 +54,25 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       });
       if (error) throw toAuthError(error);
       return { needsEmailConfirmation: data.session === null };
+    },
+
+    async signInWithProvider(provider) {
+      const returnUrl = redirectUrl();
+      // 브라우저는 앱이 직접 연다(skipBrowserRedirect). PKCE라 돌아온 주소에는 일회용 code만 온다.
+      const { data, error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: returnUrl, skipBrowserRedirect: true } });
+      if (error || !data.url) throw new AuthError('로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      const result = await openLoginPage(data.url, returnUrl);
+      if (result.type === 'cancel') return 'cancelled';
+      const params = parseRedirect(result.url);
+      if (params.error) {
+        // 동의 화면에서 취소해도 error=access_denied로 돌아온다. 오류로 보이지 않게 취소로 처리한다.
+        if (params.error === 'access_denied') return 'cancelled';
+        throw new AuthError(params.error_description || '소셜 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      }
+      if (!params.code) throw new AuthError('소셜 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      const exchanged = await supabase.auth.exchangeCodeForSession(params.code);
+      if (exchanged.error) throw toAuthError(exchanged.error);
+      return 'signed_in';
     },
 
     async signOut() {

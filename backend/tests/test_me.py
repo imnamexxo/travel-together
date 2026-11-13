@@ -59,3 +59,25 @@ def test_each_user_sees_own_profile(client, auth):
 
     assert client.get("/me", headers=bearer(minji_token)).json()["display_name"] == "민지"
     assert client.get("/me", headers=bearer(junho_token)).json()["display_name"] == "준호"
+
+
+def test_first_profile_uses_kakao_nickname_and_user_without_email(engine, database_url):
+    """실제 토큰 검증기로: 카카오 로그인(이메일 없음, 닉네임만)도 첫 프로필이 닉네임으로 만들어진다."""
+    import time
+    import uuid
+
+    import jwt
+    from fastapi.testclient import TestClient
+
+    from app.auth import SupabaseJwtVerifier
+    from app.config import Settings
+    from app.main import create_app
+
+    secret = "test-secret-that-is-long-enough-for-hs256"
+    app = create_app(settings=Settings(database_url=database_url, supabase_url="", supabase_jwt_secret=secret), auth_verifier=SupabaseJwtVerifier("", jwt_secret=secret))
+    claims = {"sub": str(uuid.uuid4()), "aud": "authenticated", "exp": int(time.time()) + 3600, "email": "", "user_metadata": {"name": "제주러버", "provider_id": "123"}}
+    with TestClient(app) as client:
+        response = client.get("/me", headers={"Authorization": f"Bearer {jwt.encode(claims, secret, algorithm='HS256')}"})
+
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "제주러버"

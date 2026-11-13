@@ -1,5 +1,5 @@
 import { ApiError, type ApiClient, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
-import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
+import { AuthError, type AuthService, type AuthSession, type SignUpResult, type SocialProvider, type SocialSignInResult } from '@/auth/auth-service';
 import { toKstParts } from '@/features/expenses/expense-form';
 
 type FakeUser = { password: string; displayName: string };
@@ -50,6 +50,17 @@ export class FakeAuthService implements AuthService {
     this.users.set(email, { password, displayName });
     this.setSession({ userId: email, email });
     return { needsEmailConfirmation: false };
+  }
+
+  readonly socialSignIns: SocialProvider[] = [];
+  /** 다음 소셜 로그인 결과. 'signed_in'이면 그 공급자 계정으로 로그인된다. */
+  socialResult: SocialSignInResult | AuthError = 'signed_in';
+
+  async signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult> {
+    this.socialSignIns.push(provider);
+    if (this.socialResult instanceof AuthError) throw this.socialResult;
+    if (this.socialResult === 'signed_in') this.setSession({ userId: `${provider}-user`, email: null });
+    return this.socialResult;
   }
 
   async signOut() {
