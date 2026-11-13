@@ -4,6 +4,7 @@ import { ApiError } from '@/api/client';
 
 import { openTripMenu } from './support/alerts';
 import { FakeAuthService, fakeApi, place, planItem, tripDetail } from './support/fakes';
+import { pickPeriod } from './support/pickers';
 import { renderApp } from './support/render-app';
 
 function signedIn() {
@@ -14,8 +15,7 @@ function signedIn() {
 
 async function fillNewTrip({ name, start, end }: { name: string; start: string; end: string }) {
   fireEvent.changeText(await screen.findByLabelText('여행 이름'), name);
-  fireEvent.changeText(screen.getByLabelText('시작일'), start);
-  fireEvent.changeText(screen.getByLabelText('종료일'), end);
+  await pickPeriod(start, end);
   fireEvent.press(screen.getByRole('button', { name: '여행 만들기' }));
 }
 
@@ -37,24 +37,30 @@ test('여행이 없으면 안내가 보이고, 여행을 만들면 그 여행 �
   }
 });
 
-test('시작일이 종료일보다 늦으면 서버에 보내지 않고 이유를 보여준다', async () => {
-  const api = fakeApi();
-  renderApp({ auth: signedIn(), api, initialUrl: '/trips/new' });
+test('여행 기간은 달력에서 시작일과 종료일을 차례로 누르고, 고른 기간이 보인다', async () => {
+  renderApp({ auth: signedIn(), api: fakeApi(), initialUrl: '/trips/new' });
 
-  await fillNewTrip({ name: '부산 여행', start: '2026-12-03', end: '2026-12-01' });
+  fireEvent.press(await screen.findByRole('button', { name: '여행 기간' }));
+  expect(screen.getByText('2026년 11월')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: '확인' })).toBeDisabled();
+  fireEvent.press(screen.getByRole('button', { name: '11월 20일' }));
+  // 시작일보다 앞을 누르면 그 날이 새 시작일이 된다
+  fireEvent.press(screen.getByRole('button', { name: '11월 18일' }));
+  fireEvent.press(screen.getByRole('button', { name: '11월 21일' }));
+  expect(screen.getByText('11월 18일 (수) – 11월 21일 (토) · 4일')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '확인' }));
 
-  expect(await screen.findByText('종료일은 시작일과 같거나 뒤여야 해요.')).toBeOnTheScreen();
-  expect(api.createTrip).not.toHaveBeenCalled();
+  expect(await screen.findByText('11월 18일 (수) – 11월 21일 (토) · 4일')).toBeOnTheScreen();
 });
 
-test('날짜 형식이 틀리거나 없는 날짜면 서버에 보내지 않는다', async () => {
+test('기간을 고르지 않으면 서버에 보내지 않고 이유를 보여준다', async () => {
   const api = fakeApi();
   renderApp({ auth: signedIn(), api, initialUrl: '/trips/new' });
 
-  await fillNewTrip({ name: '부산 여행', start: '2026/12/01', end: '2026-02-30' });
+  fireEvent.changeText(await screen.findByLabelText('여행 이름'), '부산 여행');
+  fireEvent.press(screen.getByRole('button', { name: '여행 만들기' }));
 
-  expect(await screen.findByText('2026-11-12처럼 입력해주세요.')).toBeOnTheScreen();
-  expect(screen.getByText('2026-11-14처럼 입력해주세요.')).toBeOnTheScreen();
+  expect(await screen.findByText('여행 기간을 골라 주세요.')).toBeOnTheScreen();
   expect(api.createTrip).not.toHaveBeenCalled();
 });
 

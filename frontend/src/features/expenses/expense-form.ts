@@ -136,8 +136,8 @@ export function toInput(form: ExpenseForm): { input: ExpenseInput; errors: FormE
   if (form.date.trim() || form.time.trim()) {
     const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(form.date.trim());
     const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(form.time.trim());
-    if (!dateOk) errors.date = '2026-11-12처럼 입력해주세요.';
-    if (!timeOk) errors.time = '14:30처럼 입력해주세요.';
+    if (!dateOk) errors.date = '결제 날짜를 골라 주세요.';
+    if (!timeOk) errors.time = '결제 시각을 골라 주세요.';
     if (dateOk && timeOk) paidAt = `${form.date.trim()}T${form.time.trim()}:00+09:00`;
   }
   const items = form.items.map((item, index) => {

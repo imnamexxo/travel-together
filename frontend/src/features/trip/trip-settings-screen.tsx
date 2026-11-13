@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
 import { useDeleteTrip, useLeaveTrip, useUpdateTrip } from '@/api/queries';
+import TripPeriodField from '@/components/pickers/trip-period-field';
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
@@ -64,10 +65,7 @@ function EditTripForm() {
   return <View style={s.section}>
     <Text style={s.heading}>이름과 기간</Text>
     {field('여행 이름', name, setName, errors.name, '여행 이름')}
-    <View style={s.dates}>
-      <View style={s.dateField}>{field('시작일', startDate, setStartDate, errors.startDate, '2026-11-12')}</View>
-      <View style={s.dateField}>{field('종료일', endDate, setEndDate, errors.endDate, '2026-11-14')}</View>
-    </View>
+    <TripPeriodField start={startDate} end={endDate} onChange={(a, b) => { setStartDate(a); setEndDate(b); }} error={errors.startDate ?? errors.endDate} />
     <Text style={s.hint}>일정이 있는 날짜가 기간에서 빠지면 저장되지 않아요.</Text>
     {!!message && <Text accessibilityRole={message.error ? 'alert' : undefined} style={message.error ? s.error : s.notice}>{message.text}</Text>}
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: update.isPending, busy: update.isPending }} disabled={update.isPending} onPress={save} style={({ pressed }) => [s.primaryButton, (pressed || update.isPending) && s.pressed]}>
@@ -152,7 +150,7 @@ const s = StyleSheet.create({
   input: { minHeight: 54, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
   invalid: { borderColor: C.error }, error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 8 },
   notice: { fontSize: 12, lineHeight: 19, color: C.textSecondary, marginTop: 8 },
-  dates: { flexDirection: 'row', gap: 12 }, dateField: { flex: 1 },
+
   hint: { fontSize: 12, color: C.textMuted, marginTop: 10, lineHeight: 18 },
   primaryButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },

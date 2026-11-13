@@ -6,6 +6,7 @@ import { todayInKorea } from '@/features/trip/home-screen';
 
 import { pressAlertButton, spyOnAlerts } from './support/alerts';
 import { FakeAuthService, fakeApi, member, place, planItem, tripDetail } from './support/fakes';
+import { pickTime } from './support/pickers';
 import { renderApp } from './support/render-app';
 
 function signedIn() {
@@ -37,7 +38,7 @@ test('장소를 검색해 고르면 이름이 채워지고, 저장하면 타임�
   fireEvent.press(screen.getByRole('button', { name: '검색' }));
   fireEvent.press(await screen.findByRole('button', { name: '동문시장 선택' }));
   expect(screen.getByLabelText('장소 또는 일정 이름')).toHaveDisplayValue('동문시장');
-  fireEvent.changeText(screen.getByLabelText('시간'), '13:00');
+  await pickTime('시간', '13:00');
   fireEvent.changeText(screen.getByLabelText('예상 비용'), '45000');
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
@@ -148,16 +149,19 @@ test('하루 안에서 순서를 바꾼다', async () => {
   expect(await screen.findByText('순서를 바꿨어요.')).toBeOnTheScreen();
 });
 
-test('잘못된 시간은 서버에 보내지 않는다', async () => {
+test('시간은 시·분을 눌러 고르고, 시간 없음으로 비울 수 있다', async () => {
   const api = render();
 
   fireEvent.press(await screen.findByRole('button', { name: '＋ 일정 추가' }));
   fireEvent.changeText(await screen.findByLabelText('장소 또는 일정 이름'), '점심');
-  fireEvent.changeText(screen.getByLabelText('시간'), '25:00');
+  await pickTime('시간', '12:30');
+  expect(screen.getByText('12:30')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '시간' }));
+  fireEvent.press(screen.getByRole('button', { name: '시간 없음' }));
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
-  expect(await screen.findByText('시간을 10:00처럼 입력하거나 비워 두세요.')).toBeOnTheScreen();
-  expect(api.createPlanItem).not.toHaveBeenCalled();
+  await waitFor(() => expect(api.createPlanItem).toHaveBeenCalledTimes(1));
+  expect(api.createPlanItem.mock.calls[0][1].time).toBeNull();
 });
 
 test('지도에는 일정에 넣은 장소가 핀으로 보인다', async () => {
