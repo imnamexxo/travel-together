@@ -3045,6 +3045,119 @@
           }
         }
       }
+    },
+    "/trips/{trip_id}/map": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Map Data",
+        "description": "장소별 지도 데이터.\n\n- date: 그날 계획했거나(일정 항목) 들른(사진 촬영일·지출 결제일) 장소만.\n- member_id: 그 멤버가 사진을 올렸거나 결제한 장소만. 일정 항목은 함께 보여 주지만 장소를 고르는 기준은 아니다.",
+        "operationId": "map_data_trips__trip_id__map_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "member_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Member Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "저장소 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3764,6 +3877,117 @@
           "sharer_ids"
         ],
         "title": "LineItemOut"
+      },
+      "MapData": {
+        "properties": {
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/MapPlace"
+            },
+            "type": "array",
+            "title": "Places"
+          },
+          "unlinked_photo_count": {
+            "type": "integer",
+            "title": "Unlinked Photo Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "places",
+          "unlinked_photo_count"
+        ],
+        "title": "MapData"
+      },
+      "MapPhoto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "taken_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taken At"
+          },
+          "uploader_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uploader Member Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "taken_at",
+          "uploader_member_id"
+        ],
+        "title": "MapPhoto"
+      },
+      "MapPlace": {
+        "properties": {
+          "place": {
+            "$ref": "#/components/schemas/PlaceOut"
+          },
+          "visited": {
+            "type": "boolean",
+            "title": "Visited"
+          },
+          "visited_dates": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Visited Dates"
+          },
+          "plan_items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItemOut"
+            },
+            "type": "array",
+            "title": "Plan Items"
+          },
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/MapPhoto"
+            },
+            "type": "array",
+            "title": "Photos"
+          },
+          "expense_count": {
+            "type": "integer",
+            "title": "Expense Count"
+          },
+          "expense_total": {
+            "type": "integer",
+            "title": "Expense Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "place",
+          "visited",
+          "visited_dates",
+          "plan_items",
+          "photos",
+          "expense_count",
+          "expense_total"
+        ],
+        "title": "MapPlace"
       },
       "MemberBalanceOut": {
         "properties": {

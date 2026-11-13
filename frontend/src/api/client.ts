@@ -7,6 +7,10 @@ import { filePart } from '@/api/file-part';
 import type { components } from '@/api/schema';
 
 export type Profile = components['schemas']['Profile'];
+export type MapData = components['schemas']['MapData'];
+export type MapPlace = components['schemas']['MapPlace'];
+/** 지도 필터. date는 YYYY-MM-DD. */
+export type MapFilter = { date?: string | null; memberId?: string | null };
 export type TripSummary = components['schemas']['TripSummary'];
 export type TripDetail = components['schemas']['TripDetail'];
 export type TripCreate = components['schemas']['TripCreate'];
@@ -110,6 +114,8 @@ export interface ApiClient {
   uploadReceipt(tripId: string, receipt: { uri: string }, idempotencyKey: string): Promise<ReceiptUpload>;
   /** 지출에 붙일 장소 후보(총무만). 이 여행의 장소가 앞에 온다. */
   getExpensePlaceCandidates(tripId: string, query: string): Promise<ExpensePlaceCandidate[]>;
+  /** 지도: 장소별 들른 곳 여부·일정·사진·지출 요약. 날짜·멤버로 거른다. */
+  getMapData(tripId: string, filter?: MapFilter): Promise<MapData>;
 }
 
 type ApiClientOptions = {
@@ -202,6 +208,10 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
     linkPhotoPlace: (tripId, photoId, link) => request<Photo>('PUT', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}/place`, link),
     getExpensePlaceCandidates: (tripId, query) => request<ExpensePlaceCandidate[]>('GET', `${trip(tripId)}/expenses/place-candidates?query=${encodeURIComponent(query)}`),
+    getMapData: (tripId, { date, memberId } = {}) => {
+      const params = [date && `date=${encodeURIComponent(date)}`, memberId && `member_id=${encodeURIComponent(memberId)}`].filter(Boolean).join('&');
+      return request<MapData>('GET', `${trip(tripId)}/map${params ? `?${params}` : ''}`);
+    },
     uploadReceipt: (tripId, receipt, idempotencyKey) => {
       const form = new FormData();
       form.append('file', filePart(receipt.uri, 'receipt.jpg', 'image/jpeg') as unknown as Blob);

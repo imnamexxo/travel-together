@@ -1,6 +1,6 @@
 # 진행 상황
 
-마지막 갱신: 2026-11-12 (밤)
+마지막 갱신: 2026-11-13
 
 작업 단위(티켓)의 상태는 [GitHub Issues](https://github.com/imnamexxo/travel-together/issues)가 기준이다. 이 파일은 티켓에 담기지 않는 것만 기록한다: 지금 어디까지 왔는지, 사람이 해야 할 일, 아직 열린 질문, 날짜별 기록.
 
@@ -66,6 +66,13 @@
 ```
 
 ## 기록
+
+### 2026-11-13
+
+- #16 지도 중 키 없이 되는 부분. 서버: `GET /trips/{id}/map?date=&member_id=`(장소별 들른 곳 여부·들른 날짜·일정 항목·사진 썸네일 서명 URL·확정 지출 수와 합계, 장소 미연결 사진 수). 날짜는 그날 계획했거나 들른 곳, 멤버는 그 멤버가 사진을 올렸거나 결제한 곳. 앱: 지도 화면이 이 API를 쓰고 멤버 필터 칩, "들른 날" 표시, 지도 탭에 올 때마다 다시 받음.
+- 구글 지도 Android 키는 `app.config.js`가 환경 변수 `GOOGLE_MAPS_ANDROID_KEY`에서 넣는다(공개 저장소에 커밋하지 않음). 개발 서버는 `frontend/.env`, EAS 빌드는 expo.dev Environment variables(development). 키가 없으면 지도 대신 장소 목록.
+- 앱 테스트 시계를 2026-11-12로 고정(jest-setup). 날짜가 바뀌자 플래너가 "오늘"을 먼저 열어 날짜에 의존하는 테스트 10개가 깨졌었다.
+- Expo 57 패치 버전 5개 올림(expo, expo-constants, expo-linking, expo-router, expo-sqlite, `npx expo install --fix`). expo-doctor 21/21 통과.
 
 ### 2026-11-12
 

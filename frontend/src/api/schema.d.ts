@@ -561,6 +561,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Map Data
+         * @description 장소별 지도 데이터.
+         *
+         *     - date: 그날 계획했거나(일정 항목) 들른(사진 촬영일·지출 결제일) 장소만.
+         *     - member_id: 그 멤버가 사진을 올렸거나 결제한 장소만. 일정 항목은 함께 보여 주지만 장소를 고르는 기준은 아니다.
+         */
+        get: operations["map_data_trips__trip_id__map_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -789,6 +812,46 @@ export interface components {
             amount: number | null;
             /** Sharer Ids */
             sharer_ids: string[];
+        };
+        /** MapData */
+        MapData: {
+            /** Places */
+            places: components["schemas"]["MapPlace"][];
+            /** Unlinked Photo Count */
+            unlinked_photo_count: number;
+        };
+        /** MapPhoto */
+        MapPhoto: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Url */
+            url: string;
+            /** Taken At */
+            taken_at: string | null;
+            /**
+             * Uploader Member Id
+             * Format: uuid
+             */
+            uploader_member_id: string;
+        };
+        /** MapPlace */
+        MapPlace: {
+            place: components["schemas"]["PlaceOut"];
+            /** Visited */
+            visited: boolean;
+            /** Visited Dates */
+            visited_dates: string[];
+            /** Plan Items */
+            plan_items: components["schemas"]["PlanItemOut"][];
+            /** Photos */
+            photos: components["schemas"]["MapPhoto"][];
+            /** Expense Count */
+            expense_count: number;
+            /** Expense Total */
+            expense_total: number;
         };
         /** MemberBalanceOut */
         MemberBalanceOut: {
@@ -3341,6 +3404,67 @@ export interface operations {
             };
             /** @description JPEG가 아님 */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 저장소 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    map_data_trips__trip_id__map_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+                member_id?: string | null;
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapData"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
