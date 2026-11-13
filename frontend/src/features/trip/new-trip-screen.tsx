@@ -19,6 +19,8 @@ export default function NewTripScreen() {
   const [endDate, setEndDate] = useState('');
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [overseas, setOverseas] = useState(false);
+  // 통화를 고르면 국내/해외를 따라 맞춘다(원이 아니면 해외). 고른 뒤 스위치로 다시 바꿀 수 있다.
+  const chooseCurrency = (code: CurrencyCode) => { setCurrency(code); setOverseas(code !== DEFAULT_CURRENCY); };
   const [errors, setErrors] = useState<NewTripErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -53,8 +55,8 @@ export default function NewTripScreen() {
         <Text style={s.subtitle}>여행을 만들면 내가 총무가 돼요. 지출과 송금은 총무가 관리해요.</Text>
         {field('여행 이름', name, setName, errors.name, { placeholder: '예: 우리의 제주 여행', maxLength: 50, returnKeyType: 'next' })}
         <TripPeriodField start={startDate} end={endDate} onChange={(a, b) => { setStartDate(a); setEndDate(b); }} error={errors.startDate ?? errors.endDate} />
-        <OverseasField value={overseas} onChange={setOverseas} />
-        <CurrencyField value={currency} onChange={setCurrency} hint={overseas && currency === 'KRW' ? '해외 여행이면 현지 통화를 고르세요. 지출과 정산을 이 통화로 적어요.' : '지출과 정산을 이 통화로 적어요.'} />
+        <CurrencyField value={currency} onChange={chooseCurrency} hint={overseas && currency === DEFAULT_CURRENCY ? '해외 여행이면 현지 통화를 고르세요. 지출과 정산을 이 통화로 적어요.' : '지출과 정산을 이 통화로 적어요.'} />
+        <OverseasField value={overseas} onChange={setOverseas} warning={!overseas && currency !== DEFAULT_CURRENCY} />
         {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: createTrip.isPending, busy: createTrip.isPending }} disabled={createTrip.isPending} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || createTrip.isPending) && s.pressed]}>
           <Text style={s.primaryText}>여행 만들기</Text>
