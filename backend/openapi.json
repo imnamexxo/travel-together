@@ -252,7 +252,7 @@
           "trips"
         ],
         "summary": "Update Trip",
-        "description": "총무가 여행 이름·기간을 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지면 409.",
+        "description": "총무가 여행 이름·기간·통화를 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지거나, 지출·송금이 있는데 통화를 바꾸면 409.",
         "operationId": "update_trip_trips__trip_id__patch",
         "security": [
           {
@@ -333,7 +333,7 @@
             }
           },
           "409": {
-            "description": "일정 항목이 있는 날짜가 빠짐",
+            "description": "일정 항목이 있는 날짜가 빠짐, 또는 지출·송금이 있어 통화를 바꿀 수 없음",
             "content": {
               "application/json": {
                 "schema": {
@@ -4938,6 +4938,24 @@
             "type": "string",
             "format": "date",
             "title": "End Date"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KRW",
+              "JPY",
+              "USD",
+              "EUR",
+              "CNY",
+              "TWD",
+              "THB",
+              "VND",
+              "PHP",
+              "HKD",
+              "SGD"
+            ],
+            "title": "Currency",
+            "default": "KRW"
           }
         },
         "type": "object",
@@ -4969,6 +4987,10 @@
             "format": "date",
             "title": "End Date"
           },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
           "member_count": {
             "type": "integer",
             "title": "Member Count"
@@ -4983,6 +5005,7 @@
           "name",
           "start_date",
           "end_date",
+          "currency",
           "member_count",
           "me"
         ],
@@ -5009,6 +5032,10 @@
             "format": "date",
             "title": "End Date"
           },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
           "member_count": {
             "type": "integer",
             "title": "Member Count"
@@ -5024,6 +5051,7 @@
           "name",
           "start_date",
           "end_date",
+          "currency",
           "member_count",
           "is_organizer"
         ],
@@ -5067,6 +5095,30 @@
               }
             ],
             "title": "End Date"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "KRW",
+                  "JPY",
+                  "USD",
+                  "EUR",
+                  "CNY",
+                  "TWD",
+                  "THB",
+                  "VND",
+                  "PHP",
+                  "HKD",
+                  "SGD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
           }
         },
         "type": "object",

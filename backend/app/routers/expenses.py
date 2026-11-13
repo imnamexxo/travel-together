@@ -276,9 +276,9 @@ def confirm_expense(
     session: Session = Depends(get_session),
 ) -> ExpenseOut:
     """확정 조건이 모두 맞으면 confirmed. 아니면 needs_review로 바꾸고 깨진 조건과 함께 422. 강제 확정은 없다."""
-    require_organizer(session, trip_id, user)
+    me = require_organizer(session, trip_id, user)
     expense = _get_expense(session, trip_id, expense_id)
-    broken = broken_conditions(expense)
+    broken = broken_conditions(expense, me.trip.currency)
     expense.status = "needs_review" if broken else "confirmed"
     session.commit()
     if broken:

@@ -5,21 +5,18 @@ import uuid
 from sqlalchemy import exists, or_, select
 from sqlalchemy.orm import Session
 
+from app.currency import DEFAULT_CURRENCY, format_money
 from app.errors import ErrorDetail
 from app.models import Expense, Transfer, expense_default_sharers, line_item_sharers
 
 
-def won(amount: int) -> str:
-    return f"{amount:,}원"
-
-
-def broken_conditions(expense: Expense) -> list[ErrorDetail]:
+def broken_conditions(expense: Expense, currency: str = DEFAULT_CURRENCY) -> list[ErrorDetail]:
     """확정 조건 4가지 중 깨진 것. 비어 있으면 확정할 수 있다.
 
     1. 품목 금액 합 = 총액
     2. 모든 품목에 분담 대상 1명 이상
     3. 결제자 지정
-    4. 모든 금액이 0보다 큰 원 단위 정수
+    4. 모든 금액이 0보다 큰 정수(여행 통화의 가장 작은 단위)
     field는 앱이 해당 칸 옆에 표시할 수 있도록 위치를 가리킨다(items.<번호>.amount 등).
     """
     broken: list[ErrorDetail] = []
@@ -45,7 +42,7 @@ def broken_conditions(expense: Expense) -> list[ErrorDetail]:
         broken.append(
             ErrorDetail(
                 field="total_amount",
-                message=f"품목 합계({won(sum(amounts))})와 총액({won(total)})이 다릅니다.",
+                message=f"품목 합계({format_money(sum(amounts), currency)})와 총액({format_money(total, currency)})이 다릅니다.",
             )
         )
     return broken

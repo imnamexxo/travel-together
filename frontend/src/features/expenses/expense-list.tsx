@@ -9,8 +9,6 @@ import { useCurrentTrip } from '@/features/trip/current-trip';
 import { STATUS_LABEL, toKstParts } from './expense-form';
 import { pickReceipt, prepareReceipt, type ReceiptSource } from './receipt-prep';
 
-const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
-
 /** 지출 내역: 확인이 필요한 지출(초안·검사 실패)을 위에 모으고, 그 아래 확정된 지출. */
 export default function ExpenseList() {
   const { trip, isOrganizer } = useCurrentTrip();
@@ -73,6 +71,7 @@ export default function ExpenseList() {
 }
 
 function ExpenseRow({ expense, tripId }: { expense: ExpenseSummary; tripId: string }) {
+  const { money } = useCurrentTrip();
   const name = expense.merchant_name ?? '이름 없는 지출';
   const date = expense.paid_at ? toKstParts(expense.paid_at).date.slice(5).replace('-', '.') : '';
   return <Pressable accessibilityRole="button" accessibilityLabel={`${name} 지출 열기`} onPress={() => router.push(`/trips/${tripId}/expenses/${expense.id}`)} style={s.expenseRow}>
@@ -81,7 +80,7 @@ function ExpenseRow({ expense, tripId }: { expense: ExpenseSummary; tripId: stri
       <Text style={s.expenseName}>{name}</Text>
       <Text style={s.helper}>{expense.payer_name ? `${expense.payer_name} 결제` : '결제자 미지정'}{expense.status !== 'confirmed' ? ` · ${STATUS_LABEL[expense.status]}` : ''}</Text>
     </View>
-    <Text style={s.expenseAmount}>{expense.total_amount === null ? '금액 미입력' : money(expense.total_amount)}</Text>
+    <Text style={s.expenseAmount}>{expense.total_amount === null ? '금액 미입력' : money.format(expense.total_amount)}</Text>
     <Text style={s.chevron}>›</Text>
   </Pressable>;
 }

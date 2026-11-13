@@ -14,8 +14,6 @@ import { useCurrentTrip } from './current-trip';
 import PlanItemEditor from './plan-item-editor';
 import { formatPeriod } from './trip-dates';
 
-const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
-
 /** 한국 시간 기준 오늘(YYYY-MM-DD). */
 export function todayInKorea(now = new Date()): string {
   return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -27,7 +25,7 @@ export default function HomeScreen() {
   const me = useMe();
   const { signOut } = useAuth();
   const queryClient = useQueryClient();
-  const { trip, days, isOrganizer } = useCurrentTrip();
+  const { trip, days, isOrganizer, money } = useCurrentTrip();
   const planItems = usePlanItems(trip.id);
   const photos = usePhotos(trip.id).data?.photos ?? [];
   const expenses = useExpenses(trip.id).data ?? [];
@@ -85,9 +83,9 @@ export default function HomeScreen() {
               {!!item.memo && <Text style={s.memo}>{item.memo}</Text>}
               <View style={s.meta}>
                 {!!item.place && item.place.name !== item.title && <Text style={s.metaText}>📍 {item.place.name}</Text>}
-                {item.estimated_cost != null && item.estimated_cost > 0 && <Text style={s.metaText}>예상 {money(item.estimated_cost)}</Text>}
+                {item.estimated_cost != null && item.estimated_cost > 0 && <Text style={s.metaText}>예상 {money.format(item.estimated_cost)}</Text>}
                 {photosHere > 0 && <Text style={s.photoText}>사진 {photosHere}장</Text>}
-                {spent > 0 && <Text style={s.photoText}>지출 {money(spent)}</Text>}
+                {spent > 0 && <Text style={s.photoText}>지출 {money.format(spent)}</Text>}
               </View>
             </View>
           </Pressable>;
