@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
 import { useCreateTrip } from '@/api/queries';
+import TripPeriodField from '@/components/pickers/trip-period-field';
 import { TravelColors as C } from '@/constants/theme';
 import { validateNewTrip, type NewTripErrors } from './new-trip-validation';
 
@@ -46,11 +47,7 @@ export default function NewTripScreen() {
         <Text style={s.title}>새 여행</Text>
         <Text style={s.subtitle}>여행을 만들면 내가 총무가 돼요. 지출과 송금은 총무가 관리해요.</Text>
         {field('여행 이름', name, setName, errors.name, { placeholder: '예: 우리의 제주 여행', maxLength: 50, returnKeyType: 'next' })}
-        {/* 날짜 선택기는 개발 빌드를 다시 만들 때 함께 넣는다. 지금은 YYYY-MM-DD로 입력한다. */}
-        <View style={s.dates}>
-          <View style={s.dateField}>{field('시작일', startDate, setStartDate, errors.startDate, { placeholder: '2026-11-12', maxLength: 10, keyboardType: 'numbers-and-punctuation' })}</View>
-          <View style={s.dateField}>{field('종료일', endDate, setEndDate, errors.endDate, { placeholder: '2026-11-14', maxLength: 10, keyboardType: 'numbers-and-punctuation', returnKeyType: 'go', onSubmitEditing: submit })}</View>
-        </View>
+        <TripPeriodField start={startDate} end={endDate} onChange={(a, b) => { setStartDate(a); setEndDate(b); }} error={errors.startDate ?? errors.endDate} />
         {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: createTrip.isPending, busy: createTrip.isPending }} disabled={createTrip.isPending} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || createTrip.isPending) && s.pressed]}>
           <Text style={s.primaryText}>여행 만들기</Text>
@@ -69,7 +66,7 @@ const s = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 22 },
   input: { minHeight: 54, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
   invalid: { borderColor: C.error }, error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 7 },
-  dates: { flexDirection: 'row', gap: 12 }, dateField: { flex: 1 },
+
   primaryButton: { minHeight: 54, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 28 },
   primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
 });

@@ -5,6 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, newIdempotencyKey, type Expense, type ExpenseStatus, type Member } from '@/api/client';
 import { useConfirmExpense, useDeleteExpense, useExpense, useMembers, useSaveExpense } from '@/api/queries';
+import CalendarPicker from '@/components/pickers/calendar-picker';
+import { formatDay } from '@/components/pickers/calendar-logic';
+import PickerField from '@/components/pickers/picker-field';
+import TimePicker from '@/components/pickers/time-picker';
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
@@ -58,6 +62,7 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
   const nameOf = (id: string) => members.find((m) => m.member_id === id)?.display_name ?? '알 수 없음';
   const [form, setForm] = useState<ExpenseForm>(() => expense ? formFromExpense(expense) : emptyForm(memberOrder, trip.me.member_id));
   const [savedId, setSavedId] = useState(expense?.id);
+  const [picking, setPicking] = useState<'date' | 'time' | null>(null);
   const [status, setStatus] = useState<ExpenseStatus | undefined>(expense?.status);
   // 한 번 만든 키는 저장에 성공할 때까지 다시 쓴다. 재시도해도 지출은 하나만 생긴다.
   const [idempotencyKey] = useState(newIdempotencyKey);
@@ -159,8 +164,10 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
         <ExpensePlacePicker tripId={trip.id} merchant={form.merchant} value={form.place} onChange={(place) => update({ place })} editable={editable} />
         {fieldError('place')}
         <View style={s.row}>
-          <View style={s.flex}><View style={s.labelRow}><Text style={s.label}>결제 날짜</Text>{missing(form.date)}</View>{input('결제 날짜', form.date, (v) => update({ date: v }), { placeholder: '2026-11-12', maxLength: 10, keyboardType: 'numbers-and-punctuation' })}{fieldError('date')}</View>
-          <View style={s.flex}><Text style={s.label}>결제 시각</Text>{input('결제 시각', form.time, (v) => update({ time: v }), { placeholder: '14:30', maxLength: 5, keyboardType: 'numbers-and-punctuation' })}{fieldError('time')}</View>
+          <View style={s.flex}><View style={s.labelRow}><Text style={s.label}>결제 날짜</Text>{missing(form.date)}</View><PickerField label="결제 날짜" value={form.date ? formatDay(form.date) : null} placeholder="날짜 고르기" onPress={() => setPicking('date')} invalid={!!errors.date} />{fieldError('date')}</View>
+          <View style={s.flex}><Text style={s.label}>결제 시각</Text><PickerField label="결제 시각" value={form.time || null} placeholder="시각 고르기" onPress={() => setPicking('time')} invalid={!!errors.time} />{fieldError('time')}</View>
+          <CalendarPicker visible={picking === 'date'} mode="single" title="결제 날짜" date={form.date || null} onClose={() => setPicking(null)} onConfirm={(d) => { update({ date: d }); setPicking(null); }} />
+          <TimePicker visible={picking === 'time'} title="결제 시각" value={form.time} onClose={() => setPicking(null)} onConfirm={(t) => { update({ time: t }); setPicking(null); }} />
         </View>
 
         <Text style={s.label}>결제자</Text>

@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, type PlaceCandidate, type PlanItem } from '@/api/client';
 import { useDeletePlanItem, usePlaceSearch, useReorderPlanItems, useSavePlanItem } from '@/api/queries';
+import PickerField from '@/components/pickers/picker-field';
+import TimePicker from '@/components/pickers/time-picker';
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from './current-trip';
 import type { TripDay } from './trip-dates';
@@ -31,6 +33,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   const reorder = useReorderPlanItems(trip.id);
   const [title, setTitle] = useState(item?.title ?? '');
   const [time, setTime] = useState(item?.time?.slice(0, 5) ?? '');
+  const [timeOpen, setTimeOpen] = useState(false);
   const [memo, setMemo] = useState(item?.memo ?? '');
   const [cost, setCost] = useState(item?.estimated_cost == null ? '' : String(item.estimated_cost));
   const [place, setPlace] = useState<ChosenPlace | null>(item?.place ? { kakao_place_id: item.place.kakao_place_id, name: item.place.name, address: item.place.address } : null);
@@ -130,7 +133,9 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
         <Text style={s.label}>장소 또는 일정 이름</Text>
         <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="장소 또는 일정 이름" style={s.input} value={title} onChangeText={setTitle} placeholder="어디로 떠날까요?" maxLength={80} />
         <Text style={s.label}>시간 (선택)</Text>
-        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="시간" style={s.input} value={time} onChangeText={setTime} placeholder="10:00" maxLength={5} keyboardType="numbers-and-punctuation" />
+        <PickerField label="시간" value={time || null} placeholder="시간 정하기" onPress={() => setTimeOpen(true)} />
+        <TimePicker visible={timeOpen} title="시간" value={time} onClose={() => setTimeOpen(false)}
+          onConfirm={(t) => { setTime(t); setTimeOpen(false); }} onClear={() => { setTime(''); setTimeOpen(false); }} />
         <Text style={s.label}>메모</Text>
         <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="메모" style={[s.input, s.memo]} value={memo} onChangeText={setMemo} placeholder="함께 기억할 내용을 남겨요" multiline maxLength={300} />
         <Text style={s.label}>예상 비용 (원)</Text>

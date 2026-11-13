@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client';
 
 import { pressAlertButton, spyOnAlerts } from './support/alerts';
 import { FakeAuthService, expense, fakeApi, member, tripDetail } from './support/fakes';
+import { pickDate, pickTime } from './support/pickers';
 import { renderApp } from './support/render-app';
 
 function signedIn() {
@@ -216,4 +217,29 @@ test('일반 멤버는 지출을 볼 수만 있고 수정 버튼이 보이지 �
   }
   expect(screen.getByLabelText('품목 1 이름')).toHaveProp('editable', false);
   expect(screen.getByLabelText('결제자 민지')).toBeDisabled();
+});
+
+test('결제 날짜는 달력에서, 결제 시각은 시·분을 눌러 고르고 저장된다', async () => {
+  const api = organizerApi();
+  render(api, '/trips/trip-jeju/expenses/new');
+
+  fireEvent.changeText(await screen.findByLabelText('상호'), '편의점');
+  fireEvent.changeText(screen.getByLabelText('품목 1 이름'), '음료');
+  await pickDate('결제 날짜', '2026-11-13');
+  await pickTime('결제 시각', '14:35');
+  expect(screen.getByText('11월 13일 (금)')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '저장' }));
+
+  await waitFor(() => expect(api.createExpense).toHaveBeenCalledTimes(1));
+  expect(api.createExpense.mock.calls[0][1].paid_at).toBe('2026-11-13T14:35:00+09:00');
+});
+
+test('날짜만 고르고 시각을 고르지 않으면 이유가 보인다', async () => {
+  const api = organizerApi();
+  render(api, '/trips/trip-jeju/expenses/new');
+
+  await pickDate('결제 날짜', '2026-11-13');
+  fireEvent.press(screen.getByRole('button', { name: '저장' }));
+
+  expect(await screen.findByText('결제 시각을 골라 주세요.')).toBeOnTheScreen();
 });

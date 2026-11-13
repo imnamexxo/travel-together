@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client';
 
 import { openTripMenu, pressAlertButton, spyOnAlerts } from './support/alerts';
 import { FakeAuthService, fakeApi, member, tripDetail } from './support/fakes';
+import { pickPeriod } from './support/pickers';
 import { renderApp } from './support/render-app';
 
 function signedIn() {
@@ -33,7 +34,7 @@ test('총무는 여행 메뉴에서 설정을 열어 이름과 기간을 바꾼�
   const { buttons } = await openTripMenu();
   await pressAlertButton(buttons, '여행 설정');
   fireEvent.changeText(await screen.findByLabelText('여행 이름'), '제주 3박');
-  fireEvent.changeText(screen.getByLabelText('종료일'), '2026-11-15');
+  await pickPeriod('2026-11-12', '2026-11-15');
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
   expect(await screen.findByText('저장했어요.')).toBeOnTheScreen();
@@ -52,21 +53,24 @@ test('기간을 줄였다가 서버가 거절하면 어느 날짜 때문인지 �
   }, { trips: [organizerTrip] });
   renderApp({ auth: signedIn(), api, initialUrl: '/trips/trip-jeju/settings' });
 
-  fireEvent.changeText(await screen.findByLabelText('종료일'), '2026-11-13');
+  await pickPeriod('2026-11-12', '2026-11-13');
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
   expect(await screen.findByText('일정 항목이 있는 날짜가 기간에서 빠집니다. 그 날짜의 일정을 먼저 옮기거나 지워 주세요.\n2026-11-14')).toBeOnTheScreen();
 });
 
-test('잘못된 기간은 서버에 보내지 않는다', async () => {
+test('달력은 지금 기간을 보여 주고, 취소하면 기간이 그대로다', async () => {
   const api = fakeApi({}, { trips: [organizerTrip] });
   renderApp({ auth: signedIn(), api, initialUrl: '/trips/trip-jeju/settings' });
 
-  fireEvent.changeText(await screen.findByLabelText('종료일'), '2026-11-01');
+  fireEvent.press(await screen.findByRole('button', { name: '여행 기간' }));
+  // 칸과 달력 아래 요약 둘 다 지금 기간을 보여 준다
+  expect(screen.getAllByText('11월 12일 (목) – 11월 14일 (토) · 3일')).toHaveLength(2);
+  fireEvent.press(screen.getByRole('button', { name: '11월 20일' }));
+  fireEvent.press(screen.getByRole('button', { name: '취소' }));
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
-  expect(await screen.findByText('종료일은 시작일과 같거나 뒤여야 해요.')).toBeOnTheScreen();
-  expect(api.updateTrip).not.toHaveBeenCalled();
+  await waitFor(() => expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', { name: '제주 여행', start_date: '2026-11-12', end_date: '2026-11-14' }));
 });
 
 test('총무는 확인 창을 거쳐 여행을 삭제하고 목록으로 돌아간다', async () => {
