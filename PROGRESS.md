@@ -10,9 +10,8 @@
 
 ## 바로 다음 할 일
 
-1. #18 실기기 확인은 지도 그림만 남음(키를 넣은 빌드에서 확인). 나머지는 확인 완료
-2. 남은 티켓: #16 지도(구글 지도 키 필요), #23 소셜 로그인(카카오 로그인 설정·Google OAuth 필요)
-3. 팀원(유소영) GitHub 아이디 받아서 저장소에 초대 (아직이면)
+1. 남은 티켓: #23 소셜 로그인(카카오 로그인 설정·Google OAuth 필요)
+2. 팀원(유소영) GitHub 아이디 받아서 저장소에 초대 (아직이면)
 
 ## 사람이 해야 할 일
 
@@ -26,7 +25,7 @@
 | Google Cloud OAuth 클라이언트(웹) ID·Secret → Supabase Google 로그인 | #23 | 대기 |
 | Gemini API 키 | #8, #14 | 완료(`GEMINI_API_KEY`) |
 | Supabase Storage 비공개 버킷 + `SUPABASE_SERVICE_ROLE_KEY`를 Render 환경 변수에 | #9 | 완료(버킷 `trip-media`로 안내함) |
-| Google Cloud 결제 계정(카드 등록) + Android 지도 키 | #16 | 대기 |
+| Google Cloud 결제 계정(카드 등록) + Android 지도 키 | #16 | 완료(`GOOGLE_MAPS_ANDROID_KEY`: expo.dev development 환경 + frontend/.env) |
 | 팀원 저장소 초대 | #4 전 | 대기 (아이디 필요) |
 | 기획서 용어를 `GLOSSARY.md`에 맞춰 수정 ("그룹", "이용자", "송금 목록" 등) | 제출 전 | 대기 |
 | 기획서 4장 UI 목업 이미지 새로 그리기 | 제출 전 | 대기 |
@@ -70,6 +69,8 @@
 ### 2026-11-13
 
 - #23 소셜 로그인 코드. 서버: 첫 프로필 이름을 `user_metadata`의 display_name → full_name → name → nickname → preferred_username → user_name → 이메일 앞부분 순으로(이메일 없는 카카오 계정 허용). 앱: 로그인·가입 화면에 카카오·Google 버튼, Supabase OAuth PKCE(`signInWithOAuth` + `expo-web-browser` + `exchangeCodeForSession`), 앱 주소 scheme `traveltogether`(복귀 주소 `traveltogether://auth-callback`), 닫기·동의 거부는 오류 없이 취소. scheme이 바뀌어 개발 빌드를 다시 해야 한다. 카카오·Google·Supabase 설정은 사람이 한다.
+- 구글 지도 키 발급(Google Cloud 프로젝트 travel-together, Maps SDK for Android, 패키지·SHA-1 제한) 후 개발 빌드에서 지도 확인 완료: 핀 모양, 화면 맞추기, 하단 시트, 날짜·멤버 필터. #16·#18 끝.
+- `npx expo start --tunnel`이 `Install @expo/ngrok` 오류로 안 되던 것 → `@expo/ngrok`을 frontend 개발 의존성으로 추가(전역 설치는 npx가 못 찾음).
 - #16 지도 중 키 없이 되는 부분. 서버: `GET /trips/{id}/map?date=&member_id=`(장소별 들른 곳 여부·들른 날짜·일정 항목·사진 썸네일 서명 URL·확정 지출 수와 합계, 장소 미연결 사진 수). 날짜는 그날 계획했거나 들른 곳, 멤버는 그 멤버가 사진을 올렸거나 결제한 곳. 앱: 지도 화면이 이 API를 쓰고 멤버 필터 칩, "들른 날" 표시, 지도 탭에 올 때마다 다시 받음.
 - 구글 지도 Android 키는 `app.config.js`가 환경 변수 `GOOGLE_MAPS_ANDROID_KEY`에서 넣는다(공개 저장소에 커밋하지 않음). 개발 서버는 `frontend/.env`, EAS 빌드는 expo.dev Environment variables(development). 키가 없으면 지도 대신 장소 목록.
 - 앱 테스트 시계를 2026-11-12로 고정(jest-setup). 날짜가 바뀌자 플래너가 "오늘"을 먼저 열어 날짜에 의존하는 테스트 10개가 깨졌었다.
