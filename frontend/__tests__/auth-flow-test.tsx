@@ -171,3 +171,15 @@ test('여행 메뉴에서 로그아웃하면 로그인 화면으로 돌아간다
   expect(await screen.findByLabelText('이메일')).toBeOnTheScreen();
   expect(auth.isSignedIn()).toBe(false);
 });
+
+test('소셜 로그인에서 돌아온 앱 주소(auth-callback)는 없는 화면이 아니라 원래 화면으로 간다', async () => {
+  const signedIn = new FakeAuthService();
+  signedIn.signInAs('minji@example.com');
+  renderApp({ auth: signedIn, api: fakeApi(), initialUrl: '/auth-callback' });
+  expect(await screen.findByText('내 여행')).toBeOnTheScreen();
+});
+
+test('세션이 아직 없을 때 돌아오면 로그인 화면으로 간다', async () => {
+  renderApp({ auth: new FakeAuthService(), api: fakeApi(), initialUrl: '/auth-callback' });
+  expect(await screen.findByLabelText('이메일')).toBeOnTheScreen();
+});

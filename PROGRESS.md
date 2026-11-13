@@ -68,6 +68,7 @@
 
 ### 2026-11-13
 
+- 소셜 로그인 후 돌아온 앱 주소(`traveltogether://auth-callback`)를 Expo Router가 화면으로 열어 UnmatchedRoute가 뜸 → `src/app/auth-callback.tsx`가 원래 화면(로그인됐으면 내 여행, 아니면 로그인)으로 돌려보낸다.
 - #23 소셜 로그인 코드. 서버: 첫 프로필 이름을 `user_metadata`의 display_name → full_name → name → nickname → preferred_username → user_name → 이메일 앞부분 순으로(이메일 없는 카카오 계정 허용). 앱: 로그인·가입 화면에 카카오·Google 버튼, Supabase OAuth PKCE(`signInWithOAuth` + `expo-web-browser` + `exchangeCodeForSession`), 앱 주소 scheme `traveltogether`(복귀 주소 `traveltogether://auth-callback`), 닫기·동의 거부는 오류 없이 취소. scheme이 바뀌어 개발 빌드를 다시 해야 한다. 카카오·Google·Supabase 설정은 사람이 한다.
 - 구글 지도 키 발급(Google Cloud 프로젝트 travel-together, Maps SDK for Android, 패키지·SHA-1 제한) 후 개발 빌드에서 지도 확인 완료: 핀 모양, 화면 맞추기, 하단 시트, 날짜·멤버 필터. #16·#18 끝.
 - `npx expo start --tunnel`이 `Install @expo/ngrok` 오류로 안 되던 것 → `@expo/ngrok`을 frontend 개발 의존성으로 추가(전역 설치는 npx가 못 찾음).
