@@ -36,9 +36,9 @@ def expense_place_candidates(
 ) -> list[ExpensePlaceCandidate]:
     """지출에 붙일 장소 후보. 위치 좌표 없이 검색어로만 찾는다(ADR-0003). 고르기 전에는 붙이지 않는다."""
     require_organizer(session, trip_id, user)
-    known = set(session.scalars(select(Place.kakao_place_id).where(Place.trip_id == trip_id)))
+    known = set(session.scalars(select(Place.source_place_id).where(Place.trip_id == trip_id)))
     candidates = [
-        ExpensePlaceCandidate(**c.__dict__, in_trip=c.kakao_place_id in known) for c in search_places(searcher, query.strip())
+        ExpensePlaceCandidate(**c.__dict__, in_trip=c.source_place_id in known) for c in search_places(searcher, query.strip())
     ]
     # 이 여행의 장소를 앞으로(같은 그룹 안에서는 카카오 순서 유지).
     return sorted(candidates, key=lambda c: not c.in_trip)

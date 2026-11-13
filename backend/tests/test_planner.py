@@ -37,14 +37,14 @@ def items(client, trip, who="민지"):
     return client.get(trip.url("/plan-items"), headers=bearer(trip.tokens[who])).json()
 
 
-MARKET = {"kakao_place_id": "111", "name": "동문시장"}
+MARKET = {"source_place_id": "111", "name": "동문시장"}
 
 
 def test_search_returns_kakao_candidates(client, trip, places):
     response = client.get(trip.url("/places/search"), params={"query": "시장"}, headers=bearer(trip.tokens["준호"]))
 
     assert response.status_code == 200
-    assert response.json()[0]["kakao_place_id"] == "111"
+    assert response.json()[0]["source_place_id"] == "111"
     assert response.json()[0]["name"] == "동문시장"
     assert places.queries == ["시장"]
 
@@ -79,7 +79,7 @@ def test_same_kakao_place_is_one_place(client, trip, engine):
 
 
 def test_place_not_found_on_kakao_is_rejected_and_nothing_saved(client, trip, engine):
-    response = add(client, trip, place={"kakao_place_id": "999", "name": "동문시장"})
+    response = add(client, trip, place={"source_place_id": "999", "name": "동문시장"})
 
     assert response.status_code == 422
     assert response.json()["code"] == "place_not_verified"
@@ -89,7 +89,7 @@ def test_place_not_found_on_kakao_is_rejected_and_nothing_saved(client, trip, en
 
 
 def test_app_supplied_place_details_are_not_trusted(client, trip):
-    body = add(client, trip, place={"kakao_place_id": "111", "name": "동문"}).json()
+    body = add(client, trip, place={"source_place_id": "111", "name": "동문"}).json()
 
     # 이름으로 다시 찾은 카카오 결과로 저장한다.
     assert body["place"]["name"] == "동문시장"

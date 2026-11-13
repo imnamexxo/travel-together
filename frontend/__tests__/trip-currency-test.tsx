@@ -77,3 +77,17 @@ test('여행 설정에서 통화를 바꿔 저장한다', async () => {
 
   await waitFor(() => expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', expect.objectContaining({ currency: 'USD' })));
 });
+
+test('해외 여행을 켜고 만들면 해외 여행으로 만든다', async () => {
+  const api = fakeApi();
+  renderApp({ auth: signedIn(), api, initialUrl: '/trips/new' });
+
+  fireEvent.changeText(await screen.findByLabelText('여행 이름'), '오사카 여행');
+  await pickPeriod('2026-12-01', '2026-12-03');
+  fireEvent(screen.getByLabelText('해외 여행'), 'valueChange', true);
+  expect(screen.getByText('장소를 Google 지도에서 찾아요.')).toBeOnTheScreen();
+  expect(screen.getByText('해외 여행이면 현지 통화를 고르세요. 지출과 정산을 이 통화로 적어요.')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '여행 만들기' }));
+
+  await waitFor(() => expect(api.createTrip).toHaveBeenCalledWith(expect.objectContaining({ is_overseas: true })));
+});

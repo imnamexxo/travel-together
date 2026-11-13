@@ -85,7 +85,7 @@ def seed(session: Session, organizer_id: uuid.UUID, today: dt.date) -> Trip | No
 
     places: dict[str, Place] = {}
     for key, (name, address, road, lat, lng, category) in PLACES.items():
-        places[key] = Place(trip_id=trip.id, kakao_place_id=f"demo-{key}", name=name, address=address, road_address=road, latitude=lat, longitude=lng, category=category)
+        places[key] = Place(trip_id=trip.id, source_place_id=f"demo-{key}", name=name, address=address, road_address=road, latitude=lat, longitude=lng, category=category)
     session.add_all(places.values())
     session.flush()
 

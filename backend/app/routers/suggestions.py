@@ -71,6 +71,8 @@ def get_plan_suggester(request: Request) -> PlanSuggester:
 
 def _input_hash(trip: Trip, body: SuggestionAsk) -> str:
     key = [body.destination.lower(), trip.start_date.isoformat(), trip.end_date.isoformat(), body.preferences.lower()]
+    if trip.is_overseas:
+        key.append("overseas")
     return hashlib.sha256(json.dumps(key, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -93,13 +95,20 @@ def names_match(suggested: str, found: str) -> bool:
     return len(short) >= 2 and len(short) * 2 >= len(long) and _in_order(short, long)
 
 
-def _verify(searcher: PlaceSearcher, stop: SuggestedStop) -> PlaceCandidate | None:
-    """"장소명 + 지역"으로 카카오를 검색해 이름이 충분히 일치하는 첫 후보. 없거나 검색이 안 되면 None(확인 필요)."""
+def _verify(searcher: PlaceSearcher, stop: SuggestedStop, *, overseas: bool = False) -> PlaceCandidate | None:
+    """"장소명 + 지역"으로 검색해 이름이 충분히 일치하는 첫 후보. 없거나 검색이 안 되면 None(확인 필요).
+
+    해외 여행(Google)은 같은 장소도 한국어 표기가 여러 가지라 이름이 맞는 후보가 없으면 첫 후보를 쓴다.
+    Google은 "장소명 + 지역" 검색의 첫 결과가 대개 그 장소다. 사용자가 일정에 넣기 전에 보고 고른다.
+    """
     try:
         candidates = searcher.search(f"{stop.place_name} {stop.region}")
     except PlaceSearchUnavailable:
         return None
-    return next((c for c in candidates if names_match(stop.place_name, c.name)), None)
+    match = next((c for c in candidates if names_match(stop.place_name, c.name)), None)
+    if match is None and overseas and candidates:
+        return candidates[0]
+    return match
 
 
 def _ask_gemini(suggester: PlanSuggester, request: PlanRequest) -> list[SuggestedStop]:
@@ -123,15 +132,15 @@ def _start_of_today_kst() -> datetime:
 def _item_out(item: SuggestedItem) -> SuggestedItemOut:
     place = (
         PlaceCandidateOut(
-            kakao_place_id=item.kakao_place_id,
-            name=item.kakao_name or item.place_name,
-            address=item.kakao_address or "",
-            road_address=item.kakao_road_address,
+            source_place_id=item.source_place_id,
+            name=item.found_name or item.place_name,
+            address=item.found_address or "",
+            road_address=item.found_road_address,
             latitude=item.latitude,
             longitude=item.longitude,
-            category=item.kakao_category,
+            category=item.found_category,
         )
-        if item.status == "verified" and item.kakao_place_id and item.latitude is not None and item.longitude is not None
+        if item.status == "verified" and item.source_place_id and item.latitude is not None and item.longitude is not None
         else None
     )
     return SuggestedItemOut(
@@ -197,13 +206,13 @@ def ask_for_suggestions(
             f"이 여행의 오늘 추천 횟수({DAILY_LIMIT}회)를 모두 썼습니다. 내일 0시(한국 시간)부터 다시 요청할 수 있습니다.",
         )
 
-    stops = _ask_gemini(suggester, PlanRequest(body.destination, trip.start_date, trip.end_date, body.preferences))
+    stops = _ask_gemini(suggester, PlanRequest(body.destination, trip.start_date, trip.end_date, body.preferences, overseas=trip.is_overseas))
     request = SuggestionRequest(trip_id=trip_id, input_hash=input_hash, destination=body.destination, preferences=body.preferences)
     # 장소마다 카카오 검색이 필요하다. 한 곳씩 하면 12곳이면 12번을 기다리므로 동시에 묻는다(순서는 그대로).
     started = time.monotonic()
     with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
-        verified = list(pool.map(lambda stop: _verify(searcher, stop), stops))
-    logger.info("카카오 확인 %d곳 %.1f초", len(stops), time.monotonic() - started)
+        verified = list(pool.map(lambda stop: _verify(searcher, stop, overseas=trip.is_overseas), stops))
+    logger.info("장소 확인(%s) %d곳 %.1f초", "Google" if trip.is_overseas else "카카오", len(stops), time.monotonic() - started)
     for stop, found in zip(stops, verified):
         request.items.append(
             SuggestedItem(
@@ -214,13 +223,13 @@ def ask_for_suggestions(
                 stay_minutes=stop.stay_minutes,
                 description=stop.description,
                 status="verified" if found else "needs_check",
-                kakao_place_id=found.kakao_place_id if found else None,
-                kakao_name=found.name if found else None,
-                kakao_address=found.address if found else None,
-                kakao_road_address=found.road_address if found else None,
+                source_place_id=found.source_place_id if found else None,
+                found_name=found.name if found else None,
+                found_address=found.address if found else None,
+                found_road_address=found.road_address if found else None,
                 latitude=found.latitude if found else None,
                 longitude=found.longitude if found else None,
-                kakao_category=found.category if found else None,
+                found_category=found.category if found else None,
             )
         )
     session.add(request)
@@ -253,13 +262,13 @@ def adopt_suggestions(
             continue
         check_in_period(me.trip, item.date)
         place = None
-        if item.status == "verified" and item.kakao_place_id and item.latitude is not None and item.longitude is not None:
+        if item.status == "verified" and item.source_place_id and item.latitude is not None and item.longitude is not None:
             place = place_from_candidate(
                 session,
                 trip_id,
                 PlaceCandidate(
-                    item.kakao_place_id, item.kakao_name or item.place_name, item.kakao_address or "",
-                    item.kakao_road_address, item.latitude, item.longitude, item.kakao_category,
+                    item.source_place_id, item.found_name or item.place_name, item.found_address or "",
+                    item.found_road_address, item.latitude, item.longitude, item.found_category,
                 ),
             )
         plan = PlanItem(

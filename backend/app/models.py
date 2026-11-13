@@ -3,6 +3,7 @@ import datetime as dt
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     CheckConstraint,
     Date,
@@ -16,6 +17,7 @@ from sqlalchemy import (
     Time,
     UniqueConstraint,
     Uuid,
+    false,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -57,6 +59,8 @@ class Trip(Base):
     invite_code: Mapped[str] = mapped_column(String(INVITE_CODE_LENGTH), unique=True)
     # 여행 통화(ADR 0004). 이 여행의 모든 금액은 이 통화의 가장 작은 단위 정수다.
     currency: Mapped[str] = mapped_column(String(3), server_default="KRW", default="KRW")
+    # 해외 여행이면 장소를 Google Places에서 찾는다(ADR 0004). 장소가 생긴 뒤에는 바꾸지 않는다.
+    is_overseas: Mapped[bool] = mapped_column(Boolean, server_default=false(), default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -199,14 +203,15 @@ class Transfer(Base):
 
 
 class Place(Base):
-    """여행 안의 실제 장소. 카카오 검증을 통과한 것만 만든다. 한 여행에서 같은 카카오 장소는 하나다."""
+    """여행 안의 실제 장소. 장소 검색기(국내 카카오, 해외 Google) 검증을 통과한 것만 만든다. 한 여행에서 같은 장소는 하나다."""
 
     __tablename__ = "places"
-    __table_args__ = (UniqueConstraint("trip_id", "kakao_place_id", name="places_one_per_kakao_place"),)
+    __table_args__ = (UniqueConstraint("trip_id", "source_place_id", name="places_one_per_source_place"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
-    kakao_place_id: Mapped[str] = mapped_column(String(30))
+    # 검색기의 장소 id: 국내 여행은 카카오, 해외 여행은 Google Places(ADR 0004).
+    source_place_id: Mapped[str] = mapped_column(String(300))
     name: Mapped[str] = mapped_column(String(100))
     address: Mapped[str] = mapped_column(String(200))
     road_address: Mapped[str | None] = mapped_column(String(200))
@@ -279,13 +284,13 @@ class SuggestedItem(Base):
     stay_minutes: Mapped[int] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(20))
-    kakao_place_id: Mapped[str | None] = mapped_column(String(30))
-    kakao_name: Mapped[str | None] = mapped_column(String(100))
-    kakao_address: Mapped[str | None] = mapped_column(String(200))
-    kakao_road_address: Mapped[str | None] = mapped_column(String(200))
+    source_place_id: Mapped[str | None] = mapped_column(String(300))
+    found_name: Mapped[str | None] = mapped_column(String(100))
+    found_address: Mapped[str | None] = mapped_column(String(200))
+    found_road_address: Mapped[str | None] = mapped_column(String(200))
     latitude: Mapped[float | None] = mapped_column(Float)
     longitude: Mapped[float | None] = mapped_column(Float)
-    kakao_category: Mapped[str | None] = mapped_column(String(100))
+    found_category: Mapped[str | None] = mapped_column(String(100))
     adopted_plan_item_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plan_items.id", ondelete="SET NULL"))
 
     request: Mapped[SuggestionRequest] = relationship(back_populates="items")

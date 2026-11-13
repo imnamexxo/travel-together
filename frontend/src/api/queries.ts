@@ -203,7 +203,7 @@ export function usePlanItems(tripId: string) {
   return useQuery({ queryKey: queryKeys.planItems(tripId), queryFn: () => api.listPlanItems(tripId) });
 }
 
-/** 검색어를 확정했을 때만 부른다(입력할 때마다 카카오를 부르지 않는다). */
+/** 검색어를 확정했을 때만 부른다(입력할 때마다 검색기를 부르지 않는다). */
 export function usePlaceSearch(tripId: string, query: string) {
   const api = useApi();
   return useQuery({

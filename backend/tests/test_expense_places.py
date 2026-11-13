@@ -18,7 +18,7 @@ def trip(client, auth, places):
     places.add("901", "제주 편의점 시청점")
     places.add("902", "제주 편의점 공항점")
     # 공항점은 이미 이 여행의 장소다(일정에 들어 있음).
-    client.post(f"/trips/{trip_id}/plan-items", json={"date": "2026-11-12", "title": "도착", "place": {"kakao_place_id": "902", "name": "제주 편의점 공항점"}}, headers=bearer(minji))
+    client.post(f"/trips/{trip_id}/plan-items", json={"date": "2026-11-12", "title": "도착", "place": {"source_place_id": "902", "name": "제주 편의점 공항점"}}, headers=bearer(minji))
     me = client.get(f"/trips/{trip_id}", headers=bearer(minji)).json()["me"]["member_id"]
 
     class Trip:
@@ -68,7 +68,7 @@ def test_expense_has_no_place_unless_chosen(client, trip):
 
 
 def test_chosen_candidate_reuses_trip_place(client, trip, engine):
-    body = create(client, trip, place={"kakao_place_id": "902", "name": "제주 편의점 공항점"}).json()
+    body = create(client, trip, place={"source_place_id": "902", "name": "제주 편의점 공항점"}).json()
 
     plan_place = client.get(trip.url("/plan-items"), headers=bearer(trip.tokens["민지"])).json()[0]["place"]
     assert body["place"]["id"] == plan_place["id"]
@@ -77,7 +77,7 @@ def test_chosen_candidate_reuses_trip_place(client, trip, engine):
 
 
 def test_new_candidate_becomes_trip_place_and_can_be_cleared(client, trip):
-    expense = create(client, trip, place={"kakao_place_id": "901", "name": "제주 편의점 시청점"}).json()
+    expense = create(client, trip, place={"source_place_id": "901", "name": "제주 편의점 시청점"}).json()
     assert expense["place"]["name"] == "제주 편의점 시청점"
 
     cleared = client.put(trip.url(f"/expenses/{expense['id']}"), json={"merchant_name": "제주 편의점", "place": None}, headers=bearer(trip.tokens["민지"])).json()
@@ -86,7 +86,7 @@ def test_new_candidate_becomes_trip_place_and_can_be_cleared(client, trip):
 
 
 def test_expense_list_shows_place(client, trip):
-    create(client, trip, place={"kakao_place_id": "901", "name": "제주 편의점 시청점"})
+    create(client, trip, place={"source_place_id": "901", "name": "제주 편의점 시청점"})
 
     listed = client.get(trip.url("/expenses"), headers=bearer(trip.tokens["준호"])).json()
 
@@ -95,7 +95,7 @@ def test_expense_list_shows_place(client, trip):
 
 
 def test_unverified_place_is_rejected(client, trip):
-    response = create(client, trip, place={"kakao_place_id": "999", "name": "제주 편의점"})
+    response = create(client, trip, place={"source_place_id": "999", "name": "제주 편의점"})
 
     assert response.status_code == 422
     assert response.json()["code"] == "place_not_verified"

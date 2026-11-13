@@ -16,8 +16,8 @@ function signedIn() {
 }
 
 const candidates = [
-  { kakao_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null },
-  { kakao_place_id: '222', name: '함덕해수욕장', address: '제주시 조천읍', road_address: null, latitude: 33.543, longitude: 126.669, category: null },
+  { source_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null },
+  { source_place_id: '222', name: '함덕해수욕장', address: '제주시 조천읍', road_address: null, latitude: 33.543, longitude: 126.669, category: null },
 ];
 const organizerTrip = tripDetail({ me: { member_id: 'm1', join_order: 1, is_organizer: true } });
 const memberTrip = tripDetail({ me: { member_id: 'm2', join_order: 2, is_organizer: false } });
@@ -46,7 +46,7 @@ test('장소를 검색해 고르면 이름이 채워지고, 저장하면 타임�
   expect(screen.getByText('예상 45,000원')).toBeOnTheScreen();
   expect(api.createPlanItem).toHaveBeenCalledWith('trip-jeju', {
     date: '2026-11-12', time: '13:00', title: '동문시장', memo: '', estimated_cost: 45000,
-    place: { kakao_place_id: '111', name: '동문시장' },
+    place: { source_place_id: '111', name: '동문시장' },
   });
 });
 

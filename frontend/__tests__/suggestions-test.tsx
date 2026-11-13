@@ -18,10 +18,10 @@ const suggestion: Suggestion = {
   reused: false,
   items: [
     { id: 's1', date: '2026-11-12', order: 1, place_name: '동문시장', region: '제주시', stay_minutes: 90, description: '먹거리 구경', status: 'verified', adopted: false,
-      place: { kakao_place_id: '111', name: '동문재래시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.5, longitude: 126.5, category: null } },
+      place: { source_place_id: '111', name: '동문재래시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.5, longitude: 126.5, category: null } },
     { id: 's2', date: '2026-11-12', order: 2, place_name: '지어낸 가게', region: '제주시', stay_minutes: 60, description: '???', status: 'needs_check', adopted: false, place: null },
     { id: 's3', date: '2026-11-13', order: 1, place_name: '함덕해수욕장', region: '제주시', stay_minutes: 120, description: '바다 산책', status: 'verified', adopted: false,
-      place: { kakao_place_id: '222', name: '함덕해수욕장', address: '제주시 조천읍', road_address: null, latitude: 33.5, longitude: 126.6, category: null } },
+      place: { source_place_id: '222', name: '함덕해수욕장', address: '제주시 조천읍', road_address: null, latitude: 33.5, longitude: 126.6, category: null } },
   ],
 };
 

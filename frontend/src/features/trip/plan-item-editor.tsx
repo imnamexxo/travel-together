@@ -10,7 +10,7 @@ import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from './current-trip';
 import type { TripDay } from './trip-dates';
 
-type ChosenPlace = { kakao_place_id: string; name: string; address: string };
+type ChosenPlace = { source_place_id: string; name: string; address: string };
 
 type Props = {
   /** 고칠 일정 항목. 없으면 새로 만든다. */
@@ -36,7 +36,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   const [timeOpen, setTimeOpen] = useState(false);
   const [memo, setMemo] = useState(item?.memo ?? '');
   const [cost, setCost] = useState(item?.estimated_cost == null ? '' : money.toText(item.estimated_cost));
-  const [place, setPlace] = useState<ChosenPlace | null>(item?.place ? { kakao_place_id: item.place.kakao_place_id, name: item.place.name, address: item.place.address } : null);
+  const [place, setPlace] = useState<ChosenPlace | null>(item?.place ? { source_place_id: item.place.source_place_id, name: item.place.name, address: item.place.address } : null);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   function choose(candidate: PlaceCandidate) {
     // 이름을 비워 뒀거나 이전에 고른 장소 이름 그대로면 새 장소 이름으로 채운다.
     if (!title.trim() || title === place?.name) setTitle(candidate.name);
-    setPlace({ kakao_place_id: candidate.kakao_place_id, name: candidate.name, address: candidate.road_address ?? candidate.address });
+    setPlace({ source_place_id: candidate.source_place_id, name: candidate.name, address: candidate.road_address ?? candidate.address });
     setSubmittedQuery('');
     setQuery('');
   }
@@ -75,7 +75,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
           title: title.trim(),
           memo: memo.trim(),
           estimated_cost: estimated,
-          place: place ? { kakao_place_id: place.kakao_place_id, name: place.name } : null,
+          place: place ? { source_place_id: place.source_place_id, name: place.name } : null,
         },
       });
       onClose();
@@ -125,7 +125,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
           {!!submittedQuery && (search.isPending ? <ActivityIndicator style={s.loading} color={C.primary} />
             : search.isError ? <Text accessibilityRole="alert" style={s.error}>{search.error.message}</Text>
             : !search.data.length ? <Text style={s.caption}>검색 결과가 없어요. 다른 이름으로 찾아보세요.</Text>
-            : search.data.map((c) => <Pressable key={c.kakao_place_id} accessibilityRole="button" accessibilityLabel={`${c.name} 선택`} onPress={() => choose(c)} style={s.result}>
+            : search.data.map((c) => <Pressable key={c.source_place_id} accessibilityRole="button" accessibilityLabel={`${c.name} 선택`} onPress={() => choose(c)} style={s.result}>
               <Text style={s.placeName}>{c.name}</Text><Text style={s.caption}>{c.road_address ?? c.address}</Text>
             </Pressable>))}
           <Text style={s.caption}>장소 없이 &quot;자유시간&quot; 같은 일정도 만들 수 있어요.</Text>

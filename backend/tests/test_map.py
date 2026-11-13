@@ -21,7 +21,7 @@ def trip(client, auth, places):
         places.add(kakao_id, name)
     h = bearer(minji)
     url = f"/trips/{trip_id}"
-    plan = lambda date, title, kakao, name: client.post(f"{url}/plan-items", json={"date": date, "title": title, "place": {"kakao_place_id": kakao, "name": name}}, headers=h).json()
+    plan = lambda date, title, kakao, name: client.post(f"{url}/plan-items", json={"date": date, "title": title, "place": {"source_place_id": kakao, "name": name}}, headers=h).json()
     market = plan("2026-11-12", "점심", "1", "동문시장")["place"]["id"]
     beach = plan("2026-11-12", "산책", "2", "함덕해수욕장")["place"]["id"]
     peak = plan("2026-11-13", "일출", "3", "성산일출봉")["place"]["id"]
@@ -66,10 +66,10 @@ def by_name(body):
 def test_places_with_visited_flag_plans_photos_and_expense_summary(client, trip):
     photo(client, trip, "준호", "2026-11-12T13:30:00+09:00", trip.place["market"])
     photo(client, trip, "민지", "2026-11-12T14:00:00+09:00")  # 장소 없음
-    expense(client, trip, "민지", "2026-11-12T12:40:00+09:00", 30000, place={"kakao_place_id": "1", "name": "동문시장"})
-    expense(client, trip, "민지", "2026-11-12T12:50:00+09:00", 9999, place={"kakao_place_id": "1", "name": "동문시장"}, confirm=False)
+    expense(client, trip, "민지", "2026-11-12T12:40:00+09:00", 30000, place={"source_place_id": "1", "name": "동문시장"})
+    expense(client, trip, "민지", "2026-11-12T12:50:00+09:00", 9999, place={"source_place_id": "1", "name": "동문시장"}, confirm=False)
     # 일정에 없던 곳도 확정 지출이 있으면 들른 곳이다.
-    expense(client, trip, "준호", "2026-11-12T19:00:00+09:00", 40000, place={"kakao_place_id": "4", "name": "흑돼지 식당"})
+    expense(client, trip, "준호", "2026-11-12T19:00:00+09:00", 40000, place={"source_place_id": "4", "name": "흑돼지 식당"})
 
     body = map_data(client, trip).json()
 
@@ -99,7 +99,7 @@ def test_date_filter_keeps_places_planned_or_visited_that_day(client, trip):
 
 def test_member_filter_keeps_places_where_that_member_took_photos_or_paid(client, trip):
     photo(client, trip, "준호", "2026-11-12T13:30:00+09:00", trip.place["market"])
-    expense(client, trip, "민지", "2026-11-12T16:00:00+09:00", 12000, place={"kakao_place_id": "2", "name": "함덕해수욕장"})
+    expense(client, trip, "민지", "2026-11-12T16:00:00+09:00", 12000, place={"source_place_id": "2", "name": "함덕해수욕장"})
 
     junho = by_name(map_data(client, trip, member_id=trip.member["준호"]).json())
     minji = by_name(map_data(client, trip, member_id=trip.member["민지"]).json())

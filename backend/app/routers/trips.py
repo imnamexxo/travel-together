@@ -12,7 +12,7 @@ from app.currency import DEFAULT_CURRENCY, CurrencyCode
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.invites import new_invite_code
-from app.models import TRIP_NAME_MAX, Expense, Member, Photo, PlanItem, Receipt, Transfer, Trip
+from app.models import TRIP_NAME_MAX, Expense, Member, Photo, Place, PlanItem, Receipt, SuggestedItem, SuggestionRequest, Transfer, Trip
 from app.photos import delete_files, get_storage
 from app.storage import ObjectStorage
 from app.permissions import require_member, require_organizer
@@ -30,6 +30,8 @@ class TripCreate(BaseModel):
     start_date: date
     end_date: date
     currency: CurrencyCode = DEFAULT_CURRENCY
+    # 해외 여행이면 장소를 Google Places에서 찾는다(ADR 0004).
+    is_overseas: bool = False
 
 
 class TripUpdate(BaseModel):
@@ -40,6 +42,8 @@ class TripUpdate(BaseModel):
     end_date: date | None = None
     # 지출·송금이 하나라도 있으면 바꿀 수 없다(409).
     currency: CurrencyCode | None = None
+    # 장소가 하나라도 생기면 바꿀 수 없다(409). 검색기마다 장소 id가 달라서다.
+    is_overseas: bool | None = None
 
 
 class MyMembership(BaseModel):
@@ -54,6 +58,7 @@ class TripSummary(BaseModel):
     start_date: date
     end_date: date
     currency: str
+    is_overseas: bool
     member_count: int
     is_organizer: bool
 
@@ -64,6 +69,7 @@ class TripDetail(BaseModel):
     start_date: date
     end_date: date
     currency: str
+    is_overseas: bool
     member_count: int
     me: MyMembership
 
@@ -75,6 +81,7 @@ def trip_detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
         start_date=trip.start_date,
         end_date=trip.end_date,
         currency=trip.currency,
+        is_overseas=trip.is_overseas,
         member_count=member_count,
         me=MyMembership(
             member_id=me.id, join_order=me.join_order, is_organizer=me.is_organizer
@@ -100,6 +107,20 @@ def _has_money_records(session: Session, trip_id: uuid.UUID) -> bool:
     return bool(
         session.scalar(select(exists().where(Expense.trip_id == trip_id)))
         or session.scalar(select(exists().where(Transfer.trip_id == trip_id)))
+    )
+
+
+def _has_places(session: Session, trip_id: uuid.UUID) -> bool:
+    """여행의 장소나, 추천에서 확인해 둔 장소가 있는가. 있으면 검색기를 바꿀 수 없다."""
+    return bool(
+        session.scalar(select(exists().where(Place.trip_id == trip_id)))
+        or session.scalar(
+            select(
+                exists()
+                .where(SuggestedItem.request_id == SuggestionRequest.id)
+                .where(SuggestionRequest.trip_id == trip_id, SuggestedItem.source_place_id.is_not(None))
+            )
+        )
     )
 
 
@@ -129,6 +150,7 @@ def create_trip(
         start_date=body.start_date,
         end_date=body.end_date,
         currency=body.currency,
+        is_overseas=body.is_overseas,
         organizer_user_id=user.id,
         invite_code=new_invite_code(session),
     )
@@ -163,6 +185,7 @@ def list_trips(
             start_date=trip.start_date,
             end_date=trip.end_date,
             currency=trip.currency,
+            is_overseas=trip.is_overseas,
             member_count=count,
             is_organizer=trip.organizer_user_id == user.id,
         )
@@ -189,7 +212,7 @@ ORGANIZER_ONLY = {
 
 @router.patch(
     "/{trip_id}",
-    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "일정 항목이 있는 날짜가 빠짐, 또는 지출·송금이 있어 통화를 바꿀 수 없음"}},
+    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "일정 항목이 있는 날짜가 빠짐, 지출·송금이 있어 통화를 바꿀 수 없음, 또는 장소가 있어 국내/해외를 바꿀 수 없음"}},
 )
 def update_trip(
     trip_id: uuid.UUID,
@@ -219,6 +242,14 @@ def update_trip(
                 "지출이나 송금 기록이 있어 통화를 바꿀 수 없습니다.",
             )
         trip.currency = body.currency
+    if body.is_overseas is not None and body.is_overseas != trip.is_overseas:
+        if _has_places(session, trip_id):
+            raise ApiError(
+                409,
+                "places_exist",
+                "이미 고른 장소가 있어 국내/해외 여행을 바꿀 수 없습니다.",
+            )
+        trip.is_overseas = body.is_overseas
     if body.name is not None:
         trip.name = body.name
     trip.start_date, trip.end_date = start, end

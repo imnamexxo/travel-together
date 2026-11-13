@@ -13,10 +13,10 @@ function signedIn() {
 
 const members = [member({ member_id: 'm1', display_name: '민지', is_organizer: true, is_me: true })];
 const organizerTrip = tripDetail({ me: { member_id: 'm1', join_order: 1, is_organizer: true } });
-const airport = place({ id: 'place-902', kakao_place_id: '902', name: '제주 편의점 공항점', latitude: 33.507, longitude: 126.493 });
+const airport = place({ id: 'place-902', source_place_id: '902', name: '제주 편의점 공항점', latitude: 33.507, longitude: 126.493 });
 const candidates = [
-  { kakao_place_id: '902', name: '제주 편의점 공항점', address: '제주시 용담동', road_address: null, latitude: 33.507, longitude: 126.493, category: null, in_trip: true },
-  { kakao_place_id: '901', name: '제주 편의점 시청점', address: '제주시 이도동', road_address: null, latitude: 33.5, longitude: 126.53, category: null, in_trip: false },
+  { source_place_id: '902', name: '제주 편의점 공항점', address: '제주시 용담동', road_address: null, latitude: 33.507, longitude: 126.493, category: null, in_trip: true },
+  { source_place_id: '901', name: '제주 편의점 시청점', address: '제주시 이도동', road_address: null, latitude: 33.5, longitude: 126.53, category: null, in_trip: false },
 ];
 
 function render(options: Parameters<typeof fakeApi>[1] = {}, initialUrl = '/trips/trip-jeju/expenses/new') {
@@ -66,7 +66,7 @@ test('후보를 고르면 저장 요청에 그 장소가 실리고, 고르지 �
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
   await waitFor(() => expect(api.updateExpense).toHaveBeenCalledTimes(1));
-  expect(api.updateExpense.mock.calls[0][2].place).toEqual({ kakao_place_id: '902', name: '제주 편의점 공항점' });
+  expect(api.updateExpense.mock.calls[0][2].place).toEqual({ source_place_id: '902', name: '제주 편의점 공항점' });
 });
 
 test('후보를 열기 전에는 장소를 붙이지 않는다', async () => {

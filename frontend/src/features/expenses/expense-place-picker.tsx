@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useExpensePlaceCandidates } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
 
-type Chosen = { kakao_place_id: string; name: string } | null;
+type Chosen = { source_place_id: string; name: string } | null;
 
 type Props = {
   tripId: string;
@@ -56,7 +56,7 @@ export default function ExpensePlacePicker({ tripId, merchant, value, onChange, 
       : candidates.isPending ? <ActivityIndicator style={s.loading} color={C.primary} />
       : candidates.isError ? <Text accessibilityRole="alert" style={s.error}>{candidates.error.message}</Text>
       : !candidates.data.length ? <Text style={s.muted}>후보가 없어요. 검색어를 바꿔 보세요.</Text>
-      : candidates.data.map((c) => <Pressable key={c.kakao_place_id} accessibilityRole="button" accessibilityLabel={`${c.name} 장소로 지정`} onPress={() => { onChange({ kakao_place_id: c.kakao_place_id, name: c.name }); setOpen(false); }} style={s.candidate}>
+      : candidates.data.map((c) => <Pressable key={c.source_place_id} accessibilityRole="button" accessibilityLabel={`${c.name} 장소로 지정`} onPress={() => { onChange({ source_place_id: c.source_place_id, name: c.name }); setOpen(false); }} style={s.candidate}>
         <View style={s.candidateHead}><Text style={s.candidateName}>{c.name}</Text>{c.in_trip && <Text style={s.badge}>이 여행의 장소</Text>}</View>
         <Text style={s.muted}>{c.road_address ?? c.address}</Text>
       </Pressable>)}
