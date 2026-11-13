@@ -29,6 +29,8 @@ class ReceiptUploadOut(BaseModel):
     expense: ExpenseOut
     # read: 이번에 Gemini로 읽음 / reused: 같은 영수증의 저장된 결과를 씀 / failed: 읽지 못해 빈 초안
     analysis: Literal["read", "reused", "failed"]
+    # 영수증에 보이는 통화가 여행 통화와 다르면 그 통화(예: "USD"). 같거나 모르면 null. 환산은 하지 않는다(ADR 0004).
+    receipt_currency: str | None = None
 
 
 def get_receipt_reader(request: Request) -> ReceiptReader:
@@ -106,7 +108,7 @@ def upload_receipt(
             draft, analysis = ReceiptDraft.model_validate_json(receipt.analysis), "reused"
         else:
             try:
-                draft, analysis = reader.read(clean), "read"
+                draft, analysis = reader.read(clean, organizer.trip.currency), "read"
             except ReceiptUnreadable:
                 draft, analysis = None, "failed"
 
@@ -138,4 +140,9 @@ def upload_receipt(
     )
     session.add(expense)
     session.commit()
-    return ReceiptUploadOut(expense=expense_out(expense, _signed(storage, receipt.storage_key)), analysis=analysis)  # type: ignore[arg-type]
+    other = draft.currency if draft and draft.currency and draft.currency != organizer.trip.currency else None
+    return ReceiptUploadOut(
+        expense=expense_out(expense, _signed(storage, receipt.storage_key)),
+        analysis=analysis,  # type: ignore[arg-type]
+        receipt_currency=other,
+    )

@@ -4583,6 +4583,17 @@
               "failed"
             ],
             "title": "Analysis"
+          },
+          "receipt_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Currency"
           }
         },
         "type": "object",
