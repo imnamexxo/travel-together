@@ -123,14 +123,31 @@ def test_still_busy_falls_back_to_the_lighter_model_then_gives_up():
         busy_suggester(SequenceModels(busy(), busy(), busy()), []).suggest(REQUEST)
 
 
-def test_other_api_errors_are_not_retried():
+def bad_request():
     from google.genai import errors
 
-    models = SequenceModels(errors.ClientError(400, {"error": {"code": 400, "message": "bad", "status": "INVALID_ARGUMENT"}}))
+    return errors.ClientError(400, {"error": {"code": 400, "message": "bad", "status": "INVALID_ARGUMENT"}})
+
+
+def test_thinking_is_turned_off_and_a_400_is_retried_once_without_it():
+    """생각(thinking)을 끄면 빠르다. 그 설정을 받지 않는 모델(400)이면 설정 없이 한 번만 다시 묻는다."""
+    models = SequenceModels(bad_request(), plan_json(stop()))
+    configs = []
+    original = models.generate_content
+    models.generate_content = lambda **kw: (configs.append(kw["config"]), original(**kw))[1]
+
+    assert busy_suggester(models, []).suggest(REQUEST)
+    assert configs[0].thinking_config.thinking_budget == 0
+    assert configs[1].thinking_config is None
+    assert models.models == ["gemini-flash-latest", "gemini-flash-latest"]
+
+
+def test_other_api_errors_are_not_retried_further():
+    models = SequenceModels(bad_request(), bad_request())
 
     with pytest.raises(SuggestionUnavailable):
         busy_suggester(models, []).suggest(REQUEST)
-    assert models.models == ["gemini-flash-latest"]
+    assert models.models == ["gemini-flash-latest", "gemini-flash-latest"]
 
 
 def test_timeout_goes_straight_to_the_lighter_model():

@@ -10,7 +10,7 @@
 
 ## 바로 다음 할 일
 
-1. 남은 티켓: #23 소셜 로그인(카카오 로그인 설정·Google OAuth 필요)
+1. 처음 계획한 구현 티켓은 모두 끝남(#23까지). 남은 것: #1·#2 상위 이슈 정리, 앱 이름·아이콘, 시연용 설치 APK(preview 빌드)
 2. 팀원(유소영) GitHub 아이디 받아서 저장소에 초대 (아직이면)
 
 ## 사람이 해야 할 일
@@ -68,6 +68,9 @@
 
 ### 2026-11-13
 
+- 실기기 피드백 반영: 입력칸 예시 글자가 흰색이라 안 보이던 것(추천 일정·일정 편집·앨범·지출 장소) → 회색. 지도 아래 장소 정보를 손잡이로 끌어 올리고 내리기(누르면 접기/펼치기). 지도 멤버 칩 아래가 잘리던 것.
+- 비밀번호 찾기: 이메일 → Supabase 재설정 메일(`resetPasswordForEmail`, 복귀 주소 `traveltogether://reset-password`) → 메일 링크가 앱의 새 비밀번호 화면을 연다 → `exchangeCodeForSession` + `updateUser`. PKCE라 요청한 휴대폰에서 링크를 열어야 한다. Supabase 기본 메일은 시간당 보낼 수 있는 수가 적다.
+- 추천·영수증 속도: Gemini 생각(thinking) 끄기(`thinking_budget=0`, 받지 않는 모델이면 설정 없이 한 번 더), 추천의 카카오 확인을 동시에(최대 6곳), 영수증은 저장소 올리기와 Gemini 분석을 동시에, 영수증 이미지 긴 변 2000 → 1600px. Render Logs에 `Gemini … 응답 N초`, `카카오 확인 N곳 N초`가 남는다. Render 무료 플랜은 15분 동안 요청이 없으면 잠들어 첫 요청이 1분 가까이 걸린다(외부에서 /health를 주기적으로 부르면 피할 수 있음).
 - 소셜 로그인 후 돌아온 앱 주소(`traveltogether://auth-callback`)를 Expo Router가 화면으로 열어 UnmatchedRoute가 뜸 → `src/app/auth-callback.tsx`가 원래 화면(로그인됐으면 내 여행, 아니면 로그인)으로 돌려보낸다.
 - #23 소셜 로그인 코드. 서버: 첫 프로필 이름을 `user_metadata`의 display_name → full_name → name → nickname → preferred_username → user_name → 이메일 앞부분 순으로(이메일 없는 카카오 계정 허용). 앱: 로그인·가입 화면에 카카오·Google 버튼, Supabase OAuth PKCE(`signInWithOAuth` + `expo-web-browser` + `exchangeCodeForSession`), 앱 주소 scheme `traveltogether`(복귀 주소 `traveltogether://auth-callback`), 닫기·동의 거부는 오류 없이 취소. scheme이 바뀌어 개발 빌드를 다시 해야 한다. 카카오·Google·Supabase 설정은 사람이 한다.
 - 구글 지도 키 발급(Google Cloud 프로젝트 travel-together, Maps SDK for Android, 패키지·SHA-1 제한) 후 개발 빌드에서 지도 확인 완료: 핀 모양, 화면 맞추기, 하단 시트, 날짜·멤버 필터. #16·#18 끝.

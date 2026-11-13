@@ -116,9 +116,17 @@ def generate(client, model: str, *, sleep=time.sleep, **kwargs):
 
     models = [model, model] + ([FALLBACK_MODEL] if model != FALLBACK_MODEL else [])
     for attempt, name in enumerate(models):
+        started = time.monotonic()
         try:
-            return client.models.generate_content(model=name, **kwargs)
+            response = client.models.generate_content(model=name, **kwargs)
+            logger.info("Gemini %s 응답 %.1f초", name, time.monotonic() - started)
+            return response
         except errors.APIError as exc:
+            config = kwargs.get("config")
+            if exc.code == 400 and getattr(config, "thinking_config", None) is not None:
+                # 이 모델이 생각 끄기를 지원하지 않으면 400이 난다. 생각 설정 없이 한 번 더 묻는다.
+                logger.warning("Gemini %s가 생각 끄기를 받지 않아 설정 없이 다시 묻습니다", name)
+                return generate(client, name, sleep=sleep, **{**kwargs, "config": config.model_copy(update={"thinking_config": None})})
             if exc.code not in BUSY_CODES or attempt == len(models) - 1:
                 logger.warning("Gemini %s 요청 실패(%s)", name, exc.code)
                 raise
@@ -161,6 +169,8 @@ class GeminiPlanSuggester:
                     response_mime_type="application/json",
                     response_schema=PlanShape,
                     temperature=0.7,
+                    # 생각(thinking)은 답을 몇 배 느리게 만든다. 일정 추천에는 필요 없다.
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             )
         except errors.APIError as exc:

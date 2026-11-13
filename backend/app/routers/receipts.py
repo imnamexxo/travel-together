@@ -1,5 +1,6 @@
 import hashlib
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Annotated, Literal
 
@@ -93,23 +94,30 @@ def upload_receipt(
 
     image_hash = hashlib.sha256(clean).hexdigest()
     receipt = session.scalars(select(Receipt).where(Receipt.trip_id == trip_id, Receipt.image_hash == image_hash)).one_or_none()
-    if receipt is None:
-        receipt = Receipt(trip_id=trip_id, storage_key=f"trips/{trip_id}/receipts/{uuid.uuid4()}.jpg", image_hash=image_hash)
-        try:
-            storage.upload(receipt.storage_key, clean, "image/jpeg")
-        except StorageUnavailable:
-            raise ApiError(502, "storage_unavailable", "영수증 저장소에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.")
-        session.add(receipt)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        # 처음 보는 영수증이면 저장소에 올리는 동안 Gemini 분석을 같이 한다(둘을 차례로 기다리지 않는다).
+        uploading = None
+        if receipt is None:
+            receipt = Receipt(trip_id=trip_id, storage_key=f"trips/{trip_id}/receipts/{uuid.uuid4()}.jpg", image_hash=image_hash)
+            uploading = pool.submit(storage.upload, receipt.storage_key, clean, "image/jpeg")
 
-    draft: ReceiptDraft | None
-    if receipt.analysis:
-        draft, analysis = ReceiptDraft.model_validate_json(receipt.analysis), "reused"
-    else:
-        try:
-            draft, analysis = reader.read(clean), "read"
-            receipt.analysis = draft.model_dump_json()
-        except ReceiptUnreadable:
-            draft, analysis = None, "failed"
+        draft: ReceiptDraft | None
+        if receipt.analysis:
+            draft, analysis = ReceiptDraft.model_validate_json(receipt.analysis), "reused"
+        else:
+            try:
+                draft, analysis = reader.read(clean), "read"
+            except ReceiptUnreadable:
+                draft, analysis = None, "failed"
+
+        if uploading is not None:
+            try:
+                uploading.result()
+            except StorageUnavailable:
+                raise ApiError(502, "storage_unavailable", "영수증 저장소에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.")
+            session.add(receipt)
+    if analysis == "read" and draft is not None:
+        receipt.analysis = draft.model_dump_json()
 
     everyone = list(organizer.trip.members)
     expense = Expense(

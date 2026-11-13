@@ -107,6 +107,8 @@ class GeminiReceiptReader:
                     response_mime_type="application/json",
                     response_schema=ReceiptShape,
                     temperature=0,
+                    # 생각(thinking)은 답을 몇 배 느리게 만든다. 영수증 글자 읽기에는 필요 없다.
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             )
         except Exception as exc:  # API 오류·네트워크 등. 어느 쪽이든 빈 초안으로 이어간다.

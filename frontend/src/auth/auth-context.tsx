@@ -10,6 +10,8 @@ type AuthContextValue = {
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, displayName: string): Promise<SignUpResult>;
   signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult>;
+  requestPasswordReset(email: string): Promise<void>;
+  resetPassword(code: string, newPassword: string): Promise<void>;
   signOut(): Promise<void>;
 };
 
@@ -43,6 +45,8 @@ export function AuthProvider({ service, children }: { service: AuthService; chil
     [service],
   );
   const signInWithProvider = useCallback((provider: SocialProvider) => service.signInWithProvider(provider), [service]);
+  const requestPasswordReset = useCallback((email: string) => service.requestPasswordReset(email), [service]);
+  const resetPassword = useCallback((code: string, newPassword: string) => service.resetPassword(code, newPassword), [service]);
   const signOut = useCallback(() => service.signOut(), [service]);
 
   const value = useMemo<AuthContextValue>(
@@ -52,9 +56,11 @@ export function AuthProvider({ service, children }: { service: AuthService; chil
       signIn,
       signUp,
       signInWithProvider,
+      requestPasswordReset,
+      resetPassword,
       signOut,
     }),
-    [loaded, session, signIn, signUp, signInWithProvider, signOut],
+    [loaded, session, signIn, signUp, signInWithProvider, requestPasswordReset, resetPassword, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

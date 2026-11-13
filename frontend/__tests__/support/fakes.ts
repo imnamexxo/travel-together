@@ -63,6 +63,20 @@ export class FakeAuthService implements AuthService {
     return this.socialResult;
   }
 
+  readonly resetRequests: string[] = [];
+
+  async requestPasswordReset(email: string) {
+    this.resetRequests.push(email);
+  }
+
+  /** code가 'expired'면 만료된 링크로 본다. 아니면 비밀번호를 바꾸고 로그인한다. */
+  async resetPassword(code: string, newPassword: string) {
+    if (code === 'expired') throw new AuthError('재설정 링크가 만료되었거나 이미 사용되었어요. 비밀번호를 요청한 휴대폰에서 비밀번호 찾기를 다시 해 주세요.');
+    const email = this.resetRequests.at(-1) ?? 'minji@example.com';
+    this.users.set(email, { password: newPassword, displayName: this.users.get(email)?.displayName ?? '민지' });
+    this.setSession({ userId: email, email });
+  }
+
   async signOut() {
     this.setSession(null);
   }

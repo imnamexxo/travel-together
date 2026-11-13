@@ -1,12 +1,12 @@
 /**
  * 영수증 사진 고르기·찍기와 올릴 준비(네이티브 모듈은 이 파일에만 둔다. 테스트에서는 통째로 가짜로 바꾼다).
- * 글자가 읽히도록 긴 변 2000px JPEG로 줄인다. 다시 저장하면서 EXIF는 빠진다.
+ * 글자가 읽히면서 빨리 올라가도록 긴 변 1600px JPEG로 줄인다. 다시 저장하면서 EXIF는 빠진다.
  */
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
-const LONG_EDGE = 2000;
+const LONG_EDGE = 1600;
 
 export type ReceiptSource = 'camera' | 'library';
 

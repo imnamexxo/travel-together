@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/auth-context';
@@ -100,7 +100,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
             </View>
             {!!errors.confirmation && <Text accessibilityRole="alert" style={s.error}>{errors.confirmation}</Text>}
           </>}
-          {!signup && <Pressable accessibilityRole="button" onPress={() => Alert.alert('비밀번호 재설정', '비밀번호 재설정은 준비 중이에요.')} style={s.forgot}><Text style={s.smallLink}>비밀번호를 잊으셨나요?</Text></Pressable>}
+          {!signup && <Pressable accessibilityRole="button" onPress={() => router.push('/forgot-password')} style={s.forgot}><Text style={s.smallLink}>비밀번호를 잊으셨나요?</Text></Pressable>}
           {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
           {!!notice && <Text style={s.noticeText}>{notice}</Text>}
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting, busy: submitting }} disabled={submitting} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || submitting) && s.pressed]}><Text style={s.primaryText}>{signup ? '회원가입' : '로그인'}</Text></Pressable>

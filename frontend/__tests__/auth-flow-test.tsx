@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { AlertButton } from 'react-native';
 
 import { ApiError } from '@/api/client';
@@ -182,4 +182,52 @@ test('소셜 로그인에서 돌아온 앱 주소(auth-callback)는 없는 화�
 test('세션이 아직 없을 때 돌아오면 로그인 화면으로 간다', async () => {
   renderApp({ auth: new FakeAuthService(), api: fakeApi(), initialUrl: '/auth-callback' });
   expect(await screen.findByLabelText('이메일')).toBeOnTheScreen();
+});
+
+test('비밀번호 찾기: 이메일을 넣으면 재설정 메일을 요청하고 안내가 보인다', async () => {
+  const auth = new FakeAuthService();
+  renderApp({ auth, api: fakeApi() });
+
+  fireEvent.press(await screen.findByRole('button', { name: '비밀번호를 잊으셨나요?' }));
+  fireEvent.press(await screen.findByRole('button', { name: '재설정 링크 보내기' }));
+  expect(await screen.findByText('이메일을 입력해주세요.')).toBeOnTheScreen();
+  expect(auth.resetRequests).toEqual([]);
+
+  fireEvent.changeText(screen.getByLabelText('이메일'), ' minji@example.com ');
+  fireEvent.press(screen.getByRole('button', { name: '재설정 링크 보내기' }));
+
+  expect(await screen.findByText(/메일을 보냈어요/)).toBeOnTheScreen();
+  expect(auth.resetRequests).toEqual(['minji@example.com']);
+});
+
+test('메일 링크로 열린 화면에서 새 비밀번호를 정하면 로그인되어 내 여행 목록이 열린다', async () => {
+  const auth = new FakeAuthService();
+  auth.addUser('minji@example.com', 'old-secret');
+  renderApp({ auth, api: fakeApi(), initialUrl: '/reset-password?code=abc' });
+
+  fireEvent.changeText(await screen.findByLabelText('새 비밀번호'), 'new-secret-1');
+  fireEvent.changeText(screen.getByLabelText('새 비밀번호 확인'), 'different');
+  fireEvent.press(screen.getByRole('button', { name: '비밀번호 바꾸기' }));
+  expect(await screen.findByText('비밀번호가 일치하지 않아요.')).toBeOnTheScreen();
+
+  fireEvent.changeText(screen.getByLabelText('새 비밀번호 확인'), 'new-secret-1');
+  fireEvent.press(screen.getByRole('button', { name: '비밀번호 바꾸기' }));
+
+  expect(await screen.findByText('내 여행')).toBeOnTheScreen();
+  await act(() => auth.signOut());
+  await act(() => expect(auth.signIn('minji@example.com', 'new-secret-1')).resolves.toBeUndefined());
+});
+
+test('만료된 링크면 이유가 보인다', async () => {
+  renderApp({ auth: new FakeAuthService(), api: fakeApi(), initialUrl: '/reset-password?code=expired' });
+  fireEvent.changeText(await screen.findByLabelText('새 비밀번호'), 'new-secret-1');
+  fireEvent.changeText(screen.getByLabelText('새 비밀번호 확인'), 'new-secret-1');
+  fireEvent.press(screen.getByRole('button', { name: '비밀번호 바꾸기' }));
+  expect(await screen.findByText(/재설정 링크가 만료되었거나/)).toBeOnTheScreen();
+});
+
+test('code 없이 재설정 화면이 열리면 비밀번호 찾기를 다시 하도록 안내한다', async () => {
+  renderApp({ auth: new FakeAuthService(), api: fakeApi(), initialUrl: '/reset-password' });
+  expect(await screen.findByText('재설정 링크가 올바르지 않아요. 비밀번호 찾기를 다시 해주세요.')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: '비밀번호 찾기 다시 하기' })).toBeOnTheScreen();
 });
