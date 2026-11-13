@@ -13,6 +13,11 @@ export type SignUpResult = {
   needsEmailConfirmation: boolean;
 };
 
+export type SocialProvider = 'kakao' | 'google';
+
+/** signed_in: 세션이 생김 / cancelled: 사용자가 외부 로그인 페이지를 닫음(오류 아님). */
+export type SocialSignInResult = 'signed_in' | 'cancelled';
+
 /** 화면에 그대로 보여줄 수 있는 문구를 가진 인증 오류. */
 export class AuthError extends Error {}
 
@@ -23,5 +28,7 @@ export interface AuthService {
   getAccessToken(): Promise<string | null>;
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, displayName: string): Promise<SignUpResult>;
+  /** 카카오·Google 계정으로 가입·로그인(Supabase OAuth, PKCE). 처음이면 서버가 공급자의 이름으로 프로필을 만든다. */
+  signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult>;
   signOut(): Promise<void>;
 }

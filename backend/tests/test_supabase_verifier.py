@@ -87,3 +87,32 @@ def test_rejects_garbage():
 
     with pytest.raises(InvalidToken):
         verifier.verify("garbage")
+
+
+@pytest.mark.parametrize(
+    ("metadata", "expected"),
+    [
+        ({"display_name": "민지", "full_name": "Kim Minji"}, "민지"),
+        ({"full_name": "Kim Minji", "name": "Minji"}, "Kim Minji"),  # Google
+        ({"name": "민지짱", "preferred_username": "minji"}, "민지짱"),  # 카카오 닉네임
+        ({"nickname": "  준호  "}, "준호"),
+        ({"display_name": " ", "user_name": "subin"}, "subin"),
+        ({"avatar_url": "https://x"}, None),
+    ],
+    ids=["email-signup", "google", "kakao", "nickname", "blank-skipped", "none"],
+)
+def test_display_name_comes_from_social_name_fields(metadata, expected):
+    verifier = SupabaseJwtVerifier("", jwt_secret=SECRET)
+
+    user = verifier.verify(jwt.encode(_claims(user_metadata=metadata), SECRET, algorithm="HS256"))
+
+    assert user.display_name == expected
+
+
+def test_kakao_account_without_email_is_allowed():
+    """카카오는 이메일 동의 없이 가입할 수 있다. 그때 토큰의 email은 빈 값이다."""
+    verifier = SupabaseJwtVerifier("", jwt_secret=SECRET)
+
+    user = verifier.verify(jwt.encode(_claims(email="", user_metadata={"name": "하린"}), SECRET, algorithm="HS256"))
+
+    assert (user.email, user.display_name) == (None, "하린")

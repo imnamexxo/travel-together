@@ -14,6 +14,8 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // 소셜 로그인(#23): 돌아온 앱 주소에 토큰 대신 일회용 code가 오고, 앱이 세션으로 바꾼다.
+      flowType: 'pkce',
     },
   },
 );

@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { AlertButton } from 'react-native';
 
 import { ApiError } from '@/api/client';
+import { AuthError } from '@/auth/auth-service';
 
 import { openTripMenu, pressAlertButton } from './support/alerts';
 import { FakeAuthService, fakeApi, tripDetail } from './support/fakes';
@@ -64,12 +65,65 @@ test('회원가입할 때 입력한 이름이 가입 요청에 실린다', async
   expect(auth.signUps).toEqual([{ email: 'minji@example.com', displayName: '민지' }]);
 });
 
-test('소셜 로그인 버튼은 #23 전까지 보이지 않는다', async () => {
-  renderApp({ auth: new FakeAuthService(), api: fakeApi() });
+test('카카오로 계속하기를 누르면 소셜 로그인을 부르고, 로그인되면 내 여행 목록이 열린다', async () => {
+  const auth = new FakeAuthService();
+  renderApp({ auth, api: fakeApi() });
 
+  fireEvent.press(await screen.findByRole('button', { name: '카카오로 계속하기' }));
+
+  expect(await screen.findByText('내 여행')).toBeOnTheScreen();
+  expect(auth.socialSignIns).toEqual(['kakao']);
+});
+
+test('Google로 계속하기도 같은 흐름이다', async () => {
+  const auth = new FakeAuthService();
+  renderApp({ auth, api: fakeApi() });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Google로 계속하기' }));
+
+  expect(await screen.findByText('내 여행')).toBeOnTheScreen();
+  expect(auth.socialSignIns).toEqual(['google']);
+});
+
+test('외부 로그인 페이지를 닫으면 오류 없이 로그인 화면에 남고 다시 누를 수 있다', async () => {
+  const auth = new FakeAuthService();
+  auth.socialResult = 'cancelled';
+  renderApp({ auth, api: fakeApi() });
+
+  fireEvent.press(await screen.findByRole('button', { name: '카카오로 계속하기' }));
+  await waitFor(() => expect(auth.socialSignIns).toEqual(['kakao']));
+
+  expect(screen.queryByRole('alert')).toBeNull();
+  auth.socialResult = 'signed_in';
+  fireEvent.press(screen.getByRole('button', { name: '카카오로 계속하기' }));
+  expect(await screen.findByText('내 여행')).toBeOnTheScreen();
+});
+
+test('소셜 로그인이 실패하면 이유가 보인다', async () => {
+  const auth = new FakeAuthService();
+  auth.socialResult = new AuthError('로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  renderApp({ auth, api: fakeApi() });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Google로 계속하기' }));
+
+  expect(await screen.findByText('로그인 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.')).toBeOnTheScreen();
+  expect(auth.isSignedIn()).toBe(false);
+});
+
+test('소셜 로그인 세션도 서버가 401을 돌려주면 로그아웃된다', async () => {
+  const auth = new FakeAuthService();
+  const api = fakeApi({
+    getMe: jest.fn(async () => {
+      throw new ApiError(401, 'unauthorized', '로그인이 만료되었거나 올바르지 않습니다.');
+    }),
+  });
+  renderApp({ auth, api });
+
+  fireEvent.press(await screen.findByRole('button', { name: '카카오로 계속하기' }));
+
+  await waitFor(() => expect(auth.socialSignIns).toEqual(['kakao']));
+  await waitFor(() => expect(auth.isSignedIn()).toBe(false));
   expect(await screen.findByLabelText('이메일')).toBeOnTheScreen();
-  expect(screen.queryByText('카카오로 계속하기')).toBeNull();
-  expect(screen.queryByText('Google로 계속하기')).toBeNull();
 });
 
 test('이미 로그인되어 있으면 바로 내 여행 목록이 열린다', async () => {

@@ -77,12 +77,24 @@ class SupabaseJwtVerifier:
         except (jwt.PyJWTError, ValueError) as exc:
             raise InvalidToken() from exc
 
-        metadata = claims.get("user_metadata") or {}
         return AuthenticatedUser(
             id=user_id,
-            email=claims.get("email"),
-            display_name=metadata.get("display_name"),
+            email=claims.get("email") or None,
+            display_name=display_name_from_metadata(claims.get("user_metadata") or {}),
         )
+
+
+# 이메일 가입은 앱이 display_name을 넣는다. 카카오·Google 로그인은 Supabase가 공급자의 이름을 이 필드들에 넣는다.
+NAME_FIELDS = ("display_name", "full_name", "name", "nickname", "preferred_username", "user_name")
+
+
+def display_name_from_metadata(metadata: dict) -> str | None:
+    """첫 프로필에 쓸 이름. display_name → 카카오·Google 이름 필드 순. 없으면 None(이메일 앞부분을 쓴다)."""
+    for field in NAME_FIELDS:
+        value = metadata.get(field)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 _bearer = HTTPBearer(auto_error=False)

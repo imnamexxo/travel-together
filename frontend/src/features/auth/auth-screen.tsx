@@ -7,9 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/auth-context';
 import { AuthError } from '@/auth/auth-service';
 import { TravelColors as C } from '@/constants/theme';
+import SocialLoginButtons from './social-login-buttons';
 import { validateAuth, type AuthErrors } from './validation';
 
-// 소셜 로그인 버튼(social-login-buttons.tsx)은 #23에서 연결할 때까지 숨겨 둔다.
 
 export default function AuthScreen({ signup = false }: { signup?: boolean }) {
   const { signIn, signUp } = useAuth();
@@ -104,6 +104,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
           {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
           {!!notice && <Text style={s.noticeText}>{notice}</Text>}
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting, busy: submitting }} disabled={submitting} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || submitting) && s.pressed]}><Text style={s.primaryText}>{signup ? '회원가입' : '로그인'}</Text></Pressable>
+          <SocialLoginButtons />
           <View style={s.switchRow}><Text style={s.switchText}>{signup ? '이미 계정이 있나요?' : '아직 계정이 없나요?'}</Text><Pressable accessibilityRole="button" onPress={() => signup ? router.replace('/login') : router.push('/signup')} style={s.linkButton}><Text style={s.link}>{signup ? '로그인' : '회원가입'}</Text></Pressable></View>
         </View>
       </ScrollView>
