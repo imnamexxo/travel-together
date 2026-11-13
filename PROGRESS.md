@@ -68,6 +68,7 @@
 
 ### 2026-11-13
 
+- 앱 업데이트(EAS Update): `expo-updates`, `runtimeVersion: fingerprint`, 빌드 프로필별 채널(development·preview). 이 설정이 들어간 시연용 APK부터는 앱 코드만 바뀐 수정을 다시 설치 없이 보낼 수 있다: `cd frontend && npx eas-cli update --channel preview --environment preview --message "무엇을 바꿨는지"` → 폰에서 앱을 껐다 켜면 받고, 한 번 더 껐다 켜면 적용. 이름·아이콘·네이티브 기능·권한이 바뀌면 fingerprint가 달라져 업데이트가 안 들어가므로 다시 빌드해야 한다.
 - 날짜·시간 입력을 고르기로: 여행 만들기·여행 설정은 달력에서 시작일·종료일을 차례로 누르기(`TripPeriodField`), 일정 시간·지출 결제 시각은 시(0~23)·분(5분 단위) 누르기(`TimePicker`, 일정은 "시간 없음"으로 비우기), 지출 결제 날짜는 달력. 네이티브 모듈 없이 JS로 만들어 개발 빌드를 다시 안 해도 되고 Expo Go에서도 된다(`src/components/pickers/`).
 - 앱 이름 Travel Together, 아이콘(남색 바탕·흰 지도 핀·여행 가방) 적용: 기본 아이콘, Android 적응형(앞·뒤·단색), 스플래시(남색), 파비콘. 오리건 서버 삭제, 서버 깨우기(cron) 설정 완료.
 - 영수증 크게 보기가 화면의 2배로 열려 너무 컸던 것 → 화면에 맞춰 열고, 두 손가락 확대(최대 5배)·끌어서 이동·두 번 탭 확대/원래대로(react-native-gesture-handler + reanimated, `zoomable-image.tsx`). ScrollView 확대는 iOS에서만 됐다.

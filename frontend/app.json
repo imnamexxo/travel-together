@@ -52,6 +52,12 @@
         "projectId": "69693ebb-31d1-4aa4-8ccb-2b68a0429fde"
       }
     },
-    "owner": "kang1031"
+    "owner": "kang1031",
+    "updates": {
+      "url": "https://u.expo.dev/69693ebb-31d1-4aa4-8ccb-2b68a0429fde"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }
