@@ -1,7 +1,9 @@
 services:
   - type: web
-    name: travel-together-api
+    name: travel-together-api-sg
     runtime: python
+    # DB(Supabase)가 서울이라 가까운 싱가포르에 둔다(오리건이면 DB 질의마다 태평양을 왕복한다).
+    region: singapore
     rootDir: backend
     plan: free
     buildCommand: pip install -r requirements.txt
