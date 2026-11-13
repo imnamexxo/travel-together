@@ -4,8 +4,8 @@ import { FakeAuthService, expense, fakeApi, member, photo, place, planItem, trip
 import { renderApp } from './support/render-app';
 
 const market = place({ id: 'place-1', name: '동문시장' });
-const beach = place({ id: 'place-2', kakao_place_id: '222', name: '함덕해수욕장', latitude: 33.54, longitude: 126.67 });
-const peak = place({ id: 'place-3', kakao_place_id: '333', name: '성산일출봉', latitude: 33.46, longitude: 126.94 });
+const beach = place({ id: 'place-2', source_place_id: '222', name: '함덕해수욕장', latitude: 33.54, longitude: 126.67 });
+const peak = place({ id: 'place-3', source_place_id: '333', name: '성산일출봉', latitude: 33.46, longitude: 126.94 });
 const members = [
   member({ member_id: 'm1', display_name: '민지', is_organizer: true, is_me: true }),
   member({ member_id: 'm2', display_name: '준호', join_order: 2 }),

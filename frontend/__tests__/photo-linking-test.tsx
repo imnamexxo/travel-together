@@ -13,7 +13,7 @@ jest.mock('@/features/album/photo-prep', () => ({
 const mockPick = pickPhotos as jest.MockedFunction<typeof pickPhotos>;
 
 const market = place({ id: 'place-market', name: '동문시장', latitude: 33.5116, longitude: 126.5258 });
-const beach = place({ id: 'place-beach', kakao_place_id: '222', name: '함덕해수욕장', latitude: 33.5431, longitude: 126.6697 });
+const beach = place({ id: 'place-beach', source_place_id: '222', name: '함덕해수욕장', latitude: 33.5431, longitude: 126.6697 });
 const plans = [
   planItem({ id: 'lunch', date: '2026-11-12', title: '점심', time: '12:00:00', place: market }),
   planItem({ id: 'swim', date: '2026-11-13', title: '바다', place: beach }),
@@ -64,7 +64,7 @@ function signedIn() {
   return auth;
 }
 
-const candidates = [{ kakao_place_id: '333', name: '성산일출봉', address: '서귀포시 성산읍', road_address: null, latitude: 33.458, longitude: 126.942, category: null }];
+const candidates = [{ source_place_id: '333', name: '성산일출봉', address: '서귀포시 성산읍', road_address: null, latitude: 33.458, longitude: 126.942, category: null }];
 
 function render(options: Parameters<typeof fakeApi>[1] = {}, initialUrl = '/trips/trip-jeju/album') {
   const api = fakeApi({}, { trips: [tripDetail()], planItems: { 'trip-jeju': plans }, placeCandidates: candidates, ...options });
@@ -127,7 +127,7 @@ test('일정에 없던 곳은 검색해서 연결한다', async () => {
   fireEvent.press(screen.getByRole('button', { name: '사진 장소 검색하기' }));
   fireEvent.press(await screen.findByRole('button', { name: '성산일출봉로 연결' }));
 
-  await waitFor(() => expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p1', { kakao_place: { kakao_place_id: '333', name: '성산일출봉' } }));
+  await waitFor(() => expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p1', { source_place: { source_place_id: '333', name: '성산일출봉' } }));
   expect(await screen.findByText('성산일출봉 · 직접 연결')).toBeOnTheScreen();
 });
 

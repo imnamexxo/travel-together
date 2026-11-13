@@ -211,7 +211,7 @@ function PlaceSection({ photo }: { photo: Photo }) {
     </View>
     {!!submitted && (search.isPending ? <ActivityIndicator color={C.primary} /> : search.isError ? <Text style={s.errorText}>{search.error.message}</Text>
       : !search.data.length ? <Text style={s.helper}>검색 결과가 없어요.</Text>
-      : search.data.map((c) => <Pressable key={c.kakao_place_id} accessibilityRole="button" accessibilityLabel={`${c.name}로 연결`} disabled={link.isPending} onPress={() => change({ kakao_place: { kakao_place_id: c.kakao_place_id, name: c.name } })} style={s.result}>
+      : search.data.map((c) => <Pressable key={c.source_place_id} accessibilityRole="button" accessibilityLabel={`${c.name}로 연결`} disabled={link.isPending} onPress={() => change({ source_place: { source_place_id: c.source_place_id, name: c.name } })} style={s.result}>
         <Text style={s.resultName}>{c.name}</Text><Text style={s.helper}>{c.road_address ?? c.address}</Text>
       </Pressable>))}
     {!!error && <Text accessibilityRole="alert" style={s.errorText}>{error}</Text>}

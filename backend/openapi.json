@@ -333,7 +333,7 @@
             }
           },
           "409": {
-            "description": "일정 항목이 있는 날짜가 빠짐, 또는 지출·송금이 있어 통화를 바꿀 수 없음",
+            "description": "일정 항목이 있는 날짜가 빠짐, 지출·송금이 있어 통화를 바꿀 수 없음, 또는 장소가 있어 국내/해외를 바꿀 수 없음",
             "content": {
               "application/json": {
                 "schema": {
@@ -3589,9 +3589,9 @@
       },
       "ExpensePlaceCandidate": {
         "properties": {
-          "kakao_place_id": {
+          "source_place_id": {
             "type": "string",
-            "title": "Kakao Place Id"
+            "title": "Source Place Id"
           },
           "name": {
             "type": "string",
@@ -3638,7 +3638,7 @@
         },
         "type": "object",
         "required": [
-          "kakao_place_id",
+          "source_place_id",
           "name",
           "address",
           "road_address",
@@ -4212,7 +4212,7 @@
             ],
             "title": "Place Id"
           },
-          "kakao_place": {
+          "source_place": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/PlaceRef"
@@ -4229,9 +4229,9 @@
       },
       "PlaceCandidateOut": {
         "properties": {
-          "kakao_place_id": {
+          "source_place_id": {
             "type": "string",
-            "title": "Kakao Place Id"
+            "title": "Source Place Id"
           },
           "name": {
             "type": "string",
@@ -4274,7 +4274,7 @@
         },
         "type": "object",
         "required": [
-          "kakao_place_id",
+          "source_place_id",
           "name",
           "address",
           "road_address",
@@ -4291,9 +4291,9 @@
             "format": "uuid",
             "title": "Id"
           },
-          "kakao_place_id": {
+          "source_place_id": {
             "type": "string",
-            "title": "Kakao Place Id"
+            "title": "Source Place Id"
           },
           "name": {
             "type": "string",
@@ -4337,7 +4337,7 @@
         "type": "object",
         "required": [
           "id",
-          "kakao_place_id",
+          "source_place_id",
           "name",
           "address",
           "road_address",
@@ -4349,11 +4349,11 @@
       },
       "PlaceRef": {
         "properties": {
-          "kakao_place_id": {
+          "source_place_id": {
             "type": "string",
-            "maxLength": 30,
+            "maxLength": 300,
             "minLength": 1,
-            "title": "Kakao Place Id"
+            "title": "Source Place Id"
           },
           "name": {
             "type": "string",
@@ -4364,11 +4364,11 @@
         },
         "type": "object",
         "required": [
-          "kakao_place_id",
+          "source_place_id",
           "name"
         ],
         "title": "PlaceRef",
-        "description": "검색 결과에서 고른 장소. 서버가 카카오로 다시 확인한다."
+        "description": "검색 결과에서 고른 장소. 서버가 여행의 검색기(카카오·Google)로 다시 확인한다."
       },
       "PlanItemIn": {
         "properties": {
@@ -4967,6 +4967,11 @@
             ],
             "title": "Currency",
             "default": "KRW"
+          },
+          "is_overseas": {
+            "type": "boolean",
+            "title": "Is Overseas",
+            "default": false
           }
         },
         "type": "object",
@@ -5002,6 +5007,10 @@
             "type": "string",
             "title": "Currency"
           },
+          "is_overseas": {
+            "type": "boolean",
+            "title": "Is Overseas"
+          },
           "member_count": {
             "type": "integer",
             "title": "Member Count"
@@ -5017,6 +5026,7 @@
           "start_date",
           "end_date",
           "currency",
+          "is_overseas",
           "member_count",
           "me"
         ],
@@ -5047,6 +5057,10 @@
             "type": "string",
             "title": "Currency"
           },
+          "is_overseas": {
+            "type": "boolean",
+            "title": "Is Overseas"
+          },
           "member_count": {
             "type": "integer",
             "title": "Member Count"
@@ -5063,6 +5077,7 @@
           "start_date",
           "end_date",
           "currency",
+          "is_overseas",
           "member_count",
           "is_organizer"
         ],
@@ -5130,6 +5145,17 @@
               }
             ],
             "title": "Currency"
+          },
+          "is_overseas": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Overseas"
           }
         },
         "type": "object",

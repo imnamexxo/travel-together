@@ -727,8 +727,8 @@ export interface components {
         };
         /** ExpensePlaceCandidate */
         ExpensePlaceCandidate: {
-            /** Kakao Place Id */
-            kakao_place_id: string;
+            /** Source Place Id */
+            source_place_id: string;
             /** Name */
             name: string;
             /** Address */
@@ -946,12 +946,12 @@ export interface components {
         PhotoPlaceLink: {
             /** Place Id */
             place_id?: string | null;
-            kakao_place?: components["schemas"]["PlaceRef"] | null;
+            source_place?: components["schemas"]["PlaceRef"] | null;
         };
         /** PlaceCandidateOut */
         PlaceCandidateOut: {
-            /** Kakao Place Id */
-            kakao_place_id: string;
+            /** Source Place Id */
+            source_place_id: string;
             /** Name */
             name: string;
             /** Address */
@@ -972,8 +972,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /** Kakao Place Id */
-            kakao_place_id: string;
+            /** Source Place Id */
+            source_place_id: string;
             /** Name */
             name: string;
             /** Address */
@@ -989,11 +989,11 @@ export interface components {
         };
         /**
          * PlaceRef
-         * @description 검색 결과에서 고른 장소. 서버가 카카오로 다시 확인한다.
+         * @description 검색 결과에서 고른 장소. 서버가 여행의 검색기(카카오·Google)로 다시 확인한다.
          */
         PlaceRef: {
-            /** Kakao Place Id */
-            kakao_place_id: string;
+            /** Source Place Id */
+            source_place_id: string;
             /** Name */
             name: string;
         };
@@ -1254,6 +1254,11 @@ export interface components {
              * @enum {string}
              */
             currency: "KRW" | "JPY" | "USD" | "EUR" | "CNY" | "TWD" | "THB" | "VND" | "PHP" | "HKD" | "SGD";
+            /**
+             * Is Overseas
+             * @default false
+             */
+            is_overseas: boolean;
         };
         /** TripDetail */
         TripDetail: {
@@ -1276,6 +1281,8 @@ export interface components {
             end_date: string;
             /** Currency */
             currency: string;
+            /** Is Overseas */
+            is_overseas: boolean;
             /** Member Count */
             member_count: number;
             me: components["schemas"]["MyMembership"];
@@ -1301,6 +1308,8 @@ export interface components {
             end_date: string;
             /** Currency */
             currency: string;
+            /** Is Overseas */
+            is_overseas: boolean;
             /** Member Count */
             member_count: number;
             /** Is Organizer */
@@ -1319,6 +1328,8 @@ export interface components {
             end_date?: string | null;
             /** Currency */
             currency?: ("KRW" | "JPY" | "USD" | "EUR" | "CNY" | "TWD" | "THB" | "VND" | "PHP" | "HKD" | "SGD") | null;
+            /** Is Overseas */
+            is_overseas?: boolean | null;
         };
     };
     responses: never;
@@ -1623,7 +1634,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 일정 항목이 있는 날짜가 빠짐, 또는 지출·송금이 있어 통화를 바꿀 수 없음 */
+            /** @description 일정 항목이 있는 날짜가 빠짐, 지출·송금이 있어 통화를 바꿀 수 없음, 또는 장소가 있어 국내/해외를 바꿀 수 없음 */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -94,6 +94,7 @@ export function tripDetail(overrides: Partial<TripDetail> = {}): TripDetail {
     start_date: '2026-11-12',
     end_date: '2026-11-14',
     currency: 'KRW',
+    is_overseas: false,
     member_count: 1,
     me: { member_id: 'member-1', join_order: 1, is_organizer: true },
     ...overrides,
@@ -140,7 +141,7 @@ export function photo(overrides: Partial<Photo> = {}): Photo {
 }
 
 export function place(overrides: Partial<NonNullable<PlanItem['place']>> = {}): NonNullable<PlanItem['place']> {
-  return { id: 'place-1', kakao_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null, ...overrides };
+  return { id: 'place-1', source_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null, ...overrides };
 }
 
 export function planItem(overrides: Partial<PlanItem> = {}): PlanItem {
@@ -184,11 +185,11 @@ export function fakeApi(
   const planStore: Record<string, PlanItem[]> = Object.fromEntries(Object.entries(planItems).map(([id, list]) => [id, [...list]]));
   const plansOf = (tripId: string) => (planStore[tripId] ??= []);
   const planFrom = (tripId: string, id: string, input: Parameters<ApiClient['createPlanItem']>[1], base?: PlanItem): PlanItem => {
-    const candidate = input.place ? placeCandidates.find((c) => c.kakao_place_id === input.place!.kakao_place_id) : undefined;
+    const candidate = input.place ? placeCandidates.find((c) => c.source_place_id === input.place!.source_place_id) : undefined;
     return {
       ...(base ?? planItem({ id, created_by_member_id: trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1' })),
       id, date: input.date, time: input.time ? `${input.time}:00` : null, title: input.title, memo: input.memo ?? '', estimated_cost: input.estimated_cost ?? null,
-      place: input.place ? place({ id: `place-${input.place.kakao_place_id}`, kakao_place_id: input.place.kakao_place_id, name: candidate?.name ?? input.place.name }) : null,
+      place: input.place ? place({ id: `place-${input.place.source_place_id}`, source_place_id: input.place.source_place_id, name: candidate?.name ?? input.place.name }) : null,
       position: base?.position ?? plansOf(tripId).filter((i) => i.date === input.date).length,
     };
   };
@@ -199,7 +200,7 @@ export function fakeApi(
     merchant_name: input.merchant_name ?? null, total_amount: input.total_amount ?? null, default_sharer_ids: input.default_sharer_ids ?? [],
     items: (input.items ?? []).map((item, i) => ({ id: `${id}-item-${i}`, name: item.name, quantity: item.quantity ?? null, amount: item.amount ?? null, sharer_ids: item.sharer_ids ?? [] })),
     receipt_url: null, has_receipt: false,
-    place: input.place ? place({ id: `place-${input.place.kakao_place_id}`, kakao_place_id: input.place.kakao_place_id, name: input.place.name }) : null,
+    place: input.place ? place({ id: `place-${input.place.source_place_id}`, source_place_id: input.place.source_place_id, name: input.place.name }) : null,
   });
   const dropTrip = (tripId: string) => {
     const index = store.findIndex((t) => t.id === tripId);
@@ -216,6 +217,7 @@ export function fakeApi(
     name: trip.name,
     start_date: trip.start_date,
     currency: trip.currency,
+    is_overseas: trip.is_overseas,
     end_date: trip.end_date,
     member_count: trip.member_count,
     is_organizer: trip.me.is_organizer,
@@ -324,7 +326,7 @@ export function fakeApi(
       const created = chosen.map((item, n) => planItem({
         id: `adopted-${n + 1}`, date: item.date, title: item.place_name, memo: item.description,
         position: plansOf(tripId).filter((i) => i.date === item.date).length + n,
-        place: item.place ? place({ id: `place-${item.place.kakao_place_id}`, kakao_place_id: item.place.kakao_place_id, name: item.place.name }) : null,
+        place: item.place ? place({ id: `place-${item.place.source_place_id}`, source_place_id: item.place.source_place_id, name: item.place.name }) : null,
       }));
       plansOf(tripId).push(...created);
       return created;
@@ -375,9 +377,9 @@ export function fakeApi(
     linkPhotoPlace: jest.fn(async (tripId, photoId, link) => {
       const target = photosOf(tripId).find((p) => p.id === photoId)!;
       const known = plansOf(tripId).map((i) => i.place).filter((p) => p !== null);
-      const candidate = link.kakao_place ? placeCandidates.find((c) => c.kakao_place_id === link.kakao_place!.kakao_place_id) : undefined;
+      const candidate = link.source_place ? placeCandidates.find((c) => c.source_place_id === link.source_place!.source_place_id) : undefined;
       target.place = link.place_id ? known.find((p) => p.id === link.place_id) ?? null
-        : candidate ? place({ id: `place-${candidate.kakao_place_id}`, kakao_place_id: candidate.kakao_place_id, name: candidate.name }) : null;
+        : candidate ? place({ id: `place-${candidate.source_place_id}`, source_place_id: candidate.source_place_id, name: candidate.name }) : null;
       target.link_type = target.place ? 'manual' : null;
       return { ...target };
     }),

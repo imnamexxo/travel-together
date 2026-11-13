@@ -55,7 +55,7 @@ def test_suggestions_are_checked_against_kakao(client, trip, suggester, places):
         ("2026-11-12", 2, "지어낸 가게", "needs_check"),
         ("2026-11-13", 1, "함덕해수욕장", "verified"),
     ]
-    assert body["items"][0]["place"]["kakao_place_id"] == "111"
+    assert body["items"][0]["place"]["source_place_id"] == "111"
     assert body["items"][1]["place"] is None
     assert "동문시장 제주시" in places.queries
     request = suggester.requests[0]
@@ -91,7 +91,7 @@ def test_only_chosen_cards_become_plan_items_and_existing_items_stay(client, tri
 def test_adopted_place_reuses_existing_place(client, trip, suggester, engine):
     client.post(
         trip.url("/plan-items"),
-        json={"date": "2026-11-12", "title": "시장", "place": {"kakao_place_id": "111", "name": "동문재래시장"}},
+        json={"date": "2026-11-12", "title": "시장", "place": {"source_place_id": "111", "name": "동문재래시장"}},
         headers=bearer(trip.token),
     )
     suggester.responses = [PLAN]

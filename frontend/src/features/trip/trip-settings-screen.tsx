@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import { useDeleteTrip, useLeaveTrip, useUpdateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
+import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
@@ -41,6 +42,7 @@ function EditTripForm() {
   const [startDate, setStartDate] = useState(trip.start_date);
   const [endDate, setEndDate] = useState(trip.end_date);
   const [currency, setCurrency] = useState(money.code);
+  const [overseas, setOverseas] = useState(trip.is_overseas);
   const [errors, setErrors] = useState<NewTripErrors>({});
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
@@ -51,7 +53,7 @@ function EditTripForm() {
     setMessage(null);
     if (Object.keys(nextErrors).length) return;
     try {
-      await update.mutateAsync({ name: name.trim(), start_date: startDate.trim(), end_date: endDate.trim(), currency });
+      await update.mutateAsync({ name: name.trim(), start_date: startDate.trim(), end_date: endDate.trim(), currency, is_overseas: overseas });
       setMessage({ text: '저장했어요.', error: false });
     } catch (e) {
       setMessage({ text: errorText(e, '저장하지 못했어요. 잠시 후 다시 시도해주세요.'), error: true });
@@ -65,10 +67,11 @@ function EditTripForm() {
   </>;
 
   return <View style={s.section}>
-    <Text style={s.heading}>이름, 기간, 통화</Text>
+    <Text style={s.heading}>여행 정보</Text>
     {field('여행 이름', name, setName, errors.name, '여행 이름')}
     <TripPeriodField start={startDate} end={endDate} onChange={(a, b) => { setStartDate(a); setEndDate(b); }} error={errors.startDate ?? errors.endDate} />
     <Text style={s.hint}>일정이 있는 날짜가 기간에서 빠지면 저장되지 않아요.</Text>
+    <OverseasField value={overseas} onChange={setOverseas} hint="장소를 하나라도 고른 뒤에는 바꿀 수 없어요." />
     <CurrencyField value={currency} onChange={setCurrency} hint="지출이나 송금 기록이 있으면 통화를 바꿀 수 없어요." />
     {!!message && <Text accessibilityRole={message.error ? 'alert' : undefined} style={message.error ? s.error : s.notice}>{message.text}</Text>}
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: update.isPending, busy: update.isPending }} disabled={update.isPending} onPress={save} style={({ pressed }) => [s.primaryButton, (pressed || update.isPending) && s.pressed]}>

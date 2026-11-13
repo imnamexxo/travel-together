@@ -39,7 +39,7 @@ def test_converts_kakao_documents_and_sends_key():
     assert seen["auth"] == "KakaoAK test-key"
     assert seen["params"] == {"query": "동문시장", "size": "15"}
     first = results[0]
-    assert (first.kakao_place_id, first.name, first.latitude, first.longitude) == ("8169286", "동문재래시장", 33.51162, 126.52583)
+    assert (first.source_place_id, first.name, first.latitude, first.longitude) == ("8169286", "동문재래시장", 33.51162, 126.52583)
     assert first.road_address == "제주특별자치도 제주시 관덕로14길 20"
     assert (results[1].road_address, results[1].category) == (None, None)
 
@@ -79,6 +79,6 @@ def test_failure_reason_is_logged_without_the_key(caplog):
     with pytest.raises(PlaceSearchUnavailable):
         searcher_with(handler).search("카페")
 
-    assert "카카오 장소 검색 실패" in caplog.text
+    assert "장소 검색 실패" in caplog.text
     assert "401" in caplog.text and "wrong appKey" in caplog.text
     assert "test-key" not in caplog.text

@@ -154,7 +154,7 @@ def _apply(session: Session, searcher: PlaceSearcher, expense: Expense, body: Ex
     expense.merchant_name = body.merchant_name or None
     expense.total_amount = body.total_amount
     expense.default_sharers = default_sharers
-    expense.place = place_for(session, searcher, trip.id, body.place.kakao_place_id, body.place.name) if body.place else None
+    expense.place = place_for(session, searcher, trip.id, body.place.source_place_id, body.place.name) if body.place else None
     expense.items = [
         LineItem(position=i, name=item.name, quantity=item.quantity, amount=item.amount, sharers=sharers)
         for i, (item, sharers) in enumerate(zip(body.items, item_sharers, strict=True))

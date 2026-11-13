@@ -6,7 +6,7 @@ from tests.conftest import bearer
 from tests.jpeg_samples import jpeg
 
 JEJU = {"name": "제주 여행", "start_date": "2026-11-12", "end_date": "2026-11-14"}
-MARKET = {"kakao_place_id": "111", "name": "동문시장"}
+MARKET = {"source_place_id": "111", "name": "동문시장"}
 
 
 @pytest.fixture
@@ -85,18 +85,18 @@ def test_unlinking_clears_place(client, trip):
 def test_linking_a_searched_place_creates_trip_place(client, trip):
     photo = upload(client, trip).json()["id"]
 
-    body = link(client, trip, photo, kakao_place={"kakao_place_id": "333", "name": "새로운 카페"}).json()
+    body = link(client, trip, photo, source_place={"source_place_id": "333", "name": "새로운 카페"}).json()
 
     assert body["place"]["name"] == "새로운 카페"
     assert body["link_type"] == "manual"
-    again = link(client, trip, upload(client, trip).json()["id"], kakao_place={"kakao_place_id": "333", "name": "새로운 카페"}).json()
+    again = link(client, trip, upload(client, trip).json()["id"], source_place={"source_place_id": "333", "name": "새로운 카페"}).json()
     assert again["place"]["id"] == body["place"]["id"]
 
 
 def test_unverified_kakao_place_is_rejected(client, trip):
     photo = upload(client, trip).json()["id"]
 
-    response = link(client, trip, photo, kakao_place={"kakao_place_id": "999", "name": "새로운 카페"})
+    response = link(client, trip, photo, source_place={"source_place_id": "999", "name": "새로운 카페"})
 
     assert response.status_code == 422
     assert response.json()["code"] == "place_not_verified"
@@ -114,7 +114,7 @@ def test_manual_link_stays_manual_in_the_list(client, trip):
 def test_both_place_kinds_at_once_is_rejected(client, trip):
     photo = upload(client, trip).json()["id"]
 
-    response = link(client, trip, photo, place_id=trip.market_id, kakao_place={"kakao_place_id": "333", "name": "새로운 카페"})
+    response = link(client, trip, photo, place_id=trip.market_id, source_place={"source_place_id": "333", "name": "새로운 카페"})
 
     assert response.status_code == 422
 

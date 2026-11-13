@@ -47,7 +47,7 @@ class PhotoPlaceLink(BaseModel):
 
     place_id: uuid.UUID | None = None
     # 일정에 없던 곳: 검색 결과에서 고른 카카오 장소. 서버가 확인한 뒤 여행의 장소로 만든다.
-    kakao_place: PlaceRef | None = None
+    source_place: PlaceRef | None = None
 
 
 class PhotoList(BaseModel):
@@ -215,12 +215,12 @@ def link_photo_place(
     photo = session.scalars(select(Photo).where(Photo.id == photo_id, Photo.trip_id == trip_id)).one_or_none()
     if photo is None:
         raise ApiError(404, "photo_not_found", "사진을 찾을 수 없습니다.")
-    if body.place_id and body.kakao_place:
+    if body.place_id and body.source_place:
         raise ApiError(422, "validation_failed", "입력값을 확인해 주세요.", [ErrorDetail(field="place_id", message="장소는 하나만 고를 수 있습니다.")])
     if body.place_id:
         photo.place = _trip_place(session, trip_id, body.place_id, "place_id")
-    elif body.kakao_place:
-        photo.place = place_for(session, searcher, trip_id, body.kakao_place.kakao_place_id, body.kakao_place.name, field="kakao_place")
+    elif body.source_place:
+        photo.place = place_for(session, searcher, trip_id, body.source_place.source_place_id, body.source_place.name, field="source_place")
     else:
         photo.place = None
     photo.link_type = "manual" if photo.place else None

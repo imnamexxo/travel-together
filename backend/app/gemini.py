@@ -52,6 +52,8 @@ class PlanRequest:
     start_date: date
     end_date: date
     preferences: str
+    # 해외 여행이면 Google 지도 기준으로 장소 이름·지역을 쓰게 한다(ADR 0004).
+    overseas: bool = False
 
 
 class SuggestionFormatError(Exception):
@@ -88,16 +90,27 @@ def validate_plan(raw: str | None, request: PlanRequest) -> list[SuggestedStop]:
 def build_prompt(request: PlanRequest) -> str:
     days = (request.end_date - request.start_date).days + 1
     dates = ", ".join((request.start_date + timedelta(days=i)).isoformat() for i in range(days))
+    if request.overseas:
+        intro = "너는 해외 여행 일정을 짜 주는 도우미다.\n"
+        naming = (
+            "- place_name은 Google 지도에서 검색되는 실제 장소의 이름을 한국어로 쓴다(한국어 표기가 없으면 현지 이름). 지어내지 않는다.\n"
+            "- region은 그 장소가 있는 도시와 구역이다(예: 오사카 주오구, 도쿄 시부야구, 파리 7구).\n"
+        )
+    else:
+        intro = "너는 한국 국내 여행 일정을 짜 주는 도우미다.\n"
+        naming = (
+            "- place_name은 지도 앱에서 검색되는 실제 상호나 장소 이름만 쓴다. 지어내지 않는다.\n"
+            "- region은 그 장소가 있는 시·군·구(예: 제주시, 서귀포시, 강릉시)다.\n"
+        )
     return (
-        "너는 한국 국내 여행 일정을 짜 주는 도우미다.\n"
-        f"여행지: {request.destination}\n"
+        intro
+        + f"여행지: {request.destination}\n"
         f"날짜: {dates} ({days}일)\n"
         f"취향: {request.preferences or '특별히 없음'}\n\n"
         "규칙:\n"
         "- 날짜마다 3~5곳을 하루 동선 순서대로 추천한다(order는 그날 1부터).\n"
-        "- place_name은 지도 앱에서 검색되는 실제 상호나 장소 이름만 쓴다. 지어내지 않는다.\n"
-        "- region은 그 장소가 있는 시·군·구(예: 제주시, 서귀포시, 강릉시)다.\n"
-        "- stay_minutes는 예상 체류 시간(분), description은 한 줄 설명(60자 이내)이다.\n"
+        + naming
+        + "- stay_minutes는 예상 체류 시간(분), description은 한 줄 설명(60자 이내)이다.\n"
         "- date는 위 날짜 중 하나를 YYYY-MM-DD로 쓴다."
     )
 

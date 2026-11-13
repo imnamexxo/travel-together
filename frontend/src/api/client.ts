@@ -93,7 +93,7 @@ export interface ApiClient {
   listTransfers(tripId: string): Promise<Transfer[]>;
   recordTransfer(tripId: string, transfer: TransferCreate): Promise<Transfer>;
   deleteTransfer(tripId: string, transferId: string): Promise<void>;
-  /** 카카오 장소 검색. 사람의 위치는 보내지 않는다(ADR-0003). */
+  /** 장소 검색(국내 여행은 카카오, 해외 여행은 Google). 사람의 위치는 보내지 않는다(ADR-0003). */
   searchPlaces(tripId: string, query: string): Promise<PlaceCandidate[]>;
   listPlanItems(tripId: string): Promise<PlanItem[]>;
   createPlanItem(tripId: string, input: PlanItemInput): Promise<PlanItem>;

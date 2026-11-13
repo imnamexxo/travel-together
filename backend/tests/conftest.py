@@ -56,13 +56,13 @@ class FakePlaceSearcher:
         self.aliases: dict[str, tuple[str, ...]] = {}
 
     def add(
-        self, kakao_place_id: str, name: str, *, lat: float = 33.5, lng: float = 126.5, address: str = "제주시",
+        self, source_place_id: str, name: str, *, lat: float = 33.5, lng: float = 126.5, address: str = "제주시",
         aliases: tuple[str, ...] = (),
     ) -> PlaceCandidate:
         """aliases: 카카오가 이 장소를 돌려주는 다른 검색어(예: 동문시장 → 동문재래시장)."""
-        candidate = PlaceCandidate(kakao_place_id, name, address, None, lat, lng, "여행 > 관광명소")
+        candidate = PlaceCandidate(source_place_id, name, address, None, lat, lng, "여행 > 관광명소")
         self.places.append(candidate)
-        self.aliases[kakao_place_id] = aliases
+        self.aliases[source_place_id] = aliases
         return candidate
 
     def search(self, query: str, *, near: tuple[float, float] | None = None) -> list[PlaceCandidate]:
@@ -73,7 +73,7 @@ class FakePlaceSearcher:
         words = query.split() or [query]
         return [
             p for p in self.places
-            if query in p.name or any(w in p.name for w in words) or any(a in query for a in self.aliases[p.kakao_place_id])
+            if query in p.name or any(w in p.name for w in words) or any(a in query for a in self.aliases[p.source_place_id])
         ]
 
 
@@ -189,6 +189,12 @@ def places() -> FakePlaceSearcher:
 
 
 @pytest.fixture
+def overseas_places() -> FakePlaceSearcher:
+    """해외 여행용(Google 자리) 가짜 검색기. 국내용 places와 따로 둔다."""
+    return FakePlaceSearcher()
+
+
+@pytest.fixture
 def suggester() -> FakePlanSuggester:
     return FakePlanSuggester()
 
@@ -206,13 +212,13 @@ def receipts() -> FakeReceiptReader:
 @pytest.fixture
 def client(
     engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher, suggester: FakePlanSuggester,
-    storage: FakeStorage, receipts: FakeReceiptReader,
+    storage: FakeStorage, receipts: FakeReceiptReader, overseas_places: FakePlaceSearcher,
 ) -> TestClient:
     settings = Settings(
         database_url=database_url, supabase_url="", supabase_jwt_secret=""
     )
     app = create_app(
-        settings=settings, auth_verifier=auth, place_searcher=places, plan_suggester=suggester, storage=storage, receipt_reader=receipts,
+        settings=settings, auth_verifier=auth, place_searcher=places, overseas_place_searcher=overseas_places, plan_suggester=suggester, storage=storage, receipt_reader=receipts,
     )
     with TestClient(app) as client:
         yield client

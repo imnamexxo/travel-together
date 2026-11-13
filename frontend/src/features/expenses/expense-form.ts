@@ -32,7 +32,7 @@ export type ExpenseForm = {
   defaultSharerIds: string[];
   items: FormItem[];
   /** 장소 후보에서 고른 장소. 고르기 전에는 비어 있다(자동으로 붙이지 않음). */
-  place: { kakao_place_id: string; name: string } | null;
+  place: { source_place_id: string; name: string } | null;
 };
 
 let nextKey = 0;
@@ -78,7 +78,7 @@ export function formFromExpense(expense: Expense, money: Money = WON): ExpenseFo
     payerId: expense.payer_member_id,
     total: moneyText(expense.total_amount),
     defaultSharerIds: expense.default_sharer_ids,
-    place: expense.place ? { kakao_place_id: expense.place.kakao_place_id, name: expense.place.name } : null,
+    place: expense.place ? { source_place_id: expense.place.source_place_id, name: expense.place.name } : null,
     items: expense.items.map((item) => ({
       key: newKey(),
       name: item.name,

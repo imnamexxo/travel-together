@@ -24,7 +24,7 @@ EXTERNAL = {502: {"model": ErrorResponse, "description": "카카오 장소 검�
 
 class PlaceOut(BaseModel):
     id: uuid.UUID
-    kakao_place_id: str
+    source_place_id: str
     name: str
     address: str
     road_address: str | None
@@ -34,7 +34,7 @@ class PlaceOut(BaseModel):
 
 
 class PlaceCandidateOut(BaseModel):
-    kakao_place_id: str
+    source_place_id: str
     name: str
     address: str
     road_address: str | None
@@ -44,9 +44,9 @@ class PlaceCandidateOut(BaseModel):
 
 
 class PlaceRef(BaseModel):
-    """검색 결과에서 고른 장소. 서버가 카카오로 다시 확인한다."""
+    """검색 결과에서 고른 장소. 서버가 여행의 검색기(카카오·Google)로 다시 확인한다."""
 
-    kakao_place_id: Annotated[str, StringConstraints(min_length=1, max_length=30)]
+    source_place_id: Annotated[str, StringConstraints(min_length=1, max_length=300)]
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
@@ -81,7 +81,7 @@ class PlanOrder(BaseModel):
 def place_out(place: Place) -> PlaceOut:
     return PlaceOut(
         id=place.id,
-        kakao_place_id=place.kakao_place_id,
+        source_place_id=place.source_place_id,
         name=place.name,
         address=place.address,
         road_address=place.road_address,
@@ -158,7 +158,7 @@ def _apply(session: Session, searcher: PlaceSearcher, item: PlanItem, body: Plan
     item.memo = body.memo
     item.estimated_cost = body.estimated_cost
     item.place = (
-        place_for(session, searcher, trip.id, body.place.kakao_place_id, body.place.name) if body.place else None
+        place_for(session, searcher, trip.id, body.place.source_place_id, body.place.name) if body.place else None
     )
 
 
