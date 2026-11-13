@@ -55,6 +55,8 @@ class Trip(Base):
     )
     # 지금 유효한 초대 코드 하나. 재발급하면 바뀌고 이전 코드는 무효가 된다.
     invite_code: Mapped[str] = mapped_column(String(INVITE_CODE_LENGTH), unique=True)
+    # 여행 통화(ADR 0004). 이 여행의 모든 금액은 이 통화의 가장 작은 단위 정수다.
+    currency: Mapped[str] = mapped_column(String(3), server_default="KRW", default="KRW")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

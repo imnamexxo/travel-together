@@ -19,8 +19,6 @@ import {
   type ExpenseForm, type FormErrors,
 } from './expense-form';
 
-const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
-
 /** 서버 오류의 세부 목록을 칸별 문구로 모은다. 같은 칸에 여러 개면 줄을 바꿔 잇는다. */
 function detailErrors(e: ApiError): FormErrors {
   const errors: FormErrors = {};
@@ -57,10 +55,10 @@ const ANALYSIS_NOTICE: Record<string, string> = {
 };
 
 function Editor({ members, expense, analysis }: { members: Member[]; expense: Expense | undefined; analysis?: string }) {
-  const { trip, isOrganizer } = useCurrentTrip();
+  const { trip, isOrganizer, money } = useCurrentTrip();
   const memberOrder = members.map((m) => m.member_id);
   const nameOf = (id: string) => members.find((m) => m.member_id === id)?.display_name ?? '알 수 없음';
-  const [form, setForm] = useState<ExpenseForm>(() => expense ? formFromExpense(expense) : emptyForm(memberOrder, trip.me.member_id));
+  const [form, setForm] = useState<ExpenseForm>(() => expense ? formFromExpense(expense, money) : emptyForm(memberOrder, trip.me.member_id));
   const [savedId, setSavedId] = useState(expense?.id);
   const [picking, setPicking] = useState<'date' | 'time' | null>(null);
   const [status, setStatus] = useState<ExpenseStatus | undefined>(expense?.status);
@@ -79,15 +77,15 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
   const busy = save.isPending || confirm.isPending || remove.isPending;
   const editable = isOrganizer;
 
-  const total = totalAmount(form);
-  const sum = itemsTotal(form);
+  const total = totalAmount(form, money);
+  const sum = itemsTotal(form, money);
   const update = (changes: Partial<ExpenseForm>) => setForm((f) => ({ ...f, ...changes }));
   const updateItem = (key: string, changes: Partial<ExpenseForm['items'][number]>) =>
     setForm((f) => ({ ...f, items: f.items.map((item) => (item.key === key ? { ...item, ...changes } : item)) }));
 
   /** 저장하고 지출 id를 돌려준다. 입력 형식이 틀리거나 서버가 거절하면 null. */
   async function persist(): Promise<string | null> {
-    const { input, errors: formErrors } = toInput(form);
+    const { input, errors: formErrors } = toInput(form, money);
     setErrors(formErrors);
     setNotice(null);
     if (Object.keys(formErrors).length) return null;
@@ -174,8 +172,8 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
         <View style={s.chips}>{members.map((m) => chip(m.display_name, form.payerId === m.member_id, () => update({ payerId: m.member_id }), 'radio', `결제자 ${m.display_name}`))}</View>
         {fieldError('payer_member_id')}
 
-        <View style={s.labelRow}><Text style={s.label}>총액 (원)</Text>{missing(form.total)}</View>
-        {input('총액', form.total, (v) => update({ total: v }), { placeholder: '0', keyboardType: 'number-pad', maxLength: 9 })}
+        <View style={s.labelRow}><Text style={s.label}>총액 ({money.unit})</Text>{missing(form.total)}</View>
+        {input('총액', form.total, (v) => update({ total: v }), { placeholder: '0', keyboardType: money.decimals ? 'decimal-pad' : 'number-pad', maxLength: 12 })}
         {fieldError('total_amount')}
 
         <Text style={s.label}>누가 함께 썼나요? · 기본 분담 대상</Text>
@@ -195,7 +193,7 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
           {fieldError(`items.${index}.name`)}
           <View style={s.row}>
             <View style={s.quantity}>{input(`품목 ${index + 1} 수량`, item.quantity, (v) => updateItem(item.key, { quantity: v }), { placeholder: '수량', keyboardType: 'number-pad', maxLength: 4 })}</View>
-            <View style={s.flex}>{input(`품목 ${index + 1} 금액`, item.amount, (v) => updateItem(item.key, { amount: v }), { placeholder: '금액 (원)', keyboardType: 'number-pad', maxLength: 9 })}</View>
+            <View style={s.flex}>{input(`품목 ${index + 1} 금액`, item.amount, (v) => updateItem(item.key, { amount: v }), { placeholder: `금액 (${money.unit})`, keyboardType: money.decimals ? 'decimal-pad' : 'number-pad', maxLength: 12 })}</View>
           </View>
           {fieldError(`items.${index}.quantity`)}
           {fieldError(`items.${index}.amount`)}
@@ -207,8 +205,8 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
         {editable && <Pressable accessibilityRole="button" onPress={() => update({ items: [...form.items, newItem(form.defaultSharerIds)] })} style={s.addItem}><Text style={s.link}>＋ 품목 추가</Text></Pressable>}
 
         <View style={s.summary}>
-          <Text style={s.summaryText}>품목 합계 {money(sum)} · 총액 {total === null ? '미입력' : money(total)}</Text>
-          {total !== null && <Text style={[s.summaryDiff, sum !== total && s.mismatch]}>{sum === total ? '품목 합계와 총액이 같아요' : `차이 ${money(Math.abs(total - sum))}`}</Text>}
+          <Text style={s.summaryText}>품목 합계 {money.format(sum)} · 총액 {total === null ? '미입력' : money.format(total)}</Text>
+          {total !== null && <Text style={[s.summaryDiff, sum !== total && s.mismatch]}>{sum === total ? '품목 합계와 총액이 같아요' : `차이 ${money.format(Math.abs(total - sum))}`}</Text>}
         </View>
 
         {!editable && <Text style={s.hint}>지출은 총무만 고칠 수 있어요. {form.payerId ? `${nameOf(form.payerId)}님이 결제했어요.` : ''}</Text>}

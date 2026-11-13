@@ -4,14 +4,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, StringConstraints
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
 from app.auth import AuthenticatedUser, get_current_user
+from app.currency import DEFAULT_CURRENCY, CurrencyCode
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.invites import new_invite_code
-from app.models import TRIP_NAME_MAX, Member, Photo, PlanItem, Receipt, Trip
+from app.models import TRIP_NAME_MAX, Expense, Member, Photo, PlanItem, Receipt, Transfer, Trip
 from app.photos import delete_files, get_storage
 from app.storage import ObjectStorage
 from app.permissions import require_member, require_organizer
@@ -28,6 +29,7 @@ class TripCreate(BaseModel):
     name: TripName
     start_date: date
     end_date: date
+    currency: CurrencyCode = DEFAULT_CURRENCY
 
 
 class TripUpdate(BaseModel):
@@ -36,6 +38,8 @@ class TripUpdate(BaseModel):
     name: TripName | None = None
     start_date: date | None = None
     end_date: date | None = None
+    # 지출·송금이 하나라도 있으면 바꿀 수 없다(409).
+    currency: CurrencyCode | None = None
 
 
 class MyMembership(BaseModel):
@@ -49,6 +53,7 @@ class TripSummary(BaseModel):
     name: str
     start_date: date
     end_date: date
+    currency: str
     member_count: int
     is_organizer: bool
 
@@ -58,6 +63,7 @@ class TripDetail(BaseModel):
     name: str
     start_date: date
     end_date: date
+    currency: str
     member_count: int
     me: MyMembership
 
@@ -68,6 +74,7 @@ def trip_detail(trip: Trip, me: Member, member_count: int) -> TripDetail:
         name=trip.name,
         start_date=trip.start_date,
         end_date=trip.end_date,
+        currency=trip.currency,
         member_count=member_count,
         me=MyMembership(
             member_id=me.id, join_order=me.join_order, is_organizer=me.is_organizer
@@ -87,6 +94,13 @@ def _check_dates(start: date, end: date) -> None:
             "입력값을 확인해 주세요.",
             [ErrorDetail(field="end_date", message="종료일은 시작일과 같거나 뒤여야 합니다.")],
         )
+
+
+def _has_money_records(session: Session, trip_id: uuid.UUID) -> bool:
+    return bool(
+        session.scalar(select(exists().where(Expense.trip_id == trip_id)))
+        or session.scalar(select(exists().where(Transfer.trip_id == trip_id)))
+    )
 
 
 def _dates_with_plan_items_outside(session: Session, trip: Trip, start: date, end: date) -> list[date]:
@@ -114,6 +128,7 @@ def create_trip(
         name=body.name,
         start_date=body.start_date,
         end_date=body.end_date,
+        currency=body.currency,
         organizer_user_id=user.id,
         invite_code=new_invite_code(session),
     )
@@ -147,6 +162,7 @@ def list_trips(
             name=trip.name,
             start_date=trip.start_date,
             end_date=trip.end_date,
+            currency=trip.currency,
             member_count=count,
             is_organizer=trip.organizer_user_id == user.id,
         )
@@ -173,7 +189,7 @@ ORGANIZER_ONLY = {
 
 @router.patch(
     "/{trip_id}",
-    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "일정 항목이 있는 날짜가 빠짐"}},
+    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "일정 항목이 있는 날짜가 빠짐, 또는 지출·송금이 있어 통화를 바꿀 수 없음"}},
 )
 def update_trip(
     trip_id: uuid.UUID,
@@ -181,7 +197,7 @@ def update_trip(
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> TripDetail:
-    """총무가 여행 이름·기간을 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지면 409."""
+    """총무가 여행 이름·기간·통화를 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지거나, 지출·송금이 있는데 통화를 바꾸면 409."""
     me = require_organizer(session, trip_id, user)
     trip = me.trip
     start = body.start_date or trip.start_date
@@ -195,6 +211,14 @@ def update_trip(
             "일정 항목이 있는 날짜가 기간에서 빠집니다. 그 날짜의 일정을 먼저 옮기거나 지워 주세요.",
             [ErrorDetail(field="dates", message=d.isoformat()) for d in stranded],
         )
+    if body.currency is not None and body.currency != trip.currency:
+        if _has_money_records(session, trip_id):
+            raise ApiError(
+                409,
+                "currency_locked",
+                "지출이나 송금 기록이 있어 통화를 바꿀 수 없습니다.",
+            )
+        trip.currency = body.currency
     if body.name is not None:
         trip.name = body.name
     trip.start_date, trip.end_date = start, end

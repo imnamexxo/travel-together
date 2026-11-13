@@ -8,20 +8,19 @@ import { useDeleteTransfer, useRecordTransfer, useSettlement, useTransfers } fro
 import { toKstParts } from '@/features/expenses/expense-form';
 import { TravelColors as C } from '@/constants/theme';
 import { useCurrentTrip } from '@/features/trip/current-trip';
+import type { Money } from '@/lib/money';
 
-const money = (value: number) => `${value.toLocaleString('ko-KR')}원`;
-
-export function transferGuide(tripName: string, settlement: Settlement): string {
+export function transferGuide(tripName: string, settlement: Settlement, money: Money): string {
   return [
     `[${tripName}] 정산 송금 안내`,
-    ...settlement.suggested_transfers.map((t) => `${t.from_name} → ${t.to_name} ${money(t.amount)}`),
+    ...settlement.suggested_transfers.map((t) => `${t.from_name} → ${t.to_name} ${money.format(t.amount)}`),
     '실제 송금은 은행 앱에서 해 주세요.',
   ].join('\n');
 }
 
 /** 정산 현황. 서버가 계산한 결과만 그린다. 금액을 앱에서 다시 계산하지 않는다. */
 export default function BalanceView() {
-  const { trip, isOrganizer } = useCurrentTrip();
+  const { trip, isOrganizer, money } = useCurrentTrip();
   const settlement = useSettlement(trip.id);
   const transfers = useTransfers(trip.id);
   const recordTransfer = useRecordTransfer(trip.id);
@@ -49,14 +48,14 @@ export default function BalanceView() {
     recordTransfer.mutate(
       { from_member_id: suggestion.from_member_id, to_member_id: suggestion.to_member_id, amount },
       {
-        onSuccess: () => { setPartial(null); setNotice(`${suggestion.from_name} → ${suggestion.to_name} ${money(amount)} 송금을 기록했어요.`); },
+        onSuccess: () => { setPartial(null); setNotice(`${suggestion.from_name} → ${suggestion.to_name} ${money.format(amount)} 송금을 기록했어요.`); },
         onError: (e) => setNotice(e.message),
       },
     );
   }
 
   function confirmRecord(suggestion: Suggestion) {
-    Alert.alert('송금 완료로 기록할까요?', `${suggestion.from_name} → ${suggestion.to_name} ${money(suggestion.amount)}\n앱은 실제로 송금하지 않아요. 은행 앱에서 보낸 뒤 기록해 주세요.`, [
+    Alert.alert('송금 완료로 기록할까요?', `${suggestion.from_name} → ${suggestion.to_name} ${money.format(suggestion.amount)}\n앱은 실제로 송금하지 않아요. 은행 앱에서 보낸 뒤 기록해 주세요.`, [
       { text: '취소', style: 'cancel' },
       { text: '기록', onPress: () => record(suggestion, suggestion.amount) },
     ]);
@@ -70,28 +69,28 @@ export default function BalanceView() {
   }
 
   async function copyGuide() {
-    await Clipboard.setStringAsync(transferGuide(trip.name, data));
+    await Clipboard.setStringAsync(transferGuide(trip.name, data, money));
     setNotice('송금 안내문을 복사했어요. 메신저에 붙여 넣으세요.');
   }
 
   return <>
-    <View style={s.totalRow}><Text style={s.secondary}>확정된 총지출 · {data.confirmed_count}건</Text><Text style={s.total}>{money(data.confirmed_total)}</Text></View>
+    <View style={s.totalRow}><Text style={s.secondary}>확정된 총지출 · {data.confirmed_count}건</Text><Text style={s.total}>{money.format(data.confirmed_total)}</Text></View>
     {me && <View style={s.balanceSection}>
       <Text style={s.secondary}>{me.balance > 0 ? '내가 받을 금액' : me.balance < 0 ? '내가 보낼 금액' : '내 정산이 완료됐어요'}</Text>
-      <Text style={s.balance}>{money(Math.abs(me.balance))}</Text>
-      <View style={s.amountRow}><Text style={s.secondary}>결제액 <Text style={s.emphasis}>{money(me.paid)}</Text></Text><Text style={s.secondary}>부담액 <Text style={s.emphasis}>{money(me.owed)}</Text></Text></View>
+      <Text style={s.balance}>{money.format(Math.abs(me.balance))}</Text>
+      <View style={s.amountRow}><Text style={s.secondary}>결제액 <Text style={s.emphasis}>{money.format(me.paid)}</Text></Text><Text style={s.secondary}>부담액 <Text style={s.emphasis}>{money.format(me.owed)}</Text></Text></View>
       <Pressable accessibilityRole="button" onPress={() => setBasisOpen(true)} style={s.basisButton}><Text style={s.link}>내 부담액의 계산 근거</Text><Text style={s.link}>›</Text></Pressable>
     </View>}
 
     <Text style={s.sectionTitle}>송금 제안</Text>
     {data.confirmed_count === 0 ? <View style={s.empty}><Text style={s.emptyTitle}>아직 확정된 지출이 없어요</Text><Text style={s.helper}>지출을 확정하면 누가 누구에게 얼마를 보내면 되는지 알려 드려요.</Text></View>
-      : data.is_settled ? <View style={s.empty}><Text style={s.emptyTitle}>정산 완료</Text><Text style={s.helper}>모든 멤버의 잔액이 0원이에요.</Text></View>
+      : data.is_settled ? <View style={s.empty}><Text style={s.emptyTitle}>정산 완료</Text><Text style={s.helper}>모든 멤버의 잔액이 {money.format(0)}이에요.</Text></View>
       : <>
         {data.suggested_transfers.map((transfer) => <View key={`${transfer.from_member_id}-${transfer.to_member_id}`} style={s.transfer}>
-          <View style={s.rowBetween}><Text style={s.transferNames}>{transfer.from_name} <Text style={s.arrow}>→</Text> {transfer.to_name}</Text><Text style={s.transferAmount}>{money(transfer.amount)}</Text></View>
+          <View style={s.rowBetween}><Text style={s.transferNames}>{transfer.from_name} <Text style={s.arrow}>→</Text> {transfer.to_name}</Text><Text style={s.transferAmount}>{money.format(transfer.amount)}</Text></View>
           {isOrganizer && <View style={s.recordActions}>
             <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} 금액 직접 입력`} disabled={recordTransfer.isPending} onPress={() => setPartial(transfer)} style={s.partialButton}><Text style={s.partialText}>금액 직접 입력</Text></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} ${money(transfer.amount)} 송금 완료로 기록`} disabled={recordTransfer.isPending} onPress={() => confirmRecord(transfer)} style={s.recordButton}><Text style={s.recordText}>송금 완료로 기록</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} ${money.format(transfer.amount)} 송금 완료로 기록`} disabled={recordTransfer.isPending} onPress={() => confirmRecord(transfer)} style={s.recordButton}><Text style={s.recordText}>송금 완료로 기록</Text></Pressable>
           </View>}
         </View>)}
         <Pressable accessibilityRole="button" onPress={copyGuide} style={s.copyButton}><Text style={s.link}>송금 안내문 복사</Text></Pressable>
@@ -103,7 +102,7 @@ export default function BalanceView() {
     {data.members.map((member) => <View key={member.member_id} style={s.listRow}>
       <View style={s.avatar}><Text style={s.avatarText}>{member.display_name.slice(0, 1)}</Text></View>
       <Text style={s.memberName}>{member.display_name}{member.member_id === trip.me.member_id ? ' (나)' : ''}</Text>
-      <Text style={s.memberBalance}>{member.balance === 0 ? (data.confirmed_count ? '정산 완료' : '0원') : `${money(Math.abs(member.balance))} ${member.balance > 0 ? '받을 금액' : '보낼 금액'}`}</Text>
+      <Text style={s.memberBalance}>{member.balance === 0 ? (data.confirmed_count ? '정산 완료' : money.format(0)) : `${money.format(Math.abs(member.balance))} ${member.balance > 0 ? '받을 금액' : '보낼 금액'}`}</Text>
     </View>)}
 
     <Text style={s.sectionTitle}>송금 기록</Text>
@@ -111,10 +110,10 @@ export default function BalanceView() {
       : transfers.isError ? <Text style={s.helper}>{transfers.error.message}</Text>
       : !transfers.data.length ? <Text style={s.helper}>아직 기록된 송금이 없어요.</Text>
       : transfers.data.map((t) => {
-        const label = `${t.from_name} → ${t.to_name} ${money(t.amount)}`;
+        const label = `${t.from_name} → ${t.to_name} ${money.format(t.amount)}`;
         const when = toKstParts(t.recorded_at);
         return <View key={t.id} style={s.history}>
-          <View style={s.historyCopy}><Text style={s.historyTitle}>{t.from_name} → {t.to_name}</Text><Text style={s.helper}>{money(t.amount)} · {when.date.slice(5).replace('-', '.')} {when.time} 기록</Text></View>
+          <View style={s.historyCopy}><Text style={s.historyTitle}>{t.from_name} → {t.to_name}</Text><Text style={s.helper}>{money.format(t.amount)} · {when.date.slice(5).replace('-', '.')} {when.time} 기록</Text></View>
           {isOrganizer && <Pressable accessibilityRole="button" accessibilityLabel={`${label} 기록 지우기`} disabled={deleteTransfer.isPending} onPress={() => confirmDelete(t.id, label)} style={s.textAction}><Text style={s.link}>지우기</Text></Pressable>}
         </View>;
       })}
@@ -125,16 +124,16 @@ export default function BalanceView() {
       <SafeAreaView style={s.screen}>
         <ScrollView contentContainerStyle={s.content}>
           <View style={s.rowBetween}><Pressable accessibilityRole="button" onPress={() => setBasisOpen(false)} style={s.textAction}><Text style={s.link}>닫기</Text></Pressable><Text style={s.sheetTitle}>부담액 계산 근거</Text><View style={s.navSpacer} /></View>
-          <Text style={s.detailName}>내 부담액</Text><Text style={s.detailAmount}>{money(me?.owed ?? 0)}</Text>
+          <Text style={s.detailName}>내 부담액</Text><Text style={s.detailAmount}>{money.format(me?.owed ?? 0)}</Text>
           {!myShares.length && <Text style={s.helper}>확정된 지출 중 내가 분담 대상인 품목이 없어요.</Text>}
           {Object.values(sharesByExpense).map((shares) => <View key={shares[0].expense_id} style={s.basisGroup}>
             <Text style={s.expenseName}>{shares[0].expense_name}</Text>
             {shares.map((share, index) => <View key={`${share.expense_id}-${index}`} style={s.basisRow}>
-              <View style={s.expenseCopy}><Text style={s.secondary}>{share.item_name}</Text><Text style={s.helper}>품목 {money(share.item_amount)} · {share.sharer_count}명 분담</Text></View>
-              <Text style={s.emphasis}>{money(share.amount)}</Text>
+              <View style={s.expenseCopy}><Text style={s.secondary}>{share.item_name}</Text><Text style={s.helper}>품목 {money.format(share.item_amount)} · {share.sharer_count}명 분담</Text></View>
+              <Text style={s.emphasis}>{money.format(share.amount)}</Text>
             </View>)}
           </View>)}
-          <Text style={s.helper}>결제액은 대신 결제한 금액이고, 부담액은 분담 대상인 품목에서 내 몫을 더한 금액이에요. 나누어 떨어지지 않는 원은 가입 순서가 빠른 멤버부터 1원씩 더 부담해요. 송금 기록은 부담액이 아니라 잔액에 반영돼요.</Text>
+          <Text style={s.helper}>결제액은 대신 결제한 금액이고, 부담액은 분담 대상인 품목에서 내 몫을 더한 금액이에요. 나누어 떨어지지 않는 끝전은 가입 순서가 빠른 멤버부터 {money.format(1)}씩 더 부담해요. 송금 기록은 부담액이 아니라 잔액에 반영돼요.</Text>
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -145,12 +144,14 @@ type Suggestion = Settlement['suggested_transfers'][number];
 
 /** 일부만 보낸 경우: 보낸 멤버·받은 멤버는 송금 제안 그대로, 금액만 직접 입력한다. */
 function PartialTransferSheet({ suggestion, busy, onClose, onSubmit }: { suggestion: Suggestion; busy: boolean; onClose: () => void; onSubmit: (amount: number) => void }) {
-  const [amount, setAmount] = useState(String(suggestion.amount));
+  const { money } = useCurrentTrip();
+  const [amount, setAmount] = useState(money.toText(suggestion.amount));
   const [error, setError] = useState<string | null>(null);
 
   function submit() {
-    if (!/^\d+$/.test(amount.trim()) || Number(amount) <= 0) { setError('0보다 큰 원 단위 숫자로 입력해주세요.'); return; }
-    onSubmit(Number(amount));
+    const value = money.parse(amount);
+    if (!value) { setError(`0보다 큰 ${money.hint}`); return; }
+    onSubmit(value);
   }
 
   return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -158,9 +159,9 @@ function PartialTransferSheet({ suggestion, busy, onClose, onSubmit }: { suggest
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
         <View style={s.rowBetween}><Pressable accessibilityRole="button" onPress={onClose} style={s.textAction}><Text style={s.link}>취소</Text></Pressable><Text style={s.sheetTitle}>송금 기록</Text><View style={s.navSpacer} /></View>
         <Text style={s.detailName}>{suggestion.from_name} → {suggestion.to_name}</Text>
-        <Text style={s.helper}>제안 금액은 {money(suggestion.amount)}이에요. 실제로 보낸 금액을 입력하세요.</Text>
-        <Text style={s.label}>보낸 금액 (원)</Text>
-        <TextInput accessibilityLabel="보낸 금액" value={amount} onChangeText={setAmount} keyboardType="number-pad" maxLength={9} style={s.input} />
+        <Text style={s.helper}>제안 금액은 {money.format(suggestion.amount)}이에요. 실제로 보낸 금액을 입력하세요.</Text>
+        <Text style={s.label}>보낸 금액 ({money.unit})</Text>
+        <TextInput accessibilityLabel="보낸 금액" value={amount} onChangeText={setAmount} keyboardType={money.decimals ? 'decimal-pad' : 'number-pad'} maxLength={12} style={s.input} />
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={[s.primaryButton, busy && s.pressed]}><Text style={s.primaryText}>기록</Text></Pressable>
       </ScrollView>

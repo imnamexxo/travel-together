@@ -31,7 +31,7 @@ test('여행이 없으면 안내가 보이고, 여행을 만들면 그 여행 �
 
   expect(await screen.findByText('부산 여행')).toBeOnTheScreen();
   expect(screen.getByText('2026. 12. 1 – 12. 3  ·  1명')).toBeOnTheScreen();
-  expect(api.createTrip).toHaveBeenCalledWith({ name: '부산 여행', start_date: '2026-12-01', end_date: '2026-12-03' });
+  expect(api.createTrip).toHaveBeenCalledWith({ name: '부산 여행', start_date: '2026-12-01', end_date: '2026-12-03', currency: 'KRW' });
   for (const tab of ['플래너', '앨범', '지도', '정산']) {
     expect(screen.getAllByText(tab).length).toBeGreaterThan(0);
   }

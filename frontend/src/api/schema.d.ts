@@ -88,7 +88,7 @@ export interface paths {
         head?: never;
         /**
          * Update Trip
-         * @description 총무가 여행 이름·기간을 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지면 409.
+         * @description 총무가 여행 이름·기간·통화를 바꾼다. 일정 항목이 있는 날짜가 기간 밖으로 빠지거나, 지출·송금이 있는데 통화를 바꾸면 409.
          */
         patch: operations["update_trip_trips__trip_id__patch"];
         trace?: never;
@@ -1246,6 +1246,12 @@ export interface components {
              * Format: date
              */
             end_date: string;
+            /**
+             * Currency
+             * @default KRW
+             * @enum {string}
+             */
+            currency: "KRW" | "JPY" | "USD" | "EUR" | "CNY" | "TWD" | "THB" | "VND" | "PHP" | "HKD" | "SGD";
         };
         /** TripDetail */
         TripDetail: {
@@ -1266,6 +1272,8 @@ export interface components {
              * Format: date
              */
             end_date: string;
+            /** Currency */
+            currency: string;
             /** Member Count */
             member_count: number;
             me: components["schemas"]["MyMembership"];
@@ -1289,6 +1297,8 @@ export interface components {
              * Format: date
              */
             end_date: string;
+            /** Currency */
+            currency: string;
             /** Member Count */
             member_count: number;
             /** Is Organizer */
@@ -1305,6 +1315,8 @@ export interface components {
             start_date?: string | null;
             /** End Date */
             end_date?: string | null;
+            /** Currency */
+            currency?: ("KRW" | "JPY" | "USD" | "EUR" | "CNY" | "TWD" | "THB" | "VND" | "PHP" | "HKD" | "SGD") | null;
         };
     };
     responses: never;
@@ -1609,7 +1621,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 일정 항목이 있는 날짜가 빠짐 */
+            /** @description 일정 항목이 있는 날짜가 빠짐, 또는 지출·송금이 있어 통화를 바꿀 수 없음 */
             409: {
                 headers: {
                     [name: string]: unknown;

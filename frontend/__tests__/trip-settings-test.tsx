@@ -38,7 +38,7 @@ test('총무는 여행 메뉴에서 설정을 열어 이름과 기간을 바꾼�
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
   expect(await screen.findByText('저장했어요.')).toBeOnTheScreen();
-  expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', { name: '제주 3박', start_date: '2026-11-12', end_date: '2026-11-15' });
+  expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', { name: '제주 3박', start_date: '2026-11-12', end_date: '2026-11-15', currency: 'KRW' });
   fireEvent.press(screen.getByRole('button', { name: '플래너로 돌아가기' }));
   expect(await screen.findByText('2026. 11. 12 – 11. 15  ·  2명')).toBeOnTheScreen();
 });
@@ -70,7 +70,7 @@ test('달력은 지금 기간을 보여 주고, 취소하면 기간이 그대로
   fireEvent.press(screen.getByRole('button', { name: '취소' }));
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
-  await waitFor(() => expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', { name: '제주 여행', start_date: '2026-11-12', end_date: '2026-11-14' }));
+  await waitFor(() => expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', { name: '제주 여행', start_date: '2026-11-12', end_date: '2026-11-14', currency: 'KRW' }));
 });
 
 test('총무는 확인 창을 거쳐 여행을 삭제하고 목록으로 돌아간다', async () => {

@@ -1,6 +1,6 @@
 # 진행 상황
 
-마지막 갱신: 2026-11-13
+마지막 갱신: 2026-11-14
 
 작업 단위(티켓)의 상태는 [GitHub Issues](https://github.com/imnamexxo/travel-together/issues)가 기준이다. 이 파일은 티켓에 담기지 않는 것만 기록한다: 지금 어디까지 왔는지, 사람이 해야 할 일, 아직 열린 질문, 날짜별 기록.
 
@@ -26,6 +26,7 @@
 | Gemini API 키 | #8, #14 | 완료(`GEMINI_API_KEY`) |
 | Supabase Storage 비공개 버킷 + `SUPABASE_SERVICE_ROLE_KEY`를 Render 환경 변수에 | #9 | 완료(버킷 `trip-media`로 안내함) |
 | Google Cloud 결제 계정(카드 등록) + Android 지도 키 | #16 | 완료(`GOOGLE_MAPS_ANDROID_KEY`: expo.dev development 환경 + frontend/.env) |
+| Google Places API (New) 켜기 + 서버 키 `GOOGLE_PLACES_API_KEY`를 Render에 | #59 해외 장소 검색 | 대기 (#58) |
 | 팀원 저장소 초대 | #4 전 | 대기 (아이디 필요) |
 | 기획서 용어를 `GLOSSARY.md`에 맞춰 수정 ("그룹", "이용자", "송금 목록" 등) | 제출 전 | 대기 |
 | 기획서 4장 UI 목업 이미지 새로 그리기 | 제출 전 | 대기 |
@@ -65,6 +66,11 @@
 ```
 
 ## 기록
+
+### 2026-11-14
+
+- 해외 여행 지원 시작(#55). 결정: 여행 하나 = 통화 하나, 정산도 그 통화로 하고 원화 환산 없음(ADR 0004). 국내/해외를 여행마다 정하고 해외는 Google Places로 검색. 하위: #56 여행 통화, #57 외화 영수증, #58 Places 키(사람), #59 해외 장소 검색.
+- #56 여행 통화: `trips.currency`(기본 KRW, 마이그레이션 0011 — Render 시작 때 `alembic upgrade head`로 적용). 금액은 통화의 가장 작은 단위 정수(달러는 센트). 원·엔·달러·유로·위안·대만달러·바트·동·페소·홍콩달러·싱가포르달러. 지출·송금이 있으면 통화 변경 409. 앱은 `src/lib/money.ts`(서버 `app/currency.py`와 같은 목록)로 표시·입력, 여행 만들기·설정에 통화 고르기.
 
 ### 2026-11-13
 

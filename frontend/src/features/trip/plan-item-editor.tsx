@@ -27,7 +27,7 @@ function errorText(e: unknown, fallback: string) {
 }
 
 export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose }: Props) {
-  const { trip, isOrganizer } = useCurrentTrip();
+  const { trip, isOrganizer, money } = useCurrentTrip();
   const save = useSavePlanItem(trip.id);
   const remove = useDeletePlanItem(trip.id);
   const reorder = useReorderPlanItems(trip.id);
@@ -35,7 +35,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   const [time, setTime] = useState(item?.time?.slice(0, 5) ?? '');
   const [timeOpen, setTimeOpen] = useState(false);
   const [memo, setMemo] = useState(item?.memo ?? '');
-  const [cost, setCost] = useState(item?.estimated_cost == null ? '' : String(item.estimated_cost));
+  const [cost, setCost] = useState(item?.estimated_cost == null ? '' : money.toText(item.estimated_cost));
   const [place, setPlace] = useState<ChosenPlace | null>(item?.place ? { kakao_place_id: item.place.kakao_place_id, name: item.place.name, address: item.place.address } : null);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -64,7 +64,8 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
     setError(null);
     if (!title.trim()) { setError('장소 또는 일정 이름을 입력해주세요.'); return; }
     if (time.trim() && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time.trim())) { setError('시간을 10:00처럼 입력하거나 비워 두세요.'); return; }
-    if (cost.trim() && !/^\d+$/.test(cost.trim())) { setError('비용은 0 이상의 숫자로 입력해주세요.'); return; }
+    const estimated = money.parse(cost);
+    if (estimated === undefined) { setError('비용은 0 이상의 숫자로 입력해주세요.'); return; }
     try {
       await save.mutateAsync({
         itemId: item?.id,
@@ -73,7 +74,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
           time: time.trim() || null,
           title: title.trim(),
           memo: memo.trim(),
-          estimated_cost: cost.trim() ? Number(cost.trim()) : null,
+          estimated_cost: estimated,
           place: place ? { kakao_place_id: place.kakao_place_id, name: place.name } : null,
         },
       });
@@ -138,8 +139,8 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
           onConfirm={(t) => { setTime(t); setTimeOpen(false); }} onClear={() => { setTime(''); setTimeOpen(false); }} />
         <Text style={s.label}>메모</Text>
         <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="메모" style={[s.input, s.memo]} value={memo} onChangeText={setMemo} placeholder="함께 기억할 내용을 남겨요" multiline maxLength={300} />
-        <Text style={s.label}>예상 비용 (원)</Text>
-        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="예상 비용" style={s.input} value={cost} onChangeText={setCost} placeholder="0" keyboardType="number-pad" maxLength={9} />
+        <Text style={s.label}>예상 비용 ({money.unit})</Text>
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="예상 비용" style={s.input} value={cost} onChangeText={setCost} placeholder="0" keyboardType={money.decimals ? 'decimal-pad' : 'number-pad'} maxLength={12} />
 
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
         {!!notice && <Text style={s.caption}>{notice}</Text>}

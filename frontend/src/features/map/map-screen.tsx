@@ -31,7 +31,7 @@ function createSheetDrag(bodyHeight: Animated.Value, onStart: () => void) {
 }
 
 export default function MapScreen() {
-  const { trip, days } = useCurrentTrip();
+  const { trip, days, money } = useCurrentTrip();
   const [day, setDay] = useState<number | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -89,7 +89,7 @@ export default function MapScreen() {
         <View {...drag.panHandlers} style={s.sheetHeader}>
         <Pressable accessibilityRole="button" accessibilityLabel={expanded ? '장소 정보 접기' : '장소 정보 펼치기'} onPress={() => settle(!expanded)} style={s.handleArea}><View style={s.handle} /></Pressable>
         <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selected.place.name}</Text><Text style={s.area}>{selected.place.road_address ?? selected.place.address}</Text></View><Text style={s.badge}>{selected.visited ? '들른 곳' : '계획'}</Text></View>
-        <Text style={s.counts}>일정 {selected.plan_items.length}개 · 사진 {selected.photos.length}장{selected.expense_count ? ` · 지출 ${selected.expense_total.toLocaleString('ko-KR')}원` : ''}</Text>
+        <Text style={s.counts}>일정 {selected.plan_items.length}개 · 사진 {selected.photos.length}장{selected.expense_count ? ` · 지출 ${money.format(selected.expense_total)}` : ''}</Text>
         </View>
         {(expanded || moving) && <Animated.View style={{ height: bodyHeight, overflow: 'hidden' }}><ScrollView style={s.sheet} contentContainerStyle={s.sheetContent} onContentSizeChange={(_, h) => setFull(Math.min(SHEET_BODY, Math.ceil(h)))}>
         {!!selected.visited_dates.length && <Text style={s.visitedOn}>들른 날 {selected.visited_dates.map(dayLabel).filter(Boolean).join(', ')}</Text>}

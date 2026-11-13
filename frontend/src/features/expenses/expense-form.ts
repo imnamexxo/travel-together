@@ -6,6 +6,9 @@
  */
 
 import type { Expense, ExpenseInput, ExpenseStatus } from '@/api/client';
+import { moneyFor, type Money } from '@/lib/money';
+
+const WON = moneyFor('KRW');
 
 export const STATUS_LABEL: Record<ExpenseStatus, string> = { draft: '초안', needs_review: '확인 필요', confirmed: '확정' };
 
@@ -64,22 +67,23 @@ export function toKstParts(iso: string): { date: string; time: string } {
   };
 }
 
-export function formFromExpense(expense: Expense): ExpenseForm {
+export function formFromExpense(expense: Expense, money: Money = WON): ExpenseForm {
   const { date, time } = expense.paid_at ? toKstParts(expense.paid_at) : { date: '', time: '' };
   const numberText = (n: number | null) => (n === null ? '' : String(n));
+  const moneyText = (n: number | null) => (n === null ? '' : money.toText(n));
   return {
     merchant: expense.merchant_name ?? '',
     date,
     time,
     payerId: expense.payer_member_id,
-    total: numberText(expense.total_amount),
+    total: moneyText(expense.total_amount),
     defaultSharerIds: expense.default_sharer_ids,
     place: expense.place ? { kakao_place_id: expense.place.kakao_place_id, name: expense.place.name } : null,
     items: expense.items.map((item) => ({
       key: newKey(),
       name: item.name,
       quantity: numberText(item.quantity),
-      amount: numberText(item.amount),
+      amount: moneyText(item.amount),
       sharerIds: item.sharer_ids,
       followsDefault: sameMembers(item.sharer_ids, expense.default_sharer_ids),
     })),
@@ -108,15 +112,13 @@ export function toggleItemSharer(form: ExpenseForm, itemKey: string, memberId: s
   };
 }
 
-const digits = /^\d+$/;
-
-/** 숫자로 읽을 수 있는 품목 금액의 합. */
-export function itemsTotal(form: ExpenseForm): number {
-  return form.items.reduce((sum, item) => sum + (digits.test(item.amount) ? Number(item.amount) : 0), 0);
+/** 숫자로 읽을 수 있는 품목 금액의 합(여행 통화의 가장 작은 단위). */
+export function itemsTotal(form: ExpenseForm, money: Money = WON): number {
+  return form.items.reduce((sum, item) => sum + (money.parse(item.amount) ?? 0), 0);
 }
 
-export function totalAmount(form: ExpenseForm): number | null {
-  return digits.test(form.total) ? Number(form.total) : null;
+export function totalAmount(form: ExpenseForm, money: Money = WON): number | null {
+  return money.parse(form.total) ?? null;
 }
 
 export type FormErrors = Record<string, string>;
@@ -125,12 +127,12 @@ export type FormErrors = Record<string, string>;
  * 서버로 보낼 내용. 비어 있는 값은 그대로 비워 보낸다(확정할 때 서버가 검사).
  * 형식이 틀린 값만 여기서 막는다. 오류 키는 서버의 field와 같은 모양이다(items.0.amount 등).
  */
-export function toInput(form: ExpenseForm): { input: ExpenseInput; errors: FormErrors } {
+export function toInput(form: ExpenseForm, money: Money = WON): { input: ExpenseInput; errors: FormErrors } {
   const errors: FormErrors = {};
   const amount = (text: string, field: string) => {
-    if (!text.trim()) return null;
-    if (!digits.test(text.trim())) { errors[field] = '원 단위 숫자로 입력해주세요.'; return null; }
-    return Number(text.trim());
+    const value = money.parse(text);
+    if (value === undefined) { errors[field] = money.hint; return null; }
+    return value;
   };
   let paidAt: string | null = null;
   if (form.date.trim() || form.time.trim()) {
