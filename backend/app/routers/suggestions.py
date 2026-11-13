@@ -1,8 +1,11 @@
 import datetime as dt
 import hashlib
 import json
+import logging
 import re
+import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal
 
@@ -24,6 +27,9 @@ from app.routers.planner import PlaceCandidateOut, PlanItemOut, check_in_period,
 router = APIRouter(prefix="/trips/{trip_id}/suggestions", tags=["suggestions"], responses=ERROR_RESPONSES)
 
 DAILY_LIMIT = 10
+# 카카오 확인을 동시에 몇 곳까지 할지. 카카오 초당 요청 제한보다 넉넉히 낮게.
+VERIFY_WORKERS = 6
+logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
 
 
@@ -193,8 +199,12 @@ def ask_for_suggestions(
 
     stops = _ask_gemini(suggester, PlanRequest(body.destination, trip.start_date, trip.end_date, body.preferences))
     request = SuggestionRequest(trip_id=trip_id, input_hash=input_hash, destination=body.destination, preferences=body.preferences)
-    for stop in stops:
-        found = _verify(searcher, stop)
+    # 장소마다 카카오 검색이 필요하다. 한 곳씩 하면 12곳이면 12번을 기다리므로 동시에 묻는다(순서는 그대로).
+    started = time.monotonic()
+    with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
+        verified = list(pool.map(lambda stop: _verify(searcher, stop), stops))
+    logger.info("카카오 확인 %d곳 %.1f초", len(stops), time.monotonic() - started)
+    for stop, found in zip(stops, verified):
         request.items.append(
             SuggestedItem(
                 date=stop.date,

@@ -1,7 +1,7 @@
 import type { AuthError as SupabaseAuthError, Session, SupabaseClient } from '@supabase/supabase-js';
 
 import { AuthError, type AuthService, type AuthSession } from '@/auth/auth-service';
-import { openLoginPage, parseRedirect, redirectUrl } from '@/auth/oauth-redirect';
+import { openLoginPage, parseRedirect, passwordResetUrl, redirectUrl } from '@/auth/oauth-redirect';
 
 const MESSAGES: Record<string, string> = {
   invalid_credentials: '이메일 또는 비밀번호가 맞지 않습니다.',
@@ -11,6 +11,8 @@ const MESSAGES: Record<string, string> = {
   email_not_confirmed: '메일함에서 가입 인증을 먼저 완료해 주세요.',
   validation_failed: '이메일 형식을 확인해 주세요.',
   over_request_rate_limit: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+  over_email_send_rate_limit: '메일을 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요.',
+  same_password: '이전과 다른 비밀번호를 정해 주세요.',
 };
 
 function toAuthError(error: SupabaseAuthError): AuthError {
@@ -73,6 +75,19 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       const exchanged = await supabase.auth.exchangeCodeForSession(params.code);
       if (exchanged.error) throw toAuthError(exchanged.error);
       return 'signed_in';
+    },
+
+    async requestPasswordReset(email) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: passwordResetUrl() });
+      if (error) throw toAuthError(error);
+    },
+
+    async resetPassword(code, newPassword) {
+      // PKCE라 재설정을 요청한 이 휴대폰에서만 code를 세션으로 바꿀 수 있다.
+      const exchanged = await supabase.auth.exchangeCodeForSession(code);
+      if (exchanged.error) throw new AuthError('재설정 링크가 만료되었거나 이미 사용되었어요. 비밀번호를 요청한 휴대폰에서 비밀번호 찾기를 다시 해 주세요.');
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw toAuthError(error);
     },
 
     async signOut() {

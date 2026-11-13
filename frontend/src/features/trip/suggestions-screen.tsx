@@ -67,13 +67,13 @@ export default function SuggestionsScreen() {
         <Text style={s.caption}>여행 기간({days.length}일)에 맞춰 날짜별 일정을 추천해요. 마음에 드는 것만 골라 플래너에 넣으세요.</Text>
 
         <Text style={s.label}>여행지</Text>
-        <TextInput accessibilityLabel="여행지" style={s.input} value={destination} onChangeText={setDestination} placeholder="예: 제주 동쪽" maxLength={60} />
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="여행지" style={s.input} value={destination} onChangeText={setDestination} placeholder="예: 제주 동쪽" maxLength={60} />
         <Text style={s.label}>취향 (선택)</Text>
         <View style={s.chips}>{PRESETS.map((preset) => {
           const on = preferences.split(',').map((p) => p.trim()).includes(preset);
           return <Pressable key={preset} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => togglePreset(preset)} style={[s.chip, on && s.chipOn]}><Text style={[s.chipText, on && s.chipTextOn]}>{preset}</Text></Pressable>;
         })}</View>
-        <TextInput accessibilityLabel="취향" style={[s.input, s.spaced]} value={preferences} onChangeText={setPreferences} placeholder="직접 적어도 돼요" maxLength={200} />
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="취향" style={[s.input, s.spaced]} value={preferences} onChangeText={setPreferences} placeholder="직접 적어도 돼요" maxLength={200} />
         {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: ask.isPending, busy: ask.isPending }} disabled={ask.isPending} onPress={request} style={({ pressed }) => [s.primary, (pressed || ask.isPending) && s.pressed]}>
           <Text style={s.primaryText}>{result ? '다시 추천받기' : '추천받기'}</Text>

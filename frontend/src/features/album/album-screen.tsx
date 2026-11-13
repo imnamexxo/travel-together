@@ -206,7 +206,7 @@ function PlaceSection({ photo }: { photo: Photo }) {
     </View>
     <Text style={s.helper}>일정에 없던 곳이면 검색해서 연결하세요. 지도에 들른 곳으로 남아요.</Text>
     <View style={s.searchRow}>
-      <TextInput accessibilityLabel="사진 장소 검색" value={query} onChangeText={setQuery} placeholder="예: 성산일출봉" returnKeyType="search" onSubmitEditing={() => setSubmitted(query.trim())} style={s.searchInput} maxLength={100} />
+      <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="사진 장소 검색" value={query} onChangeText={setQuery} placeholder="예: 성산일출봉" returnKeyType="search" onSubmitEditing={() => setSubmitted(query.trim())} style={s.searchInput} maxLength={100} />
       <Pressable accessibilityRole="button" accessibilityLabel="사진 장소 검색하기" onPress={() => setSubmitted(query.trim())} style={s.searchButton}><Text style={s.searchButtonText}>검색</Text></Pressable>
     </View>
     {!!submitted && (search.isPending ? <ActivityIndicator color={C.primary} /> : search.isError ? <Text style={s.errorText}>{search.error.message}</Text>

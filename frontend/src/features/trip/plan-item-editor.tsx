@@ -115,7 +115,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
           <Pressable accessibilityRole="button" accessibilityLabel="장소 빼기" onPress={() => setPlace(null)} style={s.action}><Text style={s.muted}>빼기</Text></Pressable>
         </View> : <>
           <View style={s.searchRow}>
-            <TextInput accessibilityLabel="장소 검색" style={[s.input, s.flex]} value={query} onChangeText={setQuery} placeholder="예: 동문시장" returnKeyType="search" onSubmitEditing={runSearch} maxLength={100} />
+            <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="장소 검색" style={[s.input, s.flex]} value={query} onChangeText={setQuery} placeholder="예: 동문시장" returnKeyType="search" onSubmitEditing={runSearch} maxLength={100} />
             <Pressable accessibilityRole="button" accessibilityLabel="검색" onPress={runSearch} style={s.searchButton}><Text style={s.searchText}>검색</Text></Pressable>
           </View>
           {!!submittedQuery && (search.isPending ? <ActivityIndicator style={s.loading} color={C.primary} />
@@ -128,13 +128,13 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
         </>}
 
         <Text style={s.label}>장소 또는 일정 이름</Text>
-        <TextInput accessibilityLabel="장소 또는 일정 이름" style={s.input} value={title} onChangeText={setTitle} placeholder="어디로 떠날까요?" maxLength={80} />
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="장소 또는 일정 이름" style={s.input} value={title} onChangeText={setTitle} placeholder="어디로 떠날까요?" maxLength={80} />
         <Text style={s.label}>시간 (선택)</Text>
-        <TextInput accessibilityLabel="시간" style={s.input} value={time} onChangeText={setTime} placeholder="10:00" maxLength={5} keyboardType="numbers-and-punctuation" />
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="시간" style={s.input} value={time} onChangeText={setTime} placeholder="10:00" maxLength={5} keyboardType="numbers-and-punctuation" />
         <Text style={s.label}>메모</Text>
-        <TextInput accessibilityLabel="메모" style={[s.input, s.memo]} value={memo} onChangeText={setMemo} placeholder="함께 기억할 내용을 남겨요" multiline maxLength={300} />
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="메모" style={[s.input, s.memo]} value={memo} onChangeText={setMemo} placeholder="함께 기억할 내용을 남겨요" multiline maxLength={300} />
         <Text style={s.label}>예상 비용 (원)</Text>
-        <TextInput accessibilityLabel="예상 비용" style={s.input} value={cost} onChangeText={setCost} placeholder="0" keyboardType="number-pad" maxLength={9} />
+        <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="예상 비용" style={s.input} value={cost} onChangeText={setCost} placeholder="0" keyboardType="number-pad" maxLength={9} />
 
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
         {!!notice && <Text style={s.caption}>{notice}</Text>}

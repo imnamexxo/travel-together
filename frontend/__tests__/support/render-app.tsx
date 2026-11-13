@@ -3,6 +3,8 @@ import { renderRouter } from 'expo-router/testing-library';
 import type { ApiClient } from '@/api/client';
 import { AppProviders } from '@/app-providers';
 import AuthCallback from '@/app/auth-callback';
+import ForgotPassword from '@/app/forgot-password';
+import ResetPassword from '@/app/reset-password';
 import TripListScreen from '@/app/index';
 import LoginScreen from '@/app/login';
 import SignupScreen from '@/app/signup';
@@ -36,6 +38,8 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       ),
       login: LoginScreen,
       'auth-callback': AuthCallback,
+      'forgot-password': ForgotPassword,
+      'reset-password': ResetPassword,
       signup: SignupScreen,
       index: TripListScreen,
       'trips/new': NewTripScreen,

@@ -49,7 +49,7 @@ export default function ExpensePlacePicker({ tripId, merchant, value, onChange, 
   }
   return <View>
     <View style={s.searchRow}>
-      <TextInput accessibilityLabel="장소 검색어" value={query} onChangeText={setQuery} placeholder="상호나 장소 이름" returnKeyType="search" onSubmitEditing={search} style={s.input} maxLength={100} />
+      <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="장소 검색어" value={query} onChangeText={setQuery} placeholder="상호나 장소 이름" returnKeyType="search" onSubmitEditing={search} style={s.input} maxLength={100} />
       <Pressable accessibilityRole="button" accessibilityLabel="장소 후보 다시 찾기" onPress={search} style={s.searchButton}><Text style={s.searchText}>찾기</Text></Pressable>
     </View>
     {!submitted ? <Text style={s.muted}>상호를 입력하고 찾기를 눌러 주세요.</Text>

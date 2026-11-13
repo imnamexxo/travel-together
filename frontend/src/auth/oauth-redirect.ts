@@ -11,6 +11,11 @@ export function redirectUrl(): string {
   return Linking.createURL('auth-callback');
 }
 
+/** 비밀번호 재설정 메일의 링크가 열 앱 주소(같은 Redirect URLs 규칙 traveltogether://** 에 들어간다). */
+export function passwordResetUrl(): string {
+  return Linking.createURL('reset-password');
+}
+
 export type BrowserResult = { type: 'success'; url: string } | { type: 'cancel' };
 
 /** 로그인 페이지를 열고, 앱 주소로 돌아오면 그 주소를 준다. 사용자가 닫으면 cancel. */
