@@ -129,7 +129,7 @@ type FakeApiOptions = {
   /** 지출 장소 후보(검색어가 이름에 들어간 것만) */
   expensePlaceCandidates?: ExpensePlaceCandidate[];
   /** 영수증 분석 결과로 돌려줄 지출 초안 내용과 분석 상태 */
-  receipt?: { expense: Partial<Expense>; analysis: 'read' | 'reused' | 'failed' };
+  receipt?: { expense: Partial<Expense>; analysis: 'read' | 'reused' | 'failed'; receipt_currency?: string | null };
 };
 
 export function photo(overrides: Partial<Photo> = {}): Photo {
@@ -370,7 +370,7 @@ export function fakeApi(
       const created = expense({ id: `expense-${expensesOf(tripId).length + 1}`, status: 'draft', has_receipt: true, receipt_url: `https://storage.test/receipt-of-${upload.uri}`, ...receipt?.expense });
       expensesOf(tripId).unshift(created);
       keys.set(idempotencyKey, created.id);
-      return { expense: created, analysis: receipt?.analysis ?? 'read' };
+      return { expense: created, analysis: receipt?.analysis ?? 'read', receipt_currency: receipt?.receipt_currency ?? null };
     }),
     linkPhotoPlace: jest.fn(async (tripId, photoId, link) => {
       const target = photosOf(tripId).find((p) => p.id === photoId)!;

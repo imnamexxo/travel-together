@@ -131,3 +131,12 @@ test('카메라 권한이 없으면 이유가 보인다', async () => {
 
   await waitFor(() => expect(screen.getByText('카메라 권한이 없어요. 설정에서 카메라를 허용하거나 앨범에서 골라 주세요.')).toBeOnTheScreen());
 });
+
+test('영수증 통화가 여행 통화와 다르면 바꿔 넣으라고 알려 준다', async () => {
+  render({ trips: [tripDetail({ currency: 'USD', me: { member_id: 'm1', join_order: 1, is_organizer: true } })], receipt: { expense: readReceipt, analysis: 'read', receipt_currency: 'JPY' } });
+  mockPick.mockResolvedValueOnce({ uri: 'file:///r.jpg', width: 3000, height: 4000 });
+
+  await addReceiptFrom('앨범에서 고르기');
+
+  expect(await screen.findByText('영수증 금액이 JPY로 보여요. 이 여행은 USD로 적으니, 금액을 USD로 바꿔 넣어 주세요.')).toBeOnTheScreen();
+});

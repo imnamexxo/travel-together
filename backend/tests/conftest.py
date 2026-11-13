@@ -123,9 +123,11 @@ class FakeReceiptReader:
     def __init__(self) -> None:
         self.results: list[ReceiptDraft | Exception] = []
         self.images: list[bytes] = []
+        self.currencies: list[str] = []
 
-    def read(self, image: bytes) -> ReceiptDraft:
+    def read(self, image: bytes, currency: str = "KRW") -> ReceiptDraft:
         self.images.append(image)
+        self.currencies.append(currency)
         result = self.results.pop(0) if self.results else ReceiptDraft()
         if isinstance(result, Exception):
             raise result

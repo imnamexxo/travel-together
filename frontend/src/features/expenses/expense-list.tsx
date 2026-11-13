@@ -34,7 +34,8 @@ export default function ExpenseList() {
       const uri = await prepareReceipt(picked);
       const result = await upload.mutateAsync({ uri, idempotencyKey: receiptKey.current });
       receiptKey.current = newIdempotencyKey();
-      router.push(`/trips/${trip.id}/expenses/${result.expense.id}?analysis=${result.analysis}`);
+      const other = result.receipt_currency ? `&receiptCurrency=${result.receipt_currency}` : '';
+      router.push(`/trips/${trip.id}/expenses/${result.expense.id}?analysis=${result.analysis}${other}`);
     } catch (e) {
       setReceiptError(e instanceof Error ? e.message : '영수증을 올리지 못했어요.');
     }

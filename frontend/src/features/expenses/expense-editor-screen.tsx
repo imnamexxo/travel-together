@@ -31,7 +31,7 @@ function detailErrors(e: ApiError): FormErrors {
 
 export default function ExpenseEditorScreen() {
   const { trip } = useCurrentTrip();
-  const { expenseId, analysis } = useLocalSearchParams<{ expenseId?: string; analysis?: string }>();
+  const { expenseId, analysis, receiptCurrency } = useLocalSearchParams<{ expenseId?: string; analysis?: string; receiptCurrency?: string }>();
   const members = useMembers(trip.id);
   const expense = useExpense(trip.id, expenseId);
 
@@ -45,7 +45,7 @@ export default function ExpenseEditorScreen() {
       <Pressable accessibilityRole="button" onPress={() => goBack(`/trips/${trip.id}/settlement`)} style={s.textButton}><Text style={s.link}>정산으로 돌아가기</Text></Pressable>
     </SafeAreaView>;
   }
-  return <Editor key={expense.data?.id ?? 'new'} members={members.data} expense={expense.data} analysis={analysis} />;
+  return <Editor key={expense.data?.id ?? 'new'} members={members.data} expense={expense.data} analysis={analysis} receiptCurrency={receiptCurrency} />;
 }
 
 const ANALYSIS_NOTICE: Record<string, string> = {
@@ -54,7 +54,7 @@ const ANALYSIS_NOTICE: Record<string, string> = {
   failed: '영수증을 읽지 못했어요. 원본을 보며 직접 입력해 주세요.',
 };
 
-function Editor({ members, expense, analysis }: { members: Member[]; expense: Expense | undefined; analysis?: string }) {
+function Editor({ members, expense, analysis, receiptCurrency }: { members: Member[]; expense: Expense | undefined; analysis?: string; receiptCurrency?: string }) {
   const { trip, isOrganizer, money } = useCurrentTrip();
   const memberOrder = members.map((m) => m.member_id);
   const nameOf = (id: string) => members.find((m) => m.member_id === id)?.display_name ?? '알 수 없음';
@@ -67,6 +67,10 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
   const [errors, setErrors] = useState<FormErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
   const receiptNotice = analysis ? ANALYSIS_NOTICE[analysis] ?? null : null;
+  // 영수증 통화가 여행 통화와 다르면 금액을 여행 통화로 바꿔 적어야 한다(앱은 환산하지 않음, ADR 0004).
+  const currencyNotice = receiptCurrency && receiptCurrency !== money.code
+    ? `영수증 금액이 ${receiptCurrency}로 보여요. 이 여행은 ${money.code}로 적으니, 금액을 ${money.code}로 바꿔 넣어 주세요.`
+    : null;
   const [receiptOpen, setReceiptOpen] = useState(false);
   // 영수증으로 만든 지출이면 읽지 못한(비어 있는) 칸을 표시한다.
   const fromReceipt = !!expense?.has_receipt && isOrganizer;
@@ -153,6 +157,7 @@ function Editor({ members, expense, analysis }: { members: Member[]; expense: Ex
           <Text style={s.receiptHint}>눌러서 크게 보기</Text>
         </Pressable>}
         {!!receiptNotice && <Text style={s.receiptNotice}>{receiptNotice}</Text>}
+        {!!currencyNotice && <Text accessibilityRole="alert" style={[s.receiptNotice, s.currencyNotice]}>{currencyNotice}</Text>}
         {editable && status !== 'confirmed' && <Text style={s.hint}>확정한 지출만 정산에 들어가요.</Text>}
         {editable && status === 'confirmed' && <Text style={s.hint}>고쳐서 저장하면 다시 초안이 돼요. 확정해야 정산에 다시 들어가요.</Text>}
 
@@ -273,7 +278,7 @@ const s = StyleSheet.create({
   missing: { fontSize: 11, fontWeight: '600', color: C.error, backgroundColor: C.surface, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden', marginTop: 10 },
   receipt: { marginTop: 16, borderRadius: 14, backgroundColor: C.surface, padding: 8, alignItems: 'center' },
   receiptImage: { width: '100%', height: 220 }, receiptHint: { fontSize: 11, color: C.textMuted, marginTop: 6 },
-  receiptNotice: { fontSize: 13, lineHeight: 19, color: C.primary, marginTop: 12 },
+  receiptNotice: { fontSize: 13, lineHeight: 19, color: C.primary, marginTop: 12 }, currencyNotice: { color: C.error },
   viewer: { flex: 1, backgroundColor: '#000' }, viewerClose: { alignSelf: 'flex-end', minHeight: 48, minWidth: 64, justifyContent: 'center', alignItems: 'center' },
   viewerCloseText: { color: '#fff', fontSize: 15 }, viewerHint: { color: '#bbb', fontSize: 12, textAlign: 'center', paddingVertical: 10 },
 });

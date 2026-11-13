@@ -1073,6 +1073,8 @@ export interface components {
              * @enum {string}
              */
             analysis: "read" | "reused" | "failed";
+            /** Receipt Currency */
+            receipt_currency?: string | null;
         };
         /** SettlementOut */
         SettlementOut: {

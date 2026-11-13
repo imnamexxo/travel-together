@@ -181,3 +181,54 @@ def test_bad_receipt_response_is_unreadable(raw):
 def test_missing_key_is_unreadable():
     with pytest.raises(ReceiptUnreadable):
         GeminiReceiptReader("", "gemini-flash-latest").read(b"x")
+
+
+def test_reader_gets_trip_currency_and_other_currency_is_reported(client, auth, receipts):
+    minji, _ = auth.add_user(display_name="민지")
+    body = {"name": "뉴욕 여행", "start_date": "2026-12-01", "end_date": "2026-12-03", "currency": "USD"}
+    trip_id = client.post("/trips", json=body, headers=bearer(minji)).json()["id"]
+    receipts.results = [ReceiptDraft(total_amount=1500, currency="JPY")]
+
+    out = client.post(
+        f"/trips/{trip_id}/receipts",
+        files={"file": ("r.jpg", jpeg(), "image/jpeg")},
+        data={"idempotency_key": "k1"},
+        headers=bearer(minji),
+    ).json()
+
+    assert receipts.currencies == ["USD"]
+    assert (out["expense"]["total_amount"], out["receipt_currency"]) == (1500, "JPY")
+
+
+def test_same_currency_is_not_reported(client, trip, receipts):
+    receipts.results = [ReceiptDraft(total_amount=9000, currency="KRW")]
+
+    out = upload(client, trip).json()
+
+    assert receipts.currencies == ["KRW"]
+    assert out["receipt_currency"] is None
+
+
+def test_gemini_numbers_become_smallest_unit_of_trip_currency():
+    raw = json.dumps({"merchant_name": "Diner", "paid_at_local": None, "currency": "usd", "total_amount": 12.5, "items": [{"name": "Burger", "quantity": 1, "amount": 9.99}, {"name": "Tip", "quantity": None, "amount": 2.51}]})
+
+    draft = parse_receipt(raw, "USD")
+
+    assert draft.total_amount == 1250
+    assert [i.amount for i in draft.items] == [999, 251]
+    assert draft.currency == "USD"
+    assert parse_receipt(json.dumps({"total_amount": 3200.0, "items": []}), "JPY").total_amount == 3200
+
+
+def test_prompt_names_trip_currency_and_asks_for_raw_numbers():
+    calls = []
+
+    class Models:
+        def generate_content(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(text=json.dumps({"total_amount": 7.5, "items": []}))
+
+    draft = GeminiReceiptReader("key", "m", client=SimpleNamespace(models=Models())).read(b"x", "EUR")
+
+    assert draft.total_amount == 750
+    assert "EUR" in calls[0]["contents"][1]
