@@ -106,8 +106,10 @@ def build_prompt(request: PlanRequest) -> str:
 FALLBACK_MODEL = "gemini-flash-lite-latest"
 BUSY_CODES = {429, 500, 502, 503, 504}
 TIMEOUT_CODE = 504
-# Gemini에 주는 답변 시간 제한(밀리초). 여행 기간 전체 일정을 한 번에 만들어서 60초로는 모자랄 때가 있다.
-TIMEOUT_MS = 120_000
+# Gemini에 주는 답변 시간 제한(밀리초). 가벼운 모델은 몇 초면 답한다. 붐비는 모델을 오래 기다리지 않고 빨리 가벼운 모델로 넘어가도록 짧게 둔다.
+TIMEOUT_MS = 30_000
+# 생각 끄기를 거절한(400) 모델. 다음부터는 처음부터 설정 없이 묻는다(헛된 요청 한 번을 줄인다).
+_NO_THINKING: set[str] = set()
 
 
 def generate(client, model: str, *, sleep=time.sleep, **kwargs):
@@ -116,6 +118,9 @@ def generate(client, model: str, *, sleep=time.sleep, **kwargs):
 
     models = [model, model] + ([FALLBACK_MODEL] if model != FALLBACK_MODEL else [])
     for attempt, name in enumerate(models):
+        config = kwargs.get("config")
+        if name in _NO_THINKING and getattr(config, "thinking_config", None) is not None:
+            kwargs = {**kwargs, "config": config.model_copy(update={"thinking_config": None})}
         started = time.monotonic()
         try:
             response = client.models.generate_content(model=name, **kwargs)
@@ -126,6 +131,7 @@ def generate(client, model: str, *, sleep=time.sleep, **kwargs):
             if exc.code == 400 and getattr(config, "thinking_config", None) is not None:
                 # 이 모델이 생각 끄기를 지원하지 않으면 400이 난다. 생각 설정 없이 한 번 더 묻는다.
                 logger.warning("Gemini %s가 생각 끄기를 받지 않아 설정 없이 다시 묻습니다", name)
+                _NO_THINKING.add(name)
                 return generate(client, name, sleep=sleep, **{**kwargs, "config": config.model_copy(update={"thinking_config": None})})
             if exc.code not in BUSY_CODES or attempt == len(models) - 1:
                 logger.warning("Gemini %s 요청 실패(%s)", name, exc.code)

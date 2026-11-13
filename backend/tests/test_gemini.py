@@ -16,6 +16,16 @@ from app.gemini import (
     validate_plan,
 )
 
+@pytest.fixture(autouse=True)
+def _forget_models_without_thinking():
+    """생각 끄기를 거절한 모델 기억은 테스트마다 비운다."""
+    from app import gemini
+
+    gemini._NO_THINKING.clear()
+    yield
+    gemini._NO_THINKING.clear()
+
+
 REQUEST = PlanRequest("제주", dt.date(2026, 11, 12), dt.date(2026, 11, 13), "맛집 위주")
 
 
@@ -169,3 +179,22 @@ def test_schema_sent_to_gemini_has_only_types():
         text = json.dumps(shape.model_json_schema())
         for keyword in ("format", "maxLength", "minLength", "minimum", "maximum", "pattern", "maxItems", "minItems"):
             assert f'"{keyword}"' not in text, (shape.__name__, keyword)
+
+
+def test_model_that_rejected_thinking_is_asked_without_it_next_time():
+    first = SequenceModels(bad_request(), plan_json(stop()))
+    assert busy_suggester(first, []).suggest(REQUEST)
+
+    second = SequenceModels(plan_json(stop()))
+    configs = []
+    original = second.generate_content
+    second.generate_content = lambda **kw: (configs.append(kw["config"]), original(**kw))[1]
+    assert busy_suggester(second, []).suggest(REQUEST)
+
+    assert len(configs) == 1 and configs[0].thinking_config is None
+
+
+def test_answer_deadline_is_short_so_a_busy_model_falls_back_quickly():
+    from app.gemini import TIMEOUT_MS
+
+    assert TIMEOUT_MS <= 30_000

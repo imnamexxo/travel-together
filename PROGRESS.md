@@ -68,6 +68,7 @@
 
 ### 2026-11-13
 
+- 추천이 느린 원인 확인(Render 로그): `gemini-flash-latest`가 시간 초과(504)될 때까지 기다린 뒤 `gemini-flash-lite-latest`가 1.6초에 답함. Gemini 답변 시간 제한 120초 → 30초, 생각 끄기를 거절한 모델은 기억해 다음부터 설정 없이 묻는다. Render에 `GEMINI_MODEL=gemini-flash-lite-latest`를 넣으면 처음부터 가벼운 모델을 쓴다(지우면 원래대로).
 - 실기기 피드백 반영: 입력칸 예시 글자가 흰색이라 안 보이던 것(추천 일정·일정 편집·앨범·지출 장소) → 회색. 지도 아래 장소 정보를 손잡이로 끌어 올리고 내리기(누르면 접기/펼치기). 지도 멤버 칩 아래가 잘리던 것.
 - 비밀번호 찾기: 이메일 → Supabase 재설정 메일(`resetPasswordForEmail`, 복귀 주소 `traveltogether://reset-password`) → 메일 링크가 앱의 새 비밀번호 화면을 연다 → `exchangeCodeForSession` + `updateUser`. PKCE라 요청한 휴대폰에서 링크를 열어야 한다. Supabase 기본 메일은 시간당 보낼 수 있는 수가 적다.
 - 추천·영수증 속도: Gemini 생각(thinking) 끄기(`thinking_budget=0`, 받지 않는 모델이면 설정 없이 한 번 더), 추천의 카카오 확인을 동시에(최대 6곳), 영수증은 저장소 올리기와 Gemini 분석을 동시에, 영수증 이미지 긴 변 2000 → 1600px. Render Logs에 `Gemini … 응답 N초`, `카카오 확인 N곳 N초`가 남는다. Render 무료 플랜은 15분 동안 요청이 없으면 잠들어 첫 요청이 1분 가까이 걸린다(외부에서 /health를 주기적으로 부르면 피할 수 있음).
