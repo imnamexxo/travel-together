@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
+from app import loading
 from app.models import Place, PlanItem, Trip
 from app.permissions import require_member
 from app.place_search import PlaceCandidate, PlaceSearcher
@@ -186,7 +187,7 @@ def list_plan_items(
     """여행의 모든 일정 항목. 날짜, 하루 안의 순서대로."""
     require_member(session, trip_id, user)
     items = session.scalars(
-        select(PlanItem).where(PlanItem.trip_id == trip_id).order_by(PlanItem.date, PlanItem.position)
+        select(PlanItem).where(PlanItem.trip_id == trip_id).order_by(PlanItem.date, PlanItem.position).options(*loading.PLAN_ITEM)
     ).all()
     return [plan_item_out(i) for i in items]
 

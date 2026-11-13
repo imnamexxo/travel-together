@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import loading
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
@@ -57,7 +58,7 @@ def list_transfers(
     """기록된 송금. 모든 멤버가 볼 수 있다. 최근 기록부터."""
     require_member(session, trip_id, user)
     transfers = session.scalars(
-        select(Transfer).where(Transfer.trip_id == trip_id).order_by(Transfer.recorded_at.desc(), Transfer.id)
+        select(Transfer).where(Transfer.trip_id == trip_id).order_by(Transfer.recorded_at.desc(), Transfer.id).options(*loading.TRANSFER)
     ).all()
     return [_out(t) for t in transfers]
 

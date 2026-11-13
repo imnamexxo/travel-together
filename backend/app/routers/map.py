@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
+from app import loading
 from app.models import Expense, Member, Photo, Place, PlanItem
 from app.permissions import require_member
 from app.photos import get_storage
@@ -78,7 +79,7 @@ def map_data(
         raise ApiError(422, "validation_failed", "입력값을 확인해 주세요.", [ErrorDetail(field="member_id", message="이 여행의 멤버가 아닙니다.")])
 
     plans = [
-        i for i in session.scalars(select(PlanItem).where(PlanItem.trip_id == trip_id).order_by(PlanItem.date, PlanItem.position))
+        i for i in session.scalars(select(PlanItem).where(PlanItem.trip_id == trip_id).order_by(PlanItem.date, PlanItem.position).options(*loading.PLAN_ITEM))
         if date is None or i.date == date
     ]
     photos = [

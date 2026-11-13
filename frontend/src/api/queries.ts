@@ -112,6 +112,8 @@ export function useRemoveMember(tripId: string) {
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.members(tripId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.trip(tripId), exact: true }),
+      // 내보낸 멤버의 사진도 함께 지워진다.
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos(tripId) }),
     ]),
   });
 }

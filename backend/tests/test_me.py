@@ -81,3 +81,20 @@ def test_first_profile_uses_kakao_nickname_and_user_without_email(engine, databa
 
     assert response.status_code == 200
     assert response.json()["display_name"] == "제주러버"
+
+
+def test_each_request_logs_time_and_db_query_count(client, auth, caplog):
+    """Render 로그에서 어느 화면이 느린지 보려고 요청마다 시간·DB 질의 수를 남긴다(경로는 라우트 모양으로)."""
+    import logging
+
+    caplog.set_level(logging.INFO, logger="app.requests")
+    token, _ = auth.add_user(display_name="민지")
+
+    client.get("/me", headers=bearer(token))
+    client.get("/trips/00000000-0000-0000-0000-000000000000", headers=bearer(token))
+    client.get("/health")
+
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.requests"]
+    assert len(lines) == 2
+    assert lines[0].startswith("GET /me 200 ") and "DB " in lines[0] and not lines[0].endswith("DB 0번")
+    assert lines[1].startswith("GET /trips/{trip_id} 404 ")
