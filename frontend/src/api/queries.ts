@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -17,6 +17,7 @@ export const queryKeys = {
   placeSearch: (tripId: string, query: string) => ['trips', tripId, 'place-search', query] as const,
   photos: (tripId: string) => ['trips', tripId, 'photos'] as const,
   expensePlaceCandidates: (tripId: string, query: string) => ['trips', tripId, 'expense-place-candidates', query] as const,
+  map: (tripId: string, { date, memberId }: MapFilter = {}) => ['trips', tripId, 'map', date ?? '', memberId ?? ''] as const,
 };
 
 export function useMe() {
@@ -310,5 +311,16 @@ export function useExpensePlaceCandidates(tripId: string, query: string) {
     queryFn: () => api.getExpensePlaceCandidates(tripId, query),
     enabled: query.length > 0,
     retry: false,
+  });
+}
+
+/** 지도 데이터. 사진·지출·일정이 다른 화면에서 바뀌므로 지도를 열 때마다 다시 받는다(부르는 쪽에서 refetch). */
+export function useMapData(tripId: string, filter: MapFilter) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.map(tripId, filter),
+    queryFn: () => api.getMapData(tripId, filter),
+    // 필터를 바꾸는 동안 이전 핀을 그대로 둔다.
+    placeholderData: (previous) => previous,
   });
 }

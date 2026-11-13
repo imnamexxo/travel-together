@@ -11,3 +11,10 @@ jest.mock('react-native-maps', () => {
 jest.mock('@/api/file-part', () => ({
   filePart: (uri: string, name: string, type: string) => ({ uri, name, type, bytes: async () => new Uint8Array([1, 2, 3]) }),
 }));
+
+// 테스트 속 여행은 2026-11-12부터다. 플래너는 "오늘"을 먼저 여므로, 날짜가 바뀌어도 결과가 같도록 시계를 고정한다.
+// Date만 바꾸고 타이머는 실제 것을 쓴다(findBy 등 비동기 대기가 그대로 동작하도록).
+jest.useFakeTimers({
+  now: new Date('2026-11-12T03:00:00Z'),
+  doNotFake: ['hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'],
+});

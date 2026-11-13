@@ -8,7 +8,8 @@ import PlaceList from './place-list';
 
 /** Android는 구글 지도 키 없이 지도를 그리면 화면이 열리지 않는다(#16에서 키를 넣으면 지도가 나온다). */
 export function hasMapKey(platform = Platform.OS, config = Constants.expoConfig): boolean {
-  return platform !== 'android' || !!config?.android?.config?.googleMaps?.apiKey;
+  // 키 값은 실행 중인 앱 설정에서 빠지므로 app.config.js가 넣는 표시를 본다.
+  return platform !== 'android' || config?.extra?.hasGoogleMapsKey === true;
 }
 
 export default function PlaceMap(props: PlaceMapProps) {

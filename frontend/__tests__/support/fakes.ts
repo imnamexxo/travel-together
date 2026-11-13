@@ -1,5 +1,6 @@
-import { ApiError, type ApiClient, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult } from '@/auth/auth-service';
+import { toKstParts } from '@/features/expenses/expense-form';
 
 type FakeUser = { password: string; displayName: string };
 
@@ -313,6 +314,29 @@ export function fakeApi(
       photoStore[tripId] = photosOf(tripId).filter((p) => p.id !== photoId);
     }),
     getExpensePlaceCandidates: jest.fn(async (_tripId, query) => expensePlaceCandidates.filter((c) => c.name.includes(query))),
+    // 서버의 지도 데이터와 같은 규칙(사진·확정 지출이 있으면 들른 곳, 날짜·멤버 필터).
+    getMapData: jest.fn(async (tripId, { date, memberId } = {}) => {
+      const day = (iso: string | null | undefined) => (iso ? toKstParts(iso).date : null);
+      const plans = plansOf(tripId).filter((i) => !date || i.date === date).sort((a, b) => a.date.localeCompare(b.date) || a.position - b.position);
+      const shots = photosOf(tripId).filter((ph) => (!date || day(ph.taken_at) === date) && (!memberId || ph.uploader_member_id === memberId));
+      const spent = expensesOf(tripId).filter((e) => e.status === 'confirmed' && (!date || day(e.paid_at) === date) && (!memberId || e.payer_member_id === memberId));
+      const byId = new Map<string, Place>();
+      for (const candidate of [...plans.map((i) => i.place), ...shots.map((ph) => ph.place), ...spent.map((e) => e.place)]) {
+        if (candidate && !byId.has(candidate.id)) byId.set(candidate.id, candidate);
+      }
+      const places = [...byId.values()].map((pl) => {
+        const photosHere = shots.filter((ph) => ph.place?.id === pl.id);
+        const spentHere = spent.filter((e) => e.place?.id === pl.id);
+        const dates = [...new Set([...photosHere.map((ph) => day(ph.taken_at)), ...spentHere.map((e) => day(e.paid_at))].filter((d): d is string => !!d))].sort();
+        return {
+          place: pl, visited: photosHere.length > 0 || spentHere.length > 0, visited_dates: dates,
+          plan_items: plans.filter((i) => i.place?.id === pl.id),
+          photos: photosHere.map((ph) => ({ id: ph.id, url: ph.url, taken_at: ph.taken_at, uploader_member_id: ph.uploader_member_id })),
+          expense_count: spentHere.length, expense_total: spentHere.reduce((n, e) => n + (e.total_amount ?? 0), 0),
+        };
+      }).filter((entry) => !memberId || entry.photos.length > 0 || entry.expense_count > 0);
+      return { places, unlinked_photo_count: shots.filter((ph) => !ph.place).length };
+    }),
     uploadReceipt: jest.fn(async (tripId, upload, idempotencyKey) => {
       const existing = keys.get(idempotencyKey);
       if (existing) return { expense: findExpense(tripId, existing), analysis: 'reused' as const };
