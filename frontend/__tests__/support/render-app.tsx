@@ -2,6 +2,7 @@ import { renderRouter } from 'expo-router/testing-library';
 
 import type { ApiClient } from '@/api/client';
 import { AppProviders } from '@/app-providers';
+import AuthCallback from '@/app/auth-callback';
 import TripListScreen from '@/app/index';
 import LoginScreen from '@/app/login';
 import SignupScreen from '@/app/signup';
@@ -34,6 +35,7 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
         </AppProviders>
       ),
       login: LoginScreen,
+      'auth-callback': AuthCallback,
       signup: SignupScreen,
       index: TripListScreen,
       'trips/new': NewTripScreen,
