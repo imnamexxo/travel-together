@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Constants from 'expo-constants';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -20,6 +20,15 @@ export default function PlaceMap(props: PlaceMapProps) {
 function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
   const map = useRef<MapView>(null);
   const [ready, setReady] = useState(false);
+  // Android 구글 지도는 직접 그린 핀을 그림으로 찍어 쓴다. 숫자가 다 그려지기 전에 찍히면 숫자가 빠지므로,
+  // 핀이 바뀌면 잠깐 동안 다시 그리게 두었다가(tracksViewChanges) 멈춘다(계속 켜 두면 느려진다).
+  const changeKey = useMemo(() => `${pins.map((p) => `${p.id}:${p.visited}`).join('|')}#${selectedId}#${ready}`, [pins, selectedId, ready]);
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledKey(changeKey), 800);
+    return () => clearTimeout(timer);
+  }, [changeKey]);
+  const redrawing = settledKey !== changeKey;
   const fit = useCallback(() => {
     if (!ready || !pins.length) return;
     if (pins.length === 1) {
@@ -35,8 +44,8 @@ function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
       initialRegion={{ latitude: 33.523, longitude: 126.581, latitudeDelta: 0.12, longitudeDelta: 0.25 }}
       showsUserLocation={false} showsMyLocationButton={false} showsCompass={false} showsPointsOfInterests={false} toolbarEnabled={false}>
       {pins.map((pin, index) => <Marker key={`${pin.id}-${pin.visited}-${pin.id === selectedId}`} coordinate={pin}
-        title={pin.name} description={pin.visited ? '들른 곳 · 사진 연결됨' : '계획만 한 곳'} onPress={() => onSelect(pin.id)} tracksViewChanges={false}>
-        <View style={[s.pin, pin.visited && s.visited, pin.id === selectedId && s.selected]}>
+        title={pin.name} description={pin.visited ? '들른 곳 · 사진 연결됨' : '계획만 한 곳'} onPress={() => onSelect(pin.id)} tracksViewChanges={redrawing}>
+        <View collapsable={false} style={[s.pin, pin.visited && s.visited, pin.id === selectedId && s.selected]}>
           <Text style={[s.pinText, pin.visited && s.visitedText]}>{index + 1}</Text>
         </View>
       </Marker>)}

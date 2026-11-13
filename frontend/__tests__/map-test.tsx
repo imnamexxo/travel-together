@@ -57,8 +57,10 @@ test('아래 장소 정보는 손잡이로 접고 펼칠 수 있다(접어도 �
 
   fireEvent.press(screen.getByRole('button', { name: '장소 정보 접기' }));
 
-  expect(screen.queryByText('플래너 보기')).toBeNull();
+  // 부드럽게 접힌 뒤에 내용이 빠진다.
+  await waitFor(() => expect(screen.queryByText('플래너 보기')).toBeNull());
   expect(screen.getByText(/^일정 1개 · 사진 1장/)).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '장소 정보 펼치기' }));
-  expect(screen.getByText('플래너 보기')).toBeOnTheScreen();
+  expect(await screen.findByText('플래너 보기')).toBeOnTheScreen();
+  await waitFor(() => expect(screen.getByRole('button', { name: '장소 정보 접기' })).toBeOnTheScreen());
 });
