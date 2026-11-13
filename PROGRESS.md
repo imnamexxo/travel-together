@@ -35,7 +35,7 @@
 ## 열린 질문
 
 - 자체 학습 모델 없이 Gemini 활용만으로 과목 요건이 충족되는가? 충족되지 않으면 모델 학습 티켓을 추가해야 한다. (기획서 7-1절 댓글)
-- 앱 이름 (미정, 나중에 결정). 정하면 Android 패키지 이름(`com.kang1031.frontend`)도 바꿀지 결정. 바꾸면 개발 빌드를 다시 해야 한다.
+- 앱 이름은 Travel Together로 정함(2026-11-13). Android 패키지 이름(`com.kang1031.frontend`)과 EAS slug(`frontend`)는 그대로 둠(바꾸면 지도 키 제한·카카오·EAS 프로젝트 설정을 다시 해야 함).
 - Render 리전을 싱가포르로 옮길지. 지금은 oregon이라 서울 DB와 왕복이 길다. 옮기려면 `render.yaml`에 `region: singapore`를 넣고 서비스를 다시 만든다.
 
 ## 주요 문서
@@ -68,6 +68,7 @@
 
 ### 2026-11-13
 
+- 앱 이름 Travel Together, 아이콘(남색 바탕·흰 지도 핀·여행 가방) 적용: 기본 아이콘, Android 적응형(앞·뒤·단색), 스플래시(남색), 파비콘. 오리건 서버 삭제, 서버 깨우기(cron) 설정 완료.
 - 영수증 크게 보기가 화면의 2배로 열려 너무 컸던 것 → 화면에 맞춰 열고, 두 손가락 확대(최대 5배)·끌어서 이동·두 번 탭 확대/원래대로(react-native-gesture-handler + reanimated, `zoomable-image.tsx`). ScrollView 확대는 iOS에서만 됐다.
 - 화면 로딩 줄이기: 서버가 요청마다 `GET /trips/{trip_id}/expenses 200 0.35초 DB 4번` 같은 로그를 남긴다(경로는 라우트 모양, /health 제외). 예시 여행으로 재 보니 항목마다 관계를 따로 묻고 있었다(N+1) → `app/loading.py`의 옵션으로 필요한 관계만 한 번에 읽음: 정산 DB 20→8번, 지출 목록 15→3번, 일정 11→2번, 멤버 7→3번, 송금 6→2번. 모델 전체에 `lazy="selectin"`을 거는 건 오히려 늘어서 쓰지 않음. 앱은 30초 안에 받은 데이터를 다시 쓰고(staleTime), 멤버를 내보내면 사진 목록도 새로 받음.
 - 화면 전환이 느린 주원인: 서버(오리건)와 DB(서울)가 멀어 DB 질의마다 태평양 왕복. Render 서버를 싱가포르에 새로 만듦(travel-together-api-sg, 환경 변수 그대로). expo.dev preview 환경의 `EXPO_PUBLIC_API_URL`을 새 주소로, `render.yaml`에 `region: singapore`.
