@@ -21,6 +21,7 @@ import MembersScreen from '@/app/trips/[tripId]/members';
 import TripSettingsScreen from '@/app/trips/[tripId]/settings';
 import SuggestionsScreen from '@/app/trips/[tripId]/suggestions';
 import SettlementScreen from '@/app/trips/[tripId]/(tabs)/settlement';
+import JoinLink from '@/app/join';
 import JoinTripScreen from '@/app/trips/join';
 import NewTripScreen from '@/app/trips/new';
 import type { AuthService } from '@/auth/auth-service';
@@ -48,6 +49,7 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       index: TripListScreen,
       'trips/new': NewTripScreen,
       'trips/join': JoinTripScreen,
+      join: JoinLink,
       'trips/[tripId]/_layout': TripLayout,
       'trips/[tripId]/(tabs)/_layout': TripTabsLayout,
       'trips/[tripId]/(tabs)/index': PlannerScreen,
