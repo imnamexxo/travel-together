@@ -101,7 +101,7 @@ function TripCard({ trip }: { trip: TripSummary }) {
     </Pressable>}>
     <Pressable accessibilityRole="button" accessibilityLabel={`${trip.name} 열기`}
       accessibilityActions={[{ name: 'remove', label: `${trip.name} ${label}` }]} onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'remove') confirm(); }}
-      onPress={() => router.push(`/trips/${trip.id}`)} style={({ pressed }) => [s.card, pressed && s.pressed]}>
+      dim={false} onPress={() => router.push(`/trips/${trip.id}`)} style={s.card}>
       <View style={s.between}>
         <Text style={s.cardTitle} numberOfLines={1}>{trip.name}</Text>
         {trip.is_organizer && <Text style={s.badge}>총무</Text>}
