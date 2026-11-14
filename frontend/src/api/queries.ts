@@ -326,3 +326,49 @@ export function useMapData(tripId: string, filter: MapFilter) {
     placeholderData: (previous) => previous,
   });
 }
+
+
+export function useUpdateMe() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (displayName: string) => api.updateMe(displayName),
+    onSuccess: (profile) => {
+      queryClient.setQueryData(queryKeys.me, profile);
+      // 여행마다 멤버 목록·정산에 이름이 보이므로 여행 데이터도 다시 받는다.
+      return queryClient.invalidateQueries({ queryKey: queryKeys.trips });
+    },
+  });
+}
+
+export function useDeletionPreview({ enabled }: { enabled: boolean }) {
+  const api = useApi();
+  return useQuery({ queryKey: ['me', 'deletion-preview'], queryFn: () => api.getDeletionPreview(), enabled, staleTime: 0 });
+}
+
+export function useDeleteMe() {
+  const api = useApi();
+  return useMutation({ mutationFn: () => api.deleteMe() });
+}
+
+/** 지우는 여행을 화면에서 고르는 경우(계정 관리의 내가 만든 여행). */
+export function useDeleteAnyTrip() {
+  const api = useApi();
+  const forget = useForgetTrip();
+  return useMutation({ mutationFn: (tripId: string) => api.deleteTrip(tripId), onSuccess: forget });
+}
+
+export function useHandOverOrganizer(tripId: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) => api.handOverOrganizer(tripId, memberId),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trip(tripId), trip);
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.members(tripId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.trips, exact: true }),
+      ]);
+    },
+  });
+}

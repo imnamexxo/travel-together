@@ -7,15 +7,18 @@ from sqlalchemy.orm import Session
 
 from app.auth import AuthenticatedUser
 from app.errors import ApiError
-from app.models import Member
+from app.models import Member, UserProfile
 
 
 def require_member(
     session: Session, trip_id: uuid.UUID, user: AuthenticatedUser
 ) -> Member:
-    """이 사용자의 이 여행 멤버 정보. 멤버가 아니면 여행이 있어도 404로 숨긴다."""
+    """이 사용자의 이 여행 멤버 정보. 멤버가 아니면 여행이 있어도 404로 숨긴다.
+    탈퇴한 사용자의 멤버 기록은 지출 때문에 남아 있어도 본인이 쓸 수 없다."""
     member = session.scalars(
-        select(Member).where(Member.trip_id == trip_id, Member.user_id == user.id)
+        select(Member)
+        .join(UserProfile, UserProfile.user_id == Member.user_id)
+        .where(Member.trip_id == trip_id, Member.user_id == user.id, UserProfile.deleted_at.is_(None))
     ).one_or_none()
     if member is None:
         raise ApiError(404, "trip_not_found", "여행을 찾을 수 없습니다.")

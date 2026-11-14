@@ -18,6 +18,7 @@ from app.auth import AuthenticatedUser, InvalidToken
 from app.gemini import PlanRequest, SuggestedStop
 from app.place_search import PlaceCandidate, PlaceSearchUnavailable
 from app.receipt_reader import ReceiptDraft
+from app.auth_admin import AuthAdminUnavailable
 from app.storage import StorageUnavailable
 from app.config import BACKEND_DIR, Settings, normalize_database_url
 from app.main import create_app
@@ -134,6 +135,19 @@ class FakeReceiptReader:
         return result
 
 
+class FakeAuthAdmin:
+    """지운 계정 id를 기록한다. failing이면 삭제 실패."""
+
+    def __init__(self) -> None:
+        self.deleted: list[uuid.UUID] = []
+        self.failing = False
+
+    def delete_user(self, user_id: uuid.UUID) -> None:
+        if self.failing:
+            raise AuthAdminUnavailable("down")
+        self.deleted.append(user_id)
+
+
 def bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
@@ -195,6 +209,11 @@ def overseas_places() -> FakePlaceSearcher:
 
 
 @pytest.fixture
+def auth_admin() -> FakeAuthAdmin:
+    return FakeAuthAdmin()
+
+
+@pytest.fixture
 def suggester() -> FakePlanSuggester:
     return FakePlanSuggester()
 
@@ -212,13 +231,13 @@ def receipts() -> FakeReceiptReader:
 @pytest.fixture
 def client(
     engine, database_url: str, auth: FakeAuthVerifier, places: FakePlaceSearcher, suggester: FakePlanSuggester,
-    storage: FakeStorage, receipts: FakeReceiptReader, overseas_places: FakePlaceSearcher,
+    storage: FakeStorage, receipts: FakeReceiptReader, overseas_places: FakePlaceSearcher, auth_admin: FakeAuthAdmin,
 ) -> TestClient:
     settings = Settings(
         database_url=database_url, supabase_url="", supabase_jwt_secret=""
     )
     app = create_app(
-        settings=settings, auth_verifier=auth, place_searcher=places, overseas_place_searcher=overseas_places, plan_suggester=suggester, storage=storage, receipt_reader=receipts,
+        settings=settings, auth_verifier=auth, place_searcher=places, overseas_place_searcher=overseas_places, plan_suggester=suggester, storage=storage, receipt_reader=receipts, auth_admin=auth_admin,
     )
     with TestClient(app) as client:
         yield client

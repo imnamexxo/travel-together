@@ -4,20 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TripSummary } from '@/api/client';
 import { useMe, useTrips } from '@/api/queries';
-import { useAuth } from '@/auth/auth-context';
 import { TravelColors as C } from '@/constants/theme';
 import { formatPeriod } from './trip-dates';
 
 export default function TripListScreen() {
   const me = useMe();
   const trips = useTrips();
-  const { signOut } = useAuth();
 
   const header = <View style={s.header}>
     <Text style={s.eyebrow}>TRAVEL TOGETHER</Text>
     <View style={s.between}>
       <Text style={s.title}>내 여행</Text>
+      <View style={s.headerActions}>
+      <Pressable accessibilityRole="button" accessibilityLabel="계정 관리" onPress={() => router.push('/account')} style={({ pressed }) => [s.accountButton, pressed && s.pressed]}><Text style={s.accountText}>계정</Text></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="새 여행 만들기" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.newButton, pressed && s.pressed]}><Text style={s.newText}>＋ 새 여행</Text></Pressable>
+      </View>
     </View>
     {!!me.data && <Text style={s.subtitle}>{me.data.display_name}님, 함께 떠날 여행을 골라요.</Text>}
     <Pressable accessibilityRole="button" onPress={() => router.push('/trips/join')} style={s.joinButton}><Text style={s.link}>초대 코드로 들어가기 ›</Text></Pressable>
@@ -43,7 +44,6 @@ export default function TripListScreen() {
           <Text style={s.emptyText}>새 여행을 만들거나, 친구에게 받은 초대 코드로 들어가 보세요.</Text>
           <Pressable accessibilityRole="button" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.primaryButton, pressed && s.pressed]}><Text style={s.primaryText}>여행 만들기</Text></Pressable>
         </View>}
-      ListFooterComponent={<Pressable accessibilityRole="button" onPress={() => void signOut()} style={s.signOut}><Text style={s.signOutText}>로그아웃</Text></Pressable>}
     />
   </SafeAreaView>;
 }
@@ -82,7 +82,8 @@ const s = StyleSheet.create({
   textButton: { minHeight: 44, justifyContent: 'center' },
   joinButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 4 },
   link: { fontSize: 14, fontWeight: '600', color: C.accent },
-  signOut: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: 32 },
-  signOutText: { fontSize: 12, color: C.textMuted },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  accountButton: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: C.divider, justifyContent: 'center' },
+  accountText: { fontSize: 13, color: C.text },
   pressed: { opacity: 0.65 },
 });

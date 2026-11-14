@@ -21,6 +21,8 @@ export function RootNavigator() {
         <Stack.Screen name="trips/new" />
         <Stack.Screen name="trips/join" />
         <Stack.Screen name="trips/[tripId]" />
+        <Stack.Screen name="account" />
+        <Stack.Screen name="account-delete" />
       </Stack.Protected>
       <Stack.Protected guard={status === 'signedOut'}>
         <Stack.Screen name="login" />

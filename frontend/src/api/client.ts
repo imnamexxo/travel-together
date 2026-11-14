@@ -7,6 +7,7 @@ import { filePart } from '@/api/file-part';
 import type { components } from '@/api/schema';
 
 export type Profile = components['schemas']['Profile'];
+export type DeletionPreview = components['schemas']['DeletionPreview'];
 export type MapData = components['schemas']['MapData'];
 export type MapPlace = components['schemas']['MapPlace'];
 /** 지도 필터. date는 YYYY-MM-DD. */
@@ -69,6 +70,13 @@ export function isNotFound(error: unknown): boolean {
 
 export interface ApiClient {
   getMe(): Promise<Profile>;
+  updateMe(displayName: string): Promise<Profile>;
+  /** 탈퇴하면 내 여행들이 어떻게 되는지(ADR 0005). 아무것도 바꾸지 않는다. */
+  getDeletionPreview(): Promise<DeletionPreview>;
+  /** 회원 탈퇴. 성공하면 로그인 계정도 지워진다. */
+  deleteMe(): Promise<void>;
+  /** 총무를 다른 멤버에게 넘긴다. */
+  handOverOrganizer(tripId: string, memberId: string): Promise<TripDetail>;
   listTrips(): Promise<TripSummary[]>;
   createTrip(trip: TripCreate): Promise<TripDetail>;
   getTrip(tripId: string): Promise<TripDetail>;
@@ -168,6 +176,10 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
 
   return {
     getMe: () => request<Profile>('GET', '/me'),
+    updateMe: (displayName) => request<Profile>('PATCH', '/me', { display_name: displayName }),
+    getDeletionPreview: () => request<DeletionPreview>('GET', '/me/deletion-preview'),
+    deleteMe: () => request<void>('DELETE', '/me'),
+    handOverOrganizer: (tripId, memberId) => request<TripDetail>('POST', `${trip(tripId)}/organizer`, { member_id: memberId }),
     listTrips: () => request<TripSummary[]>('GET', '/trips'),
     createTrip: (trip) => request<TripDetail>('POST', '/trips', trip),
     getTrip: (tripId) => request<TripDetail>('GET', trip(tripId)),
