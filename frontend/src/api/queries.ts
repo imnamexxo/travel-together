@@ -358,6 +358,12 @@ export function useDeleteAnyTrip() {
   return useMutation({ mutationFn: (tripId: string) => api.deleteTrip(tripId), onSuccess: forget });
 }
 
+export function useLeaveAnyTrip() {
+  const api = useApi();
+  const forget = useForgetTrip();
+  return useMutation({ mutationFn: (tripId: string) => api.leaveTrip(tripId), onSuccess: forget });
+}
+
 export function useHandOverOrganizer(tripId: string) {
   const api = useApi();
   const queryClient = useQueryClient();

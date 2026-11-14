@@ -1,15 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ApiError, type TripSummary } from '@/api/client';
-import { useDeleteAnyTrip, useMe, useTrips, useUpdateMe } from '@/api/queries';
+import { ApiError } from '@/api/client';
+import { useMe, useUpdateMe } from '@/api/queries';
 import { useAuth } from '@/auth/auth-context';
 import { TravelColors as C } from '@/constants/theme';
-import { formatPeriod } from '@/features/trip/trip-dates';
 import { goBack } from '@/navigation';
 
 const PROVIDER_LABEL: Record<string, string> = { email: '이메일', kakao: '카카오', google: 'Google' };
@@ -18,7 +16,7 @@ function errorText(e: unknown, fallback: string) {
   return e instanceof ApiError ? [e.message, ...e.details.map((d) => d.message)].join('\n') : e instanceof Error ? e.message : fallback;
 }
 
-/** 계정 관리: 표시 이름, 로그인 정보·비밀번호, 내가 만든 여행, 로그아웃·회원 탈퇴. */
+/** 계정 관리: 표시 이름, 로그인 정보·비밀번호, 친구, 로그아웃·회원 탈퇴. 여행 삭제·나가기는 여행 목록에서 밀어서 한다. */
 export default function AccountScreen() {
   const { signOut } = useAuth();
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
@@ -33,7 +31,6 @@ export default function AccountScreen() {
           <Text style={s.hint}>친구를 맺어 두면 여행에 버튼 한 번으로 초대할 수 있어요.</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="친구 관리" onPress={() => router.push('/friends')} style={({ pressed }) => [s.outlineButton, pressed && s.pressed]}><Text style={s.outlineText}>친구 관리 ›</Text></Pressable>
         </View>
-        <MyTrips />
         <View style={s.section}>
           <Pressable accessibilityRole="button" onPress={() => void signOut()} style={({ pressed }) => [s.outlineButton, pressed && s.pressed]}><Text style={s.outlineText}>로그아웃</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={() => router.push('/account-delete')} style={s.textButton}><Text style={s.mutedLink}>회원 탈퇴</Text></Pressable>
@@ -114,39 +111,6 @@ function LoginInfo() {
       <Pressable accessibilityRole="button" accessibilityLabel="비밀번호 바꾸기" disabled={busy} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || busy) && s.pressed]}><Text style={s.primaryText}>바꾸기</Text></Pressable>
     </>}
     {!!message && <Text accessibilityRole={message.error ? 'alert' : undefined} style={message.error ? s.error : s.notice}>{message.text}</Text>}
-  </View>;
-}
-
-function MyTrips() {
-  const trips = useTrips();
-  const remove = useDeleteAnyTrip();
-  const [error, setError] = useState<string | null>(null);
-  const mine = (trips.data ?? []).filter((t) => t.is_organizer);
-
-  function confirm(trip: TripSummary) {
-    showAlert(`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제', style: 'destructive', onPress: async () => {
-          setError(null);
-          try {
-            await remove.mutateAsync(trip.id);
-          } catch (e) {
-            setError(errorText(e, '삭제하지 못했어요. 잠시 후 다시 시도해주세요.'));
-          }
-        },
-      },
-    ]);
-  }
-
-  return <View style={s.section}>
-    <Text style={s.heading}>내가 만든 여행</Text>
-    <Text style={s.hint}>{mine.length ? '총무인 여행이에요. 삭제하면 모든 멤버에게서 사라져요.' : '내가 총무인 여행이 없어요.'}</Text>
-    {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-    {mine.map((t) => <View key={t.id} style={s.tripRow}>
-      <View style={s.tripCopy}><Text style={s.tripName}>{t.name}</Text><Text style={s.tripMeta}>{formatPeriod(t.start_date, t.end_date)} · {t.member_count}명</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${t.name} 삭제`} disabled={remove.isPending} onPress={() => confirm(t)} style={({ pressed }) => [s.deleteChip, pressed && s.pressed]}><Text style={s.deleteText}>삭제</Text></Pressable>
-    </View>)}
   </View>;
 }
 

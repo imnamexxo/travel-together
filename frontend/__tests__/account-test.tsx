@@ -56,18 +56,11 @@ test('카카오 계정은 가입 방법을 보여 주고 비밀번호 변경이 
   expect(screen.queryByRole('button', { name: '비밀번호 변경' })).toBeNull();
 });
 
-test('내가 만든 여행만 보이고, 확인 창을 거쳐 삭제한다', async () => {
-  const alert = spyOnAlerts();
-  const api = fakeApi({}, { trips: [mine, theirs] });
-  renderApp({ auth: signedIn(), api, initialUrl: '/account' });
+test('계정 관리에는 여행 삭제가 없다(여행 목록에서 밀어서 지운다)', async () => {
+  renderApp({ auth: signedIn(), api: fakeApi({}, { trips: [mine, theirs] }), initialUrl: '/account' });
 
-  expect(await screen.findByText('민지의 제주')).toBeOnTheScreen();
-  expect(screen.queryByText('준호의 부산')).toBeNull();
-  fireEvent.press(screen.getByRole('button', { name: '민지의 제주 삭제' }));
-  await pressAlertButton(alert.mock.calls.at(-1)![2] as AlertButton[], '삭제');
-
-  await waitFor(() => expect(api.deleteTrip).toHaveBeenCalledWith('trip-mine'));
-  await waitFor(() => expect(screen.queryByText('민지의 제주')).toBeNull());
+  expect(await screen.findByText('표시 이름')).toBeOnTheScreen();
+  expect(screen.queryByText('내가 만든 여행')).toBeNull();
 });
 
 test('회원 탈퇴는 무엇이 바뀌는지 보여 주고, 확인하면 탈퇴하고 로그아웃된다', async () => {
@@ -120,6 +113,6 @@ test('총무는 여행 설정에서 다른 멤버에게 총무를 넘긴다', as
   await pressAlertButton(alert.mock.calls.at(-1)![2] as AlertButton[], '넘기기');
 
   await waitFor(() => expect(api.handOverOrganizer).toHaveBeenCalledWith('trip-jeju', 'm2'));
-  // 이제 일반 멤버라 나가기가 보인다.
-  expect(await screen.findByRole('button', { name: '여행에서 나가기' })).toBeOnTheScreen();
+  // 이제 일반 멤버라 총무 넘기기가 사라진다.
+  await waitFor(() => expect(screen.queryByRole('button', { name: '준호에게 총무 넘기기' })).toBeNull());
 });
