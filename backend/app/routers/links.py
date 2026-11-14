@@ -58,3 +58,14 @@ def join_link(code: str, request: Request) -> HTMLResponse:
     return HTMLResponse(
         _page("여행에 초대받았어요", "버튼을 누르면 앱에서 바로 여행에 들어가요.", f"join?code={quote(code.upper())}", agent)
     )
+
+
+@router.get("/friend/{code}", response_class=HTMLResponse)
+def friend_link(code: str, request: Request) -> HTMLResponse:
+    """친구 링크. 앱이 열리면 링크 주인과 바로 친구가 된다(로그인 전이면 로그인 뒤 이어서)."""
+    agent = request.headers.get("user-agent", "")
+    if not CODE.match(code):
+        return HTMLResponse(_page("잘못된 친구 링크", "링크가 잘렸거나 올바르지 않아요. 친구에게 다시 받아 주세요.", None, agent), status_code=404)
+    return HTMLResponse(
+        _page("친구 신청이 왔어요", "버튼을 누르면 앱에서 바로 친구가 돼요.", f"friend?code={quote(code.upper())}", agent)
+    )

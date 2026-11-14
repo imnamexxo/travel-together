@@ -26,6 +26,11 @@ export default function AccountScreen() {
         <Text style={s.title}>계정 관리</Text>
         <DisplayName />
         <LoginInfo />
+        <View style={s.section}>
+          <Text style={s.heading}>친구</Text>
+          <Text style={s.hint}>친구를 맺어 두면 여행에 버튼 한 번으로 초대할 수 있어요.</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="친구 관리" onPress={() => router.push('/friends')} style={({ pressed }) => [s.outlineButton, pressed && s.pressed]}><Text style={s.outlineText}>친구 관리 ›</Text></Pressable>
+        </View>
         <MyTrips />
         <View style={s.section}>
           <Pressable accessibilityRole="button" onPress={() => void signOut()} style={({ pressed }) => [s.outlineButton, pressed && s.pressed]}><Text style={s.outlineText}>로그아웃</Text></Pressable>
@@ -166,6 +171,7 @@ export const accountStyles = StyleSheet.create({
   tripCopy: { flex: 1, paddingVertical: 10 }, tripName: { fontSize: 15, fontWeight: '600', color: C.text }, tripMeta: { fontSize: 12, color: C.textMuted, marginTop: 3 },
   deleteChip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: C.error, justifyContent: 'center' }, deleteText: { fontSize: 13, color: C.error, fontWeight: '600' },
   listItem: { fontSize: 14, color: C.text, lineHeight: 22, marginTop: 4 },
+  acceptChip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: C.primary, justifyContent: 'center' }, acceptText: { fontSize: 13, color: C.onPrimary, fontWeight: '600' },
   pressed: { opacity: 0.6 },
 });
 const s = accountStyles;

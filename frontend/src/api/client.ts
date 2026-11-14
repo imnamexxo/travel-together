@@ -8,6 +8,9 @@ import type { components } from '@/api/schema';
 
 export type Profile = components['schemas']['Profile'];
 export type DeletionPreview = components['schemas']['DeletionPreview'];
+export type Friends = components['schemas']['FriendsOut'];
+export type Person = components['schemas']['Person'];
+export type TripInvite = components['schemas']['TripInviteOut'];
 export type MapData = components['schemas']['MapData'];
 export type MapPlace = components['schemas']['MapPlace'];
 /** 지도 필터. date는 YYYY-MM-DD. */
@@ -75,6 +78,20 @@ export interface ApiClient {
   getDeletionPreview(): Promise<DeletionPreview>;
   /** 회원 탈퇴. 성공하면 로그인 계정도 지워진다. */
   deleteMe(): Promise<void>;
+  listFriends(): Promise<Friends>;
+  /** 함께 여행한 멤버에게 친구 요청 */
+  requestFriend(tripId: string, memberId: string): Promise<Friends>;
+  acceptFriend(requestId: string): Promise<Friends>;
+  /** 받은 요청 거절 또는 보낸 요청 취소 */
+  declineFriend(requestId: string): Promise<Friends>;
+  removeFriend(userId: string): Promise<Friends>;
+  getFriendCode(): Promise<{ code: string }>;
+  /** 친구 링크를 눌러 링크 주인과 바로 친구가 된다. */
+  befriendByCode(code: string): Promise<Person>;
+  inviteFriend(tripId: string, userId: string): Promise<Person>;
+  listTripInvites(): Promise<TripInvite[]>;
+  acceptTripInvite(inviteId: string): Promise<TripDetail>;
+  declineTripInvite(inviteId: string): Promise<void>;
   /** 총무를 다른 멤버에게 넘긴다. */
   handOverOrganizer(tripId: string, memberId: string): Promise<TripDetail>;
   listTrips(): Promise<TripSummary[]>;
@@ -179,6 +196,17 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     updateMe: (displayName) => request<Profile>('PATCH', '/me', { display_name: displayName }),
     getDeletionPreview: () => request<DeletionPreview>('GET', '/me/deletion-preview'),
     deleteMe: () => request<void>('DELETE', '/me'),
+    listFriends: () => request<Friends>('GET', '/friends'),
+    requestFriend: (tripId, memberId) => request<Friends>('POST', '/friends/requests', { trip_id: tripId, member_id: memberId }),
+    acceptFriend: (id) => request<Friends>('POST', `/friends/requests/${encodeURIComponent(id)}/accept`),
+    declineFriend: (id) => request<Friends>('POST', `/friends/requests/${encodeURIComponent(id)}/decline`),
+    removeFriend: (userId) => request<Friends>('DELETE', `/friends/${encodeURIComponent(userId)}`),
+    getFriendCode: () => request<{ code: string }>('GET', '/me/friend-code'),
+    befriendByCode: (code) => request<Person>('POST', '/friends/by-code', { code }),
+    inviteFriend: (tripId, userId) => request<Person>('POST', `${trip(tripId)}/invites`, { user_id: userId }),
+    listTripInvites: () => request<TripInvite[]>('GET', '/me/trip-invites'),
+    acceptTripInvite: (id) => request<TripDetail>('POST', `/me/trip-invites/${encodeURIComponent(id)}/accept`),
+    declineTripInvite: (id) => request<void>('POST', `/me/trip-invites/${encodeURIComponent(id)}/decline`),
     handOverOrganizer: (tripId, memberId) => request<TripDetail>('POST', `${trip(tripId)}/organizer`, { member_id: memberId }),
     listTrips: () => request<TripSummary[]>('GET', '/trips'),
     createTrip: (trip) => request<TripDetail>('POST', '/trips', trip),

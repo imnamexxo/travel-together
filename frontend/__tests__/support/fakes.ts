@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type DeletionPreview, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type DeletionPreview, type Friends, type TripInvite, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult, type SocialProvider, type SocialSignInResult } from '@/auth/auth-service';
 import { toKstParts } from '@/features/expenses/expense-form';
 
@@ -112,7 +112,8 @@ export function tripDetail(overrides: Partial<TripDetail> = {}): TripDetail {
 }
 
 export function member(overrides: Partial<Member> = {}): Member {
-  return { member_id: 'member-1', display_name: '민지', join_order: 1, is_organizer: true, is_me: true, ...overrides };
+  const base = { member_id: 'member-1', display_name: '민지', join_order: 1, is_organizer: true, is_me: true, friend_user_id: null, ...overrides };
+  return { friend_status: base.is_me ? 'me' : 'none', ...base };
 }
 
 type FakeApiOptions = {
@@ -139,6 +140,10 @@ type FakeApiOptions = {
   photoLimit?: number;
   /** 지출 장소 후보(검색어가 이름에 들어간 것만) */
   expensePlaceCandidates?: ExpensePlaceCandidate[];
+  /** 친구 목록·요청 */
+  friends?: Friends;
+  /** 받은 여행 초대 */
+  tripInvites?: TripInvite[];
   /** 탈퇴 미리보기 결과 */
   deletionPreview?: DeletionPreview;
   /** 영수증 분석 결과로 돌려줄 지출 초안 내용과 분석 상태 */
@@ -173,9 +178,11 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] } }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] }, friends: initialFriends = { friends: [], incoming: [], outgoing: [] }, tripInvites = [] }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   let profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
+  let friendState: Friends = { friends: [...initialFriends.friends], incoming: [...initialFriends.incoming], outgoing: [...initialFriends.outgoing] };
+  let invites = [...tripInvites];
   const store = [...trips];
   const memberStore: Record<string, Member[]> = Object.fromEntries(Object.entries(members).map(([id, list]) => [id, [...list]]));
   const membersOf = (tripId: string) => memberStore[tripId] ?? [member()];
@@ -239,6 +246,37 @@ export function fakeApi(
     updateMe: jest.fn(async (displayName) => (profile = { ...profile, display_name: displayName.trim() })),
     getDeletionPreview: jest.fn(async () => deletionPreview),
     deleteMe: jest.fn(async () => undefined),
+    listFriends: jest.fn(async () => friendState),
+    requestFriend: jest.fn(async (tripId, memberId) => {
+      const target = membersOf(tripId).find((m) => m.member_id === memberId)!;
+      memberStore[tripId] = membersOf(tripId).map((m) => (m.member_id === memberId ? { ...m, friend_status: 'requested' } : m));
+      friendState = { ...friendState, outgoing: [...friendState.outgoing, { id: `req-${memberId}`, person: { user_id: `user-${memberId}`, display_name: target.display_name } }] };
+      return friendState;
+    }),
+    acceptFriend: jest.fn(async (id) => {
+      const request = friendState.incoming.find((r) => r.id === id)!;
+      friendState = { ...friendState, incoming: friendState.incoming.filter((r) => r.id !== id), friends: [...friendState.friends, request.person] };
+      return friendState;
+    }),
+    declineFriend: jest.fn(async (id) => (friendState = { ...friendState, incoming: friendState.incoming.filter((r) => r.id !== id), outgoing: friendState.outgoing.filter((r) => r.id !== id) })),
+    removeFriend: jest.fn(async (userId) => (friendState = { ...friendState, friends: friendState.friends.filter((p) => p.user_id !== userId) })),
+    getFriendCode: jest.fn(async () => ({ code: 'FRND2345' })),
+    befriendByCode: jest.fn(async (code) => {
+      if (code !== 'JUNH2345') throw new ApiError(404, 'invalid_friend_code', '친구 링크가 맞지 않습니다. 친구에게 다시 받아 주세요.');
+      const person = { user_id: 'user-junho', display_name: '준호' };
+      friendState = { ...friendState, friends: [...friendState.friends, person] };
+      return person;
+    }),
+    inviteFriend: jest.fn(async (_tripId, userId) => friendState.friends.find((p) => p.user_id === userId)!),
+    listTripInvites: jest.fn(async () => invites),
+    acceptTripInvite: jest.fn(async (id) => {
+      const invite = invites.find((i) => i.id === id)!;
+      invites = invites.filter((i) => i.id !== id);
+      const trip = tripDetail({ id: invite.trip.id, name: invite.trip.name, start_date: invite.trip.start_date, end_date: invite.trip.end_date, me: { member_id: 'me-new', join_order: 2, is_organizer: false } });
+      store.unshift(trip);
+      return trip;
+    }),
+    declineTripInvite: jest.fn(async (id) => { invites = invites.filter((i) => i.id !== id); }),
     handOverOrganizer: jest.fn(async (tripId, memberId) => {
       const index = store.findIndex((t) => t.id === tripId);
       store[index] = { ...store[index], me: { ...store[index].me, is_organizer: false } };
