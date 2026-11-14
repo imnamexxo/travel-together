@@ -5,7 +5,8 @@ import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleShe
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TripSummary } from '@/api/client';
-import { useAnswerTripInvite, useBefriendByCode, useMe, useTripInvites, useTrips } from '@/api/queries';
+import { useAnswerTripInvite, useBefriendByCode, useFriends, useMe, useTripInvites, useTrips } from '@/api/queries';
+import { Badge } from '@/components/friend-button';
 import { TravelColors as C } from '@/constants/theme';
 import { takePendingFriend, takePendingInvite } from './pending-invite';
 import { formatPeriod } from './trip-dates';
@@ -14,6 +15,7 @@ export default function TripListScreen() {
   const me = useMe();
   const trips = useTrips();
   const invites = useTripInvites();
+  const incomingFriends = useFriends().data?.incoming.length ?? 0;
   const answer = useAnswerTripInvite();
   const befriend = useBefriendByCode();
   const { mutate: befriendMutate } = befriend;
@@ -41,7 +43,7 @@ export default function TripListScreen() {
       <Text style={s.title}>내 여행</Text>
       <View style={s.headerActions}>
       <Pressable accessibilityRole="button" accessibilityLabel="새 여행 만들기" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.newButton, pressed && s.pressed]}><Text style={s.newText}>＋ 새 여행</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="계정 관리" hitSlop={6} onPress={() => router.push('/account')} style={({ pressed }) => [s.accountButton, pressed && s.pressed]}><Ionicons name="person-circle" size={40} color={C.textMuted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={incomingFriends ? `계정 관리, 받은 친구 요청 ${incomingFriends}개` : '계정 관리'} hitSlop={6} onPress={() => router.push('/account')} style={({ pressed }) => [s.accountButton, pressed && s.pressed]}><Ionicons name="person-circle" size={40} color={C.textMuted} />{incomingFriends > 0 && <Badge count={incomingFriends} />}</Pressable>
       </View>
     </View>
     {!!me.data && <Text style={s.subtitle}>{me.data.display_name}님, 함께 떠날 여행을 골라요.</Text>}

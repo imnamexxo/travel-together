@@ -86,3 +86,29 @@ test('친구 링크로 열리면 친구가 되고 알려 준다', async () => {
   await waitFor(() => expect(api.befriendByCode).toHaveBeenCalledWith('JUNH2345'));
   await waitFor(() => expect(alert).toHaveBeenCalledWith('친구가 됐어요', '준호님과 친구가 됐어요. 이제 여행에 바로 초대할 수 있어요.'));
 });
+
+test('플래너의 친구 아이콘에 받은 요청 수가 뜨고, 누르면 친구 화면이 열린다', async () => {
+  const api = fakeApi({}, {
+    trips: [tripDetail()],
+    friends: { friends: [], incoming: [{ id: 'r1', person: { user_id: 'u2', display_name: '준호' } }], outgoing: [] },
+  });
+  renderApp({ auth: signedIn(), api, initialUrl: '/trips/trip-jeju' });
+
+  fireEvent.press(await screen.findByRole('button', { name: '친구, 받은 요청 1개' }));
+
+  expect(await screen.findByText('받은 친구 요청')).toBeOnTheScreen();
+});
+
+test('참여자도 친구 화면의 함께 여행한 사람에서 친구를 추가한다', async () => {
+  const api = fakeApi({}, {
+    trips: [tripDetail({ me: { member_id: 'm2', join_order: 2, is_organizer: false } })],
+    friendSuggestions: [{ display_name: '민지', trip_id: 'trip-jeju', trip_name: '제주 여행', member_id: 'm1' }],
+  });
+  renderApp({ auth: signedIn(), api, initialUrl: '/trips/trip-jeju' });
+
+  fireEvent.press(await screen.findByRole('button', { name: '친구' }));
+  fireEvent.press(await screen.findByRole('button', { name: '민지 친구 추가' }));
+
+  await waitFor(() => expect(api.requestFriend).toHaveBeenCalledWith('trip-jeju', 'm1'));
+  expect(await screen.findByText('보낸 요청')).toBeOnTheScreen();
+});

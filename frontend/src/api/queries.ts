@@ -389,6 +389,22 @@ function useFriendChange() {
   };
 }
 
+export function useFriendSuggestions() {
+  const api = useApi();
+  return useQuery({ queryKey: ['friends', 'suggestions'], queryFn: () => api.listFriendSuggestions() });
+}
+
+/** 여행을 고르지 않고(친구 화면의 제안에서) 요청한다. */
+export function useRequestFriendFrom() {
+  const api = useApi();
+  const changed = useFriendChange();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tripId, memberId }: { tripId: string; memberId: string }) => api.requestFriend(tripId, memberId),
+    onSuccess: (friends) => { void queryClient.invalidateQueries({ queryKey: ['friends', 'suggestions'] }); return changed(friends); },
+  });
+}
+
 export function useRequestFriend(tripId: string) {
   const api = useApi();
   const changed = useFriendChange();

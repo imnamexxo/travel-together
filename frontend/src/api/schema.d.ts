@@ -264,6 +264,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/friends/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Friend Suggestions
+         * @description 내 여행들의 다른 멤버 중 아직 관계가 없는 사람(한 사람은 한 번만, 최근 여행 기준).
+         */
+        get: operations["friend_suggestions_friends_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/friends/requests": {
         parameters: {
             query?: never;
@@ -1517,6 +1537,26 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /**
+         * Suggestion
+         * @description 함께 여행한 사람(아직 친구도 요청 중도 아님). 친구 요청은 trip_id·member_id로 보낸다.
+         */
+        Suggestion: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /** Trip Name */
+            trip_name: string;
+            /**
+             * Member Id
+             * Format: uuid
+             */
+            member_id: string;
+        };
         /** SuggestionAsk */
         SuggestionAsk: {
             /** Destination */
@@ -2609,6 +2649,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FriendsOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    friend_suggestions_friends_suggestions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"][];
                 };
             };
             /** @description 로그인 필요 */

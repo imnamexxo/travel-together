@@ -160,3 +160,16 @@ def test_friend_link_page(client):
 
     assert 'href="traveltogether://friend?code=AB12CD34"' in response.text
     assert client.get("/friend/!!").status_code == 404
+
+
+def test_suggestions_are_trip_mates_without_a_relation(client, auth):
+    p = People(client, auth)
+
+    first = client.get("/friends/suggestions", headers=p.h("준호")).json()
+    assert [(x["display_name"], x["trip_name"]) for x in first] == [("민지", "제주 여행")]
+    assert client.get("/friends/suggestions", headers=p.h("수빈")).json() == []
+
+    # 제안에서 바로 요청하면 제안에서 빠진다(참여자도 할 수 있다).
+    client.post("/friends/requests", json={"trip_id": first[0]["trip_id"], "member_id": first[0]["member_id"]}, headers=p.h("준호"))
+    assert client.get("/friends/suggestions", headers=p.h("준호")).json() == []
+    assert client.get("/friends/suggestions", headers=p.h("민지")).json() == []
