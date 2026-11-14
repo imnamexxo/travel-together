@@ -138,15 +138,31 @@ test('총무는 다른 멤버의 일정도 지울 수 있다', async () => {
   expect(await screen.findByRole('button', { name: '일정 지우기' })).toBeOnTheScreen();
 });
 
-test('하루 안에서 순서를 바꾼다', async () => {
+test('하루 안에서 순서를 바꾼다(끌기와 같은 접근성 동작)', async () => {
   const api = render({ planItems: { 'trip-jeju': [planItem({ id: 'a', title: '가', position: 0 }), planItem({ id: 'b', title: '나', position: 1 })] } });
 
-  fireEvent.press(await screen.findByRole('button', { name: '나, 일정 수정' }));
-  expect(await screen.findByRole('button', { name: '아래로' })).toBeDisabled();
-  fireEvent.press(screen.getByRole('button', { name: '위로' }));
+  await screen.findByRole('button', { name: '나, 일정 수정' });
+  // 끄는 줄에는 "위로/아래로 옮기기" 동작이 붙어 있다(화면 읽기 사용자용, 끌기와 같은 결과).
+  const draggable = screen.getByTestId('draggable-b');
+  expect(draggable.props.accessibilityActions.map((a: { label: string }) => a.label)).toEqual(['나 위로 옮기기', '나 아래로 옮기기']);
+  fireEvent(draggable, 'accessibilityAction', { nativeEvent: { actionName: 'moveUp' } });
 
   await waitFor(() => expect(api.reorderPlanItems).toHaveBeenCalledWith('trip-jeju', '2026-11-12', ['b', 'a']));
-  expect(await screen.findByText('순서를 바꿨어요.')).toBeOnTheScreen();
+  // 바뀐 순서로 보인다.
+  await waitFor(() => {
+    const titles = screen.getAllByRole('button', { name: /, 일정 수정$/ }).map((b) => b.props.accessibilityLabel);
+    expect(titles).toEqual(['나, 일정 수정', '가, 일정 수정']);
+  });
+  expect(screen.getByText('일정을 꾹 눌러 위아래로 끌면 순서를 바꿀 수 있어요')).toBeOnTheScreen();
+});
+
+test('편집 화면에는 위로/아래로 버튼이 없다', async () => {
+  render({ planItems: { 'trip-jeju': [planItem({ id: 'a', title: '가', position: 0 }), planItem({ id: 'b', title: '나', position: 1 })] } });
+
+  fireEvent.press(await screen.findByRole('button', { name: '나, 일정 수정' }));
+
+  expect(await screen.findByRole('button', { name: '저장' })).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: '위로' })).toBeNull();
 });
 
 test('시간은 시·분을 눌러 고르고, 시간 없음으로 비울 수 있다', async () => {

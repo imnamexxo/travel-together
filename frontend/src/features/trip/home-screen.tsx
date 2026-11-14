@@ -1,11 +1,12 @@
 import { TravelColors as C } from '@/constants/theme';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { PlanItem } from '@/api/client';
-import { queryKeys, useExpenses, useMe, usePhotos, usePlanItems } from '@/api/queries';
+import { queryKeys, useExpenses, useMe, usePhotos, usePlanItems, useReorderPlanItems } from '@/api/queries';
+import DraggableRows from '@/components/draggable-rows';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { photoDayIndex } from '@/features/album/album-screen';
 import TravelNotes from './travel-notes';
@@ -36,7 +37,25 @@ export default function HomeScreen() {
   const day = Math.min(selectedDay, days.length - 1);
   const [editing, setEditing] = useState<Editing>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const plans = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
+  const reorder = useReorderPlanItems(trip.id);
+  // 끌어서 바꾼 순서를 서버가 답하기 전에 먼저 보여 준다.
+  const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  // 끌기를 막 끝낸 손가락이 일정 편집을 열지 않게 한다.
+  const lastDragEnd = useRef(0);
+  const sorted = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
+  const plans = pendingOrder ? pendingOrder.map((id) => sorted.find((i) => i.id === id)).filter((i): i is PlanItem => !!i) : sorted;
+
+  function saveOrder(next: PlanItem[]) {
+    const ids = next.map((i) => i.id);
+    setPendingOrder(ids);
+    setOrderError(null);
+    reorder.mutate({ date: days[day].iso, itemIds: ids }, {
+      onError: () => setOrderError('순서를 바꾸지 못했어요. 다른 멤버가 일정을 바꿨다면 새로 불러온 순서를 확인해 주세요.'),
+      onSettled: () => setPendingOrder(null),
+    });
+  }
   // 일정 항목의 장소에 연결된 그날의 사진 수
   // 그날 그 장소에서 쓴 확정된 지출의 합
   const spentAt = (item: PlanItem) => item.place ? expenses
@@ -50,7 +69,7 @@ export default function HomeScreen() {
   }
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}
+    <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!dragging} contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={planItems.isRefetching} onRefresh={refresh} tintColor={C.primary} />}>
       <View style={s.between}><Text style={s.eyebrow}>TOGETHER, EVERYWHERE</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => setMenuOpen(true)}><Text style={s.more}>•••</Text></Pressable>
@@ -64,11 +83,13 @@ export default function HomeScreen() {
         {planItems.isPending ? <ActivityIndicator style={s.empty} color={C.primary} />
           : planItems.isError ? <View style={s.empty}><Text style={s.caption}>{planItems.error.message}</Text><Pressable accessibilityRole="button" onPress={() => planItems.refetch()} style={s.action}><Text style={s.link}>다시 시도</Text></Pressable></View>
           : !plans.length && <View style={s.empty}><Text style={s.itemTitle}>아직 정해진 일정이 없어요</Text><Text style={s.caption}>함께 가고 싶은 곳을 담아보세요.</Text></View>}
-        {plans.map((item, index) => {
+        <DraggableRows items={plans} keyOf={(item) => item.id} labelOf={(item) => item.title} onReorder={saveOrder} disabled={reorder.isPending}
+          onDragChange={(active) => { setDragging(active); if (!active) lastDragEnd.current = Date.now(); }}
+          renderItem={(item, index, { dragging: lifted }) => {
           const time = item.time?.slice(0, 5) ?? '';
           const photosHere = photoCount(item);
           const spent = spentAt(item);
-          return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} onPress={() => setEditing({ item })} style={({ pressed }) => [s.row, pressed && s.pressed]}>
+          return <Pressable accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} accessibilityHint="꾹 눌러 끌면 순서를 바꿀 수 있어요" onPress={() => { if (Date.now() - lastDragEnd.current > 400) setEditing({ item }); }} style={({ pressed }) => [s.row, lifted && s.lifted, pressed && !lifted && s.pressed]}>
             <Text style={s.time}>{time || '—'}</Text><View style={s.rail}><View style={[s.dot, index === 0 && s.activeDot]} />{index < plans.length - 1 && <View style={s.line} />}</View>
             <View style={s.item}>
               <View style={s.between}><Text style={s.itemTitle}>{item.title}</Text><Text style={s.chevron}>›</Text></View>
@@ -81,8 +102,10 @@ export default function HomeScreen() {
               </View>
             </View>
           </Pressable>;
-        })}
+        }} />
       </View>
+      {!!orderError && <Text accessibilityRole="alert" style={s.orderError}>{orderError}</Text>}
+      {plans.length > 1 && <Text style={s.dragHint}>일정을 꾹 눌러 위아래로 끌면 순서를 바꿀 수 있어요</Text>}
       <Pressable accessibilityRole="button" onPress={() => setEditing({})} style={({ pressed }) => [s.add, pressed && s.pressed]}><Text style={s.link}>＋ 일정 추가</Text></Pressable>
       <Text style={s.notice}>당겨서 새로고침하면 다른 멤버가 바꾼 일정이 보여요</Text>
     </ScrollView>
@@ -94,10 +117,11 @@ export default function HomeScreen() {
         { label: '내 여행 목록', onPress: () => router.replace('/') },
         { label: '로그아웃', destructive: true, onPress: () => Alert.alert('로그아웃할까요?', '이 기기에서 로그아웃해요.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
       ]} />
-    {editing && <PlanItemEditor item={editing.item} day={days[day]} dayNumber={day + 1} dayItems={plans} onClose={() => setEditing(null)} />}
+    {editing && <PlanItemEditor item={editing.item} day={days[day]} dayNumber={day + 1} onClose={() => setEditing(null)} />}
   </SafeAreaView>;
 }
 const s = StyleSheet.create({
+  lifted: { backgroundColor: C.background, borderRadius: 12 }, orderError: { fontSize: 12, color: C.error, marginTop: 8 }, dragHint: { fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 10 },
   screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 72, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted },
   circle: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' }, more: { color: C.textSecondary, fontSize: 18 },
