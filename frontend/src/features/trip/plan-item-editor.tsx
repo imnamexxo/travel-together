@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 
 import { ApiError, type PlaceCandidate, type PlanItem } from '@/api/client';
-import { useDeletePlanItem, usePlaceSearch, useReorderPlanItems, useSavePlanItem } from '@/api/queries';
+import { useDeletePlanItem, usePlaceSearch, useSavePlanItem } from '@/api/queries';
 import PickerField from '@/components/pickers/picker-field';
 import TimePicker from '@/components/pickers/time-picker';
 import { TravelColors as C } from '@/constants/theme';
@@ -20,7 +20,6 @@ type Props = {
   day: TripDay;
   dayNumber: number;
   /** 그날의 일정 항목(순서대로). 순서 바꾸기에 쓴다. */
-  dayItems: PlanItem[];
   onClose: () => void;
 };
 
@@ -28,13 +27,12 @@ function errorText(e: unknown, fallback: string) {
   return e instanceof ApiError ? [e.message, ...e.details.map((d) => d.message)].join('\n') : fallback;
 }
 
-export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose }: Props) {
+export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props) {
   const { trip, isOrganizer, money } = useCurrentTrip();
   const save = useSavePlanItem(trip.id);
   const remove = useDeletePlanItem(trip.id);
   const keyboard = useKeyboardHeight();
   const insets = useSafeAreaInsets();
-  const reorder = useReorderPlanItems(trip.id);
   const [title, setTitle] = useState(item?.title ?? '');
   const [time, setTime] = useState(item?.time?.slice(0, 5) ?? '');
   const [timeOpen, setTimeOpen] = useState(false);
@@ -44,11 +42,9 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const search = usePlaceSearch(trip.id, submittedQuery);
-  const busy = save.isPending || remove.isPending || reorder.isPending;
+  const busy = save.isPending || remove.isPending;
   const canDelete = !!item && (isOrganizer || item.created_by_member_id === trip.me.member_id);
-  const index = item ? dayItems.findIndex((i) => i.id === item.id) : -1;
 
   function runSearch() {
     const q = query.trim();
@@ -86,17 +82,6 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
     } catch (e) {
       setError(errorText(e, '저장하지 못했어요. 잠시 후 다시 시도해주세요.'));
     }
-  }
-
-  function move(offset: -1 | 1) {
-    if (!item) return;
-    const ids = dayItems.map((i) => i.id);
-    [ids[index], ids[index + offset]] = [ids[index + offset], ids[index]];
-    setError(null);
-    reorder.mutate({ date: day.iso, itemIds: ids }, {
-      onSuccess: () => setNotice('순서를 바꿨어요.'),
-      onError: (e) => setError(errorText(e, '순서를 바꾸지 못했어요.')),
-    });
   }
 
   function confirmDelete() {
@@ -147,13 +132,7 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
         <TextInput placeholderTextColor={C.textMuted} accessibilityLabel="예상 비용" style={s.input} value={cost} onChangeText={setCost} placeholder="0" keyboardType={money.decimals ? 'decimal-pad' : 'number-pad'} maxLength={12} />
 
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-        {!!notice && <Text style={s.caption}>{notice}</Text>}
 
-        {item && dayItems.length > 1 && <View style={s.orderRow}>
-          <Text style={s.muted}>하루 안 순서</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="위로" accessibilityState={{ disabled: busy || index <= 0 }} disabled={busy || index <= 0} onPress={() => move(-1)} style={s.orderButton}><Text style={index <= 0 ? s.muted : s.link}>↑ 위로</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="아래로" accessibilityState={{ disabled: busy || index >= dayItems.length - 1 }} disabled={busy || index >= dayItems.length - 1} onPress={() => move(1)} style={s.orderButton}><Text style={index >= dayItems.length - 1 ? s.muted : s.link}>↓ 아래로</Text></Pressable>
-        </View>}
         {canDelete && <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={confirmDelete} style={s.deleteButton}><Text style={s.error}>일정 지우기</Text></Pressable>}
         {item && !canDelete && <Text style={s.caption}>다른 멤버가 만든 일정은 고칠 수 있지만, 지우기는 만든 사람과 총무만 할 수 있어요.</Text>}
       </ScrollView>
@@ -186,7 +165,5 @@ const s = StyleSheet.create({
   placeName: { fontSize: 15, fontWeight: '600', color: C.text },
   loading: { marginTop: 12 },
   error: { fontSize: 13, color: C.error, marginTop: 16, lineHeight: 19 },
-  orderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 24 },
-  orderButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   deleteButton: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
 });

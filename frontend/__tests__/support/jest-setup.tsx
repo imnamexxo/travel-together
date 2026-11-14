@@ -1,3 +1,6 @@
+// 제스처(끌어서 순서 바꾸기)는 실기기에서 확인한다. 테스트는 접근성 동작(위로/아래로 옮기기)으로 순서를 바꾼다.
+import 'react-native-gesture-handler/jestSetup';
+
 // 테스트 환경에는 지도 네이티브 모듈이 없다. 지도는 실기기에서 확인한다(경계 4).
 jest.mock('react-native-maps', () => {
   const React = require('react');
