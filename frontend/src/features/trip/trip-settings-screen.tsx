@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { showAlert } from '@/components/dialog';
@@ -6,7 +5,7 @@ import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
-import { useDeleteTrip, useHandOverOrganizer, useLeaveTrip, useMembers, useUpdateTrip } from '@/api/queries';
+import { useHandOverOrganizer, useMembers, useUpdateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
 import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
@@ -31,8 +30,8 @@ export default function TripSettingsScreen() {
         {isOrganizer ? <>
           <EditTripForm />
           <HandOverOrganizer />
-          <DeleteTrip />
-        </> : <LeaveTrip />}
+          <Text style={s.hint}>여행 삭제는 내 여행 목록에서 여행을 왼쪽으로 밀어서 할 수 있어요.</Text>
+        </> : <Text style={s.hint}>여행에서 나가려면 내 여행 목록에서 여행을 왼쪽으로 밀어 주세요. 이름·기간은 총무가 바꿀 수 있어요.</Text>}
       </ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
@@ -113,70 +112,6 @@ function HandOverOrganizer() {
     {others.map((m) => <Pressable key={m.member_id} accessibilityRole="button" accessibilityLabel={`${m.display_name}에게 총무 넘기기`} disabled={handOver.isPending} onPress={() => confirm(m.member_id, m.display_name)} style={({ pressed }) => [s.rowButton, (pressed || handOver.isPending) && s.pressed]}>
       <Text style={s.rowText}>{m.display_name}</Text><Text style={s.rowAction}>넘기기 ›</Text>
     </Pressable>)}
-  </View>;
-}
-
-function DeleteTrip() {
-  const { trip } = useCurrentTrip();
-  const remove = useDeleteTrip(trip.id);
-  const [error, setError] = useState<string | null>(null);
-
-  function confirm() {
-    showAlert(`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제', style: 'destructive', onPress: async () => {
-          setError(null);
-          try {
-            await remove.mutateAsync();
-            router.replace('/');
-          } catch (e) {
-            setError(errorText(e, '삭제하지 못했어요. 잠시 후 다시 시도해주세요.'));
-          }
-        },
-      },
-    ]);
-  }
-
-  return <View style={s.section}>
-    <Text style={s.heading}>여행 삭제</Text>
-    <Text style={s.hint}>총무는 여행에서 나갈 수 없어요. 총무를 넘긴 뒤 나가거나, 여행이 필요 없어지면 삭제해 주세요.</Text>
-    {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: remove.isPending }} disabled={remove.isPending} onPress={confirm} style={({ pressed }) => [s.dangerButton, (pressed || remove.isPending) && s.pressed]}>
-      <Text style={s.dangerText}>여행 삭제</Text>
-    </Pressable>
-  </View>;
-}
-
-function LeaveTrip() {
-  const { trip } = useCurrentTrip();
-  const leave = useLeaveTrip(trip.id);
-  const [error, setError] = useState<string | null>(null);
-
-  function confirm() {
-    showAlert('여행에서 나갈까요?', '다시 들어오려면 총무에게 초대 코드를 받아야 해요.', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '나가기', style: 'destructive', onPress: async () => {
-          setError(null);
-          try {
-            await leave.mutateAsync();
-            router.replace('/');
-          } catch (e) {
-            setError(errorText(e, '나가지 못했어요. 잠시 후 다시 시도해주세요.'));
-          }
-        },
-      },
-    ]);
-  }
-
-  return <View style={s.section}>
-    <Text style={s.heading}>여행에서 나가기</Text>
-    <Text style={s.hint}>이름과 기간은 총무가 바꿀 수 있어요.</Text>
-    {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: leave.isPending }} disabled={leave.isPending} onPress={confirm} style={({ pressed }) => [s.dangerButton, (pressed || leave.isPending) && s.pressed]}>
-      <Text style={s.dangerText}>여행에서 나가기</Text>
-    </Pressable>
   </View>;
 }
 

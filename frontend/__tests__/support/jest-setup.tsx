@@ -27,3 +27,14 @@ jest.mock('@/features/expenses/zoomable-image', () => {
   const { Image } = require('react-native');
   return { __esModule: true, default: ({ uri, accessibilityLabel }: { uri: string; accessibilityLabel: string }) => <Image accessibilityLabel={accessibilityLabel} source={{ uri }} /> };
 });
+
+// 밀어서 지우기(제스처·애니메이션)는 실기기에서 확인한다. 테스트에서는 카드만 그리고, 숨은 버튼은 함께 그려 둔다.
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Swipeable = React.forwardRef(({ children, renderRightActions }: { children: React.ReactNode; renderRightActions?: () => React.ReactNode }, ref: unknown) => {
+    React.useImperativeHandle(ref, () => ({ close: () => {}, openRight: () => {}, openLeft: () => {}, reset: () => {} }));
+    return <View>{children}{renderRightActions?.()}</View>;
+  });
+  return { __esModule: true, default: Swipeable };
+});

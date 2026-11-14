@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import Swipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TripSummary } from '@/api/client';
-import { useBefriendByCode, useFriends, useMe, useTripInvites, useTrips } from '@/api/queries';
+import { useBefriendByCode, useDeleteAnyTrip, useFriends, useLeaveAnyTrip, useMe, useTripInvites, useTrips } from '@/api/queries';
 import { Badge } from '@/components/friend-button';
 import { TravelColors as C } from '@/constants/theme';
 import { takePendingFriend, takePendingInvite } from './pending-invite';
@@ -55,6 +56,7 @@ export default function TripListScreen() {
       refreshControl={<RefreshControl refreshing={trips.isRefetching} onRefresh={() => trips.refetch()} tintColor={C.primary} />}
       renderItem={({ item }) => <TripCard trip={item} />}
       ItemSeparatorComponent={() => <View style={s.gap} />}
+      ListFooterComponent={trips.data?.length ? <Text style={s.swipeHint}>여행을 왼쪽으로 밀면 삭제하거나 나갈 수 있어요</Text> : null}
       ListEmptyComponent={trips.isPending ? <ActivityIndicator style={s.loading} color={C.primary} />
         : trips.isError ? <View style={s.empty}>
           <Text style={s.emptyTitle}>여행 목록을 불러오지 못했어요</Text>
@@ -70,17 +72,49 @@ export default function TripListScreen() {
   </SafeAreaView>;
 }
 
+/** 여행 카드. 왼쪽으로 밀면 총무는 "삭제", 참여자는 "나가기" 버튼이 나온다(확인창을 거친다). */
 function TripCard({ trip }: { trip: TripSummary }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${trip.name} 열기`} onPress={() => router.push(`/trips/${trip.id}`)} style={({ pressed }) => [s.card, pressed && s.pressed]}>
-    <View style={s.between}>
-      <Text style={s.cardTitle} numberOfLines={1}>{trip.name}</Text>
-      {trip.is_organizer && <Text style={s.badge}>총무</Text>}
-    </View>
-    <Text style={s.cardMeta}>{formatPeriod(trip.start_date, trip.end_date)}  ·  멤버 {trip.member_count}명</Text>
-  </Pressable>;
+  const swipe = useRef<SwipeableMethods>(null);
+  const remove = useDeleteAnyTrip();
+  const leave = useLeaveAnyTrip();
+  const label = trip.is_organizer ? '삭제' : '나가기';
+
+  function confirm() {
+    swipe.current?.close();
+    const [title, message] = trip.is_organizer
+      ? [`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.']
+      : [`"${trip.name}"에서 나갈까요?`, '내가 올린 사진은 지워져요. 다시 들어오려면 총무에게 초대를 받아야 해요.'];
+    showAlert(title, message, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: label, style: 'destructive', onPress: () => (trip.is_organizer ? remove : leave).mutate(trip.id, {
+          onError: (e) => showAlert(trip.is_organizer ? '삭제하지 못했어요' : '나가지 못했어요', e.message),
+        }),
+      },
+    ]);
+  }
+
+  return <Swipeable ref={swipe} friction={2} rightThreshold={40} overshootRight={false}
+    renderRightActions={() => <Pressable haptic accessibilityRole="button" accessibilityLabel={`${trip.name} ${label}`} onPress={confirm} style={s.swipeAction}>
+      <Ionicons name={trip.is_organizer ? 'trash-outline' : 'exit-outline'} size={20} color="#fff" />
+      <Text style={s.swipeText}>{label}</Text>
+    </Pressable>}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${trip.name} 열기`}
+      accessibilityActions={[{ name: 'remove', label: `${trip.name} ${label}` }]} onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'remove') confirm(); }}
+      onPress={() => router.push(`/trips/${trip.id}`)} style={({ pressed }) => [s.card, pressed && s.pressed]}>
+      <View style={s.between}>
+        <Text style={s.cardTitle} numberOfLines={1}>{trip.name}</Text>
+        {trip.is_organizer && <Text style={s.badge}>총무</Text>}
+      </View>
+      <Text style={s.cardMeta}>{formatPeriod(trip.start_date, trip.end_date)}  ·  멤버 {trip.member_count}명</Text>
+    </Pressable>
+  </Swipeable>;
 }
 
 const s = StyleSheet.create({
+  swipeAction: { width: 92, marginLeft: 10, borderRadius: 18, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  swipeText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  swipeHint: { fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 16 },
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center', flexGrow: 1 },
   header: { marginBottom: 24 },
