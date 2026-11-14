@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Constants from 'expo-constants';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import MapView, { Marker } from 'react-native-maps';
 import { TravelColors as C } from '@/constants/theme';
 import type { PlaceMapProps } from './map-types';

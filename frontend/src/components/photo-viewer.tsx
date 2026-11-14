@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FlatList, Image, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Image, Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type ViewerPhoto = { id: string; url: string; caption?: string };

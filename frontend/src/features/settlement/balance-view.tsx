@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Settlement } from '@/api/client';
@@ -90,7 +91,7 @@ export default function BalanceView() {
           <View style={s.rowBetween}><Text style={s.transferNames}>{transfer.from_name} <Text style={s.arrow}>→</Text> {transfer.to_name}</Text><Text style={s.transferAmount}>{money.format(transfer.amount)}</Text></View>
           {isOrganizer && <View style={s.recordActions}>
             <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} 금액 직접 입력`} disabled={recordTransfer.isPending} onPress={() => setPartial(transfer)} style={s.partialButton}><Text style={s.partialText}>금액 직접 입력</Text></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} ${money.format(transfer.amount)} 송금 완료로 기록`} disabled={recordTransfer.isPending} onPress={() => confirmRecord(transfer)} style={s.recordButton}><Text style={s.recordText}>송금 완료로 기록</Text></Pressable>
+            <Pressable haptic accessibilityRole="button" accessibilityLabel={`${transfer.from_name} → ${transfer.to_name} ${money.format(transfer.amount)} 송금 완료로 기록`} disabled={recordTransfer.isPending} onPress={() => confirmRecord(transfer)} style={s.recordButton}><Text style={s.recordText}>송금 완료로 기록</Text></Pressable>
           </View>}
         </View>)}
         <Pressable accessibilityRole="button" onPress={copyGuide} style={s.copyButton}><Text style={s.link}>송금 안내문 복사</Text></Pressable>
@@ -163,7 +164,7 @@ function PartialTransferSheet({ suggestion, busy, onClose, onSubmit }: { suggest
         <Text style={s.label}>보낸 금액 ({money.unit})</Text>
         <TextInput accessibilityLabel="보낸 금액" value={amount} onChangeText={setAmount} keyboardType={money.decimals ? 'decimal-pad' : 'number-pad'} maxLength={12} style={s.input} />
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={[s.primaryButton, busy && s.pressed]}><Text style={s.primaryText}>기록</Text></Pressable>
+        <Pressable haptic accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={[s.primaryButton, busy && s.pressed]}><Text style={s.primaryText}>기록</Text></Pressable>
       </ScrollView>
     </KeyboardAvoidingView></SafeAreaView>
   </Modal>;

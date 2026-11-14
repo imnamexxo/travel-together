@@ -52,6 +52,16 @@ class Suggestion(BaseModel):
     member_id: uuid.UUID
 
 
+class InvitableTrip(BaseModel):
+    """내가 총무인 여행과 그 친구의 상태: member(이미 멤버), invited(초대해 둠), none(초대할 수 있음)."""
+
+    trip_id: uuid.UUID
+    name: str
+    start_date: str
+    end_date: str
+    state: str
+
+
 class FriendCode(BaseModel):
     code: str
 
@@ -210,6 +220,21 @@ def remove_friend(user_id: uuid.UUID, user: AuthenticatedUser = Depends(get_curr
     session.delete(found)
     session.commit()
     return list_friends(user, session)
+
+
+@router.get("/friends/{user_id}/trips")
+def trips_for_friend(user_id: uuid.UUID, user: AuthenticatedUser = Depends(get_current_user), session: Session = Depends(get_session)) -> list[InvitableTrip]:
+    """친구를 초대할 수 있는 내 여행(내가 총무인 여행, 최근 것부터)과 그 친구의 상태."""
+    ensure_profile(session, user)
+    if not are_friends(session, user.id, user_id):
+        raise ApiError(404, "friend_not_found", "친구를 찾을 수 없습니다.")
+    trips = session.scalars(select(Trip).where(Trip.organizer_user_id == user.id).order_by(Trip.start_date.desc())).all()
+    invited = set(session.scalars(select(TripInvite.trip_id).where(TripInvite.invitee_id == user_id)))
+    out = []
+    for t in trips:
+        state = "member" if any(m.user_id == user_id for m in t.members) else "invited" if t.id in invited else "none"
+        out.append(InvitableTrip(trip_id=t.id, name=t.name, start_date=t.start_date.isoformat(), end_date=t.end_date.isoformat(), state=state))
+    return out
 
 
 @router.get("/me/friend-code")

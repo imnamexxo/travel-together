@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, newIdempotencyKey, type Expense, type ExpenseStatus, type Member } from '@/api/client';
@@ -219,8 +220,8 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
         {!!notice && <Text style={s.notice}>{notice}</Text>}
         {editable && <>
           <View style={s.row}>
-            <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onSave} style={({ pressed }) => [s.secondaryButton, (pressed || busy) && s.pressed]}><Text style={s.secondaryText}>저장</Text></Pressable>
-            <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onConfirm} style={({ pressed }) => [s.primaryButton, (pressed || busy) && s.pressed]}><Text style={s.primaryText}>확정</Text></Pressable>
+            <Pressable haptic accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onSave} style={({ pressed }) => [s.secondaryButton, (pressed || busy) && s.pressed]}><Text style={s.secondaryText}>저장</Text></Pressable>
+            <Pressable haptic accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onConfirm} style={({ pressed }) => [s.primaryButton, (pressed || busy) && s.pressed]}><Text style={s.primaryText}>확정</Text></Pressable>
           </View>
           {!!savedId && <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onDelete} style={s.deleteButton}><Text style={s.removeText}>지출 삭제</Text></Pressable>}
         </>}

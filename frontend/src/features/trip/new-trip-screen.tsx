@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
@@ -58,7 +59,7 @@ export default function NewTripScreen() {
         <CurrencyField value={currency} onChange={chooseCurrency} hint={overseas && currency === DEFAULT_CURRENCY ? '해외 여행이면 현지 통화를 고르세요. 지출과 정산을 이 통화로 적어요.' : '지출과 정산을 이 통화로 적어요.'} />
         <OverseasField value={overseas} onChange={setOverseas} warning={!overseas && currency !== DEFAULT_CURRENCY} />
         {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: createTrip.isPending, busy: createTrip.isPending }} disabled={createTrip.isPending} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || createTrip.isPending) && s.pressed]}>
+        <Pressable haptic accessibilityRole="button" accessibilityState={{ disabled: createTrip.isPending, busy: createTrip.isPending }} disabled={createTrip.isPending} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || createTrip.isPending) && s.pressed]}>
           <Text style={s.primaryText}>여행 만들기</Text>
         </Pressable>
       </ScrollView>

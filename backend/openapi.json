@@ -1464,6 +1464,69 @@
         }
       }
     },
+    "/friends/{user_id}/trips": {
+      "get": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Trips For Friend",
+        "description": "친구를 초대할 수 있는 내 여행(내가 총무인 여행, 최근 것부터)과 그 친구의 상태.",
+        "operationId": "trips_for_friend_friends__user_id__trips_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvitableTrip"
+                  },
+                  "title": "Response Trips For Friend Friends  User Id  Trips Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/friend-code": {
       "get": {
         "tags": [
@@ -4797,6 +4860,41 @@
           "status"
         ],
         "title": "Health"
+      },
+      "InvitableTrip": {
+        "properties": {
+          "trip_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Trip Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trip_id",
+          "name",
+          "start_date",
+          "end_date",
+          "state"
+        ],
+        "title": "InvitableTrip",
+        "description": "내가 총무인 여행과 그 친구의 상태: member(이미 멤버), invited(초대해 둠), none(초대할 수 있음)."
       },
       "InviteCode": {
         "properties": {

@@ -1,5 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isNotFound } from '@/api/client';

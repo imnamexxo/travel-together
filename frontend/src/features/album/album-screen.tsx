@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Photo, PhotoPlaceLink, Place } from '@/api/client';

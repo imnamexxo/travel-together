@@ -442,6 +442,20 @@ export function useInviteFriend(tripId: string) {
   return useMutation({ mutationFn: (userId: string) => api.inviteFriend(tripId, userId) });
 }
 
+export function useTripsForFriend(userId: string | null) {
+  const api = useApi();
+  return useQuery({ queryKey: ['friends', 'trips', userId], queryFn: () => api.listTripsForFriend(userId!), enabled: !!userId, staleTime: 0 });
+}
+
+export function useInviteFriendTo() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tripId, userId }: { tripId: string; userId: string }) => api.inviteFriend(tripId, userId),
+    onSuccess: (_, { userId }) => queryClient.invalidateQueries({ queryKey: ['friends', 'trips', userId] }),
+  });
+}
+
 export function useTripInvites() {
   const api = useApi();
   return useQuery({ queryKey: ['trip-invites'], queryFn: () => api.listTripInvites() });

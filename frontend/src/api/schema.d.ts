@@ -361,6 +361,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/friends/{user_id}/trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trips For Friend
+         * @description 친구를 초대할 수 있는 내 여행(내가 총무인 여행, 최근 것부터)과 그 친구의 상태.
+         */
+        get: operations["trips_for_friend_friends__user_id__trips_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/friend-code": {
         parameters: {
             query?: never;
@@ -1113,6 +1133,25 @@ export interface components {
         Health: {
             /** Status */
             status: string;
+        };
+        /**
+         * InvitableTrip
+         * @description 내가 총무인 여행과 그 친구의 상태: member(이미 멤버), invited(초대해 둠), none(초대할 수 있음).
+         */
+        InvitableTrip: {
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /** Name */
+            name: string;
+            /** Start Date */
+            start_date: string;
+            /** End Date */
+            end_date: string;
+            /** State */
+            state: string;
         };
         /** InviteCode */
         InviteCode: {
@@ -2849,6 +2888,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FriendsOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    trips_for_friend_friends__user_id__trips_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitableTrip"][];
                 };
             };
             /** @description 로그인 필요 */

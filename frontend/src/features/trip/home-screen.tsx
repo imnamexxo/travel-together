@@ -1,6 +1,7 @@
 import { TravelColors as C } from '@/constants/theme';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';

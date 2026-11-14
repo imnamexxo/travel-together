@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import Pressable from '@/components/pressable';
 
 import { useExpensePlaceCandidates } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';

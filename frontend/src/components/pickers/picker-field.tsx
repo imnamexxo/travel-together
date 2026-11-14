@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import Pressable from '@/components/pressable';
 
 import { TravelColors as C } from '@/constants/theme';
 
