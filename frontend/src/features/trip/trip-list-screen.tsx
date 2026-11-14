@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,8 +17,8 @@ export default function TripListScreen() {
     <View style={s.between}>
       <Text style={s.title}>내 여행</Text>
       <View style={s.headerActions}>
-      <Pressable accessibilityRole="button" accessibilityLabel="계정 관리" onPress={() => router.push('/account')} style={({ pressed }) => [s.accountButton, pressed && s.pressed]}><Text style={s.accountText}>계정</Text></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="새 여행 만들기" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.newButton, pressed && s.pressed]}><Text style={s.newText}>＋ 새 여행</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="계정 관리" hitSlop={6} onPress={() => router.push('/account')} style={({ pressed }) => [s.accountButton, pressed && s.pressed]}><Ionicons name="person-circle" size={40} color={C.textMuted} /></Pressable>
       </View>
     </View>
     {!!me.data && <Text style={s.subtitle}>{me.data.display_name}님, 함께 떠날 여행을 골라요.</Text>}
@@ -83,7 +84,6 @@ const s = StyleSheet.create({
   joinButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 4 },
   link: { fontSize: 14, fontWeight: '600', color: C.accent },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  accountButton: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: C.divider, justifyContent: 'center' },
-  accountText: { fontSize: 13, color: C.text },
+  accountButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.65 },
 });
