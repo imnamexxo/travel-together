@@ -11,6 +11,7 @@ export type DeletionPreview = components['schemas']['DeletionPreview'];
 export type Friends = components['schemas']['FriendsOut'];
 export type Person = components['schemas']['Person'];
 export type TripInvite = components['schemas']['TripInviteOut'];
+export type FriendSuggestion = components['schemas']['Suggestion'];
 export type MapData = components['schemas']['MapData'];
 export type MapPlace = components['schemas']['MapPlace'];
 /** 지도 필터. date는 YYYY-MM-DD. */
@@ -79,6 +80,8 @@ export interface ApiClient {
   /** 회원 탈퇴. 성공하면 로그인 계정도 지워진다. */
   deleteMe(): Promise<void>;
   listFriends(): Promise<Friends>;
+  /** 함께 여행한 사람 중 아직 친구가 아닌 사람 */
+  listFriendSuggestions(): Promise<FriendSuggestion[]>;
   /** 함께 여행한 멤버에게 친구 요청 */
   requestFriend(tripId: string, memberId: string): Promise<Friends>;
   acceptFriend(requestId: string): Promise<Friends>;
@@ -197,6 +200,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     getDeletionPreview: () => request<DeletionPreview>('GET', '/me/deletion-preview'),
     deleteMe: () => request<void>('DELETE', '/me'),
     listFriends: () => request<Friends>('GET', '/friends'),
+    listFriendSuggestions: () => request<FriendSuggestion[]>('GET', '/friends/suggestions'),
     requestFriend: (tripId, memberId) => request<Friends>('POST', '/friends/requests', { trip_id: tripId, member_id: memberId }),
     acceptFriend: (id) => request<Friends>('POST', `/friends/requests/${encodeURIComponent(id)}/accept`),
     declineFriend: (id) => request<Friends>('POST', `/friends/requests/${encodeURIComponent(id)}/decline`),

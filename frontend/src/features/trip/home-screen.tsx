@@ -13,6 +13,7 @@ import TravelNotes from './travel-notes';
 import { useAuth } from '@/auth/auth-context';
 import { useCurrentTrip } from './current-trip';
 import ActionSheet from '@/components/action-sheet';
+import FriendButton from '@/components/friend-button';
 import PlanItemEditor from './plan-item-editor';
 import { formatPeriod } from './trip-dates';
 
@@ -72,7 +73,10 @@ export default function HomeScreen() {
     <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!dragging} contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={planItems.isRefetching} onRefresh={refresh} tintColor={C.primary} />}>
       <View style={s.between}><Text style={s.eyebrow}>TOGETHER, EVERYWHERE</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => setMenuOpen(true)}><Text style={s.more}>•••</Text></Pressable>
+        <View style={s.headerButtons}>
+          <FriendButton style={s.circle} />
+          <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => setMenuOpen(true)}><Text style={s.more}>•••</Text></Pressable>
+        </View>
       </View>
       <Text style={s.title}>{trip.name}</Text><Text style={s.subtitle}>{formatPeriod(trip.start_date, trip.end_date)}  ·  {trip.member_count}명</Text>
       <TravelNotes />
@@ -121,6 +125,7 @@ export default function HomeScreen() {
   </SafeAreaView>;
 }
 const s = StyleSheet.create({
+  headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lifted: { backgroundColor: C.background, borderRadius: 12 }, orderError: { fontSize: 12, color: C.error, marginTop: 8 }, dragHint: { fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 10 },
   screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 72, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted },

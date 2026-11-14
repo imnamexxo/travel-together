@@ -1180,6 +1180,57 @@
         ]
       }
     },
+    "/friends/suggestions": {
+      "get": {
+        "tags": [
+          "friends"
+        ],
+        "summary": "Friend Suggestions",
+        "description": "내 여행들의 다른 멤버 중 아직 관계가 없는 사람(한 사람은 한 번만, 최근 여행 기준).",
+        "operationId": "friend_suggestions_friends_suggestions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Suggestion"
+                  },
+                  "type": "array",
+                  "title": "Response Friend Suggestions Friends Suggestions Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/friends/requests": {
       "post": {
         "tags": [
@@ -5873,6 +5924,37 @@
           "amount"
         ],
         "title": "SuggestedTransferOut"
+      },
+      "Suggestion": {
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "trip_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Trip Id"
+          },
+          "trip_name": {
+            "type": "string",
+            "title": "Trip Name"
+          },
+          "member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Member Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_name",
+          "trip_id",
+          "trip_name",
+          "member_id"
+        ],
+        "title": "Suggestion",
+        "description": "함께 여행한 사람(아직 친구도 요청 중도 아님). 친구 요청은 trip_id·member_id로 보낸다."
       },
       "SuggestionAsk": {
         "properties": {

@@ -43,6 +43,15 @@ class FriendsOut(BaseModel):
     outgoing: list[FriendRequestOut]
 
 
+class Suggestion(BaseModel):
+    """함께 여행한 사람(아직 친구도 요청 중도 아님). 친구 요청은 trip_id·member_id로 보낸다."""
+
+    display_name: str
+    trip_id: uuid.UUID
+    trip_name: str
+    member_id: uuid.UUID
+
+
 class FriendCode(BaseModel):
     code: str
 
@@ -130,6 +139,28 @@ def list_friends(user: AuthenticatedUser = Depends(get_current_user), session: S
             outgoing.append(FriendRequestOut(id=f.id, person=_person(other)))
     friends.sort(key=lambda p: p.display_name)
     return FriendsOut(friends=friends, incoming=incoming, outgoing=outgoing)
+
+
+@router.get("/friends/suggestions")
+def friend_suggestions(user: AuthenticatedUser = Depends(get_current_user), session: Session = Depends(get_session)) -> list[Suggestion]:
+    """내 여행들의 다른 멤버 중 아직 관계가 없는 사람(한 사람은 한 번만, 최근 여행 기준)."""
+    ensure_profile(session, user)
+    related = {
+        (f.addressee_id if f.requester_id == user.id else f.requester_id)
+        for f in session.scalars(select(Friendship).where(or_(Friendship.requester_id == user.id, Friendship.addressee_id == user.id)))
+    }
+    my_trips = select(Member.trip_id).where(Member.user_id == user.id)
+    rows = session.scalars(
+        select(Member).join(Trip).where(Member.trip_id.in_(my_trips), Member.user_id != user.id).order_by(Trip.start_date.desc(), Member.join_order)
+    ).all()
+    seen: set[uuid.UUID] = set()
+    out = []
+    for m in rows:
+        if m.user_id in seen or m.user_id in related or m.profile.deleted_at is not None:
+            continue
+        seen.add(m.user_id)
+        out.append(Suggestion(display_name=m.profile.display_name, trip_id=m.trip_id, trip_name=m.trip.name, member_id=m.id))
+    return out
 
 
 @router.post("/friends/requests", status_code=status.HTTP_201_CREATED)

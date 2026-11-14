@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type DeletionPreview, type Friends, type TripInvite, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type DeletionPreview, type Friends, type FriendSuggestion, type TripInvite, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult, type SocialProvider, type SocialSignInResult } from '@/auth/auth-service';
 import { toKstParts } from '@/features/expenses/expense-form';
 
@@ -142,6 +142,8 @@ type FakeApiOptions = {
   expensePlaceCandidates?: ExpensePlaceCandidate[];
   /** 친구 목록·요청 */
   friends?: Friends;
+  /** 함께 여행한 사람 제안 */
+  friendSuggestions?: FriendSuggestion[];
   /** 받은 여행 초대 */
   tripInvites?: TripInvite[];
   /** 탈퇴 미리보기 결과 */
@@ -178,11 +180,12 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] }, friends: initialFriends = { friends: [], incoming: [], outgoing: [] }, tripInvites = [] }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] }, friends: initialFriends = { friends: [], incoming: [], outgoing: [] }, tripInvites = [], friendSuggestions = [] }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   let profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   let friendState: Friends = { friends: [...initialFriends.friends], incoming: [...initialFriends.incoming], outgoing: [...initialFriends.outgoing] };
   let invites = [...tripInvites];
+  let suggestions = [...friendSuggestions];
   const store = [...trips];
   const memberStore: Record<string, Member[]> = Object.fromEntries(Object.entries(members).map(([id, list]) => [id, [...list]]));
   const membersOf = (tripId: string) => memberStore[tripId] ?? [member()];
@@ -247,8 +250,11 @@ export function fakeApi(
     getDeletionPreview: jest.fn(async () => deletionPreview),
     deleteMe: jest.fn(async () => undefined),
     listFriends: jest.fn(async () => friendState),
+    listFriendSuggestions: jest.fn(async () => suggestions),
     requestFriend: jest.fn(async (tripId, memberId) => {
-      const target = membersOf(tripId).find((m) => m.member_id === memberId)!;
+      const suggested = suggestions.find((x) => x.member_id === memberId);
+      suggestions = suggestions.filter((x) => x.member_id !== memberId);
+      const target = suggested ? { display_name: suggested.display_name } : membersOf(tripId).find((m) => m.member_id === memberId)!;
       memberStore[tripId] = membersOf(tripId).map((m) => (m.member_id === memberId ? { ...m, friend_status: 'requested' } : m));
       friendState = { ...friendState, outgoing: [...friendState.outgoing, { id: `req-${memberId}`, person: { user_id: `user-${memberId}`, display_name: target.display_name } }] };
       return friendState;

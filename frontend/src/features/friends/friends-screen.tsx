@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAnswerFriend, useFriendCode, useFriends, useRemoveFriend } from '@/api/queries';
+import { useAnswerFriend, useFriendCode, useFriendSuggestions, useFriends, useRemoveFriend, useRequestFriendFrom } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
 import { accountStyles as s } from '@/features/account/account-screen';
 import { friendLink } from '@/features/trip/pending-invite';
@@ -14,6 +14,8 @@ export default function FriendsScreen() {
   const code = useFriendCode();
   const answer = useAnswerFriend();
   const remove = useRemoveFriend();
+  const suggestions = useFriendSuggestions();
+  const ask = useRequestFriendFrom();
   const [error, setError] = useState<string | null>(null);
   const fail = (e: Error) => setError(e.message);
 
@@ -33,7 +35,7 @@ export default function FriendsScreen() {
   const data = friends.data;
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={friends.isRefetching} onRefresh={() => friends.refetch()} tintColor={C.primary} />}>
-      <Pressable accessibilityRole="button" accessibilityLabel="계정 관리로 돌아가기" onPress={() => goBack('/account')} style={s.back}><Text style={s.backText}>‹ 계정 관리</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="뒤로" onPress={() => goBack('/')} style={s.back}><Text style={s.backText}>‹ 뒤로</Text></Pressable>
       <Text style={s.title}>친구</Text>
       <Text style={s.hint}>친구가 되면 총무가 여행에 버튼 한 번으로 초대할 수 있어요.</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="친구 링크 보내기" disabled={!code.data} onPress={shareLink} style={({ pressed }) => [s.primaryButton, (pressed || !code.data) && s.pressed]}><Text style={s.primaryText}>친구 링크 보내기</Text></Pressable>
@@ -57,6 +59,13 @@ export default function FriendsScreen() {
               <Pressable accessibilityRole="button" accessibilityLabel={`${f.display_name} 친구 끊기`} onPress={() => confirmRemove(f.user_id, f.display_name)} style={s.deleteChip}><Text style={s.deleteText}>끊기</Text></Pressable>
             </View>)}
           </View>
+          {!!suggestions.data?.length && <View style={s.section}>
+            <Text style={s.heading}>함께 여행한 사람</Text>
+            {suggestions.data.map((m) => <View key={`${m.trip_id}-${m.member_id}`} style={s.tripRow}>
+              <View style={s.tripCopy}><Text style={s.tripName}>{m.display_name}</Text><Text style={s.tripMeta}>{m.trip_name}</Text></View>
+              <Pressable accessibilityRole="button" accessibilityLabel={`${m.display_name} 친구 추가`} disabled={ask.isPending} onPress={() => ask.mutate({ tripId: m.trip_id, memberId: m.member_id }, { onError: fail })} style={s.acceptChip}><Text style={s.acceptText}>친구 추가</Text></Pressable>
+            </View>)}
+          </View>}
           {data.outgoing.length > 0 && <View style={s.section}>
             <Text style={s.heading}>보낸 요청</Text>
             {data.outgoing.map((r) => <View key={r.id} style={s.tripRow}>
