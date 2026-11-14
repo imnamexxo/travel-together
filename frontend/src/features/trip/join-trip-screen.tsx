@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,12 +13,21 @@ export function normalizeInviteCode(raw: string): string {
 
 export default function JoinTripScreen() {
   const join = useJoinTrip();
-  const [code, setCode] = useState('');
+  // 초대 링크로 왔으면 코드가 채워져 있고 바로 참여한다.
+  const params = useLocalSearchParams<{ code?: string }>();
+  const linked = normalizeInviteCode(params.code ?? '');
+  const [code, setCode] = useState(linked);
   const [error, setError] = useState<string | null>(null);
+  const triedLink = useRef(false);
+  useEffect(() => {
+    if (linked && !triedLink.current) { triedLink.current = true; void submit(linked); }
+    // 링크 코드로 한 번만 시도한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked]);
 
-  async function submit() {
+  async function submit(value = code) {
     if (join.isPending) return;
-    const normalized = normalizeInviteCode(code);
+    const normalized = normalizeInviteCode(value);
     setError(null);
     if (!normalized) { setError('초대 코드를 입력해주세요.'); return; }
     try {
@@ -34,13 +43,13 @@ export default function JoinTripScreen() {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
         <Pressable accessibilityRole="button" accessibilityLabel="내 여행 목록으로 돌아가기" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={s.back}><Text style={s.backText}>‹ 내 여행</Text></Pressable>
         <Text style={s.title}>초대 코드로 들어가기</Text>
-        <Text style={s.subtitle}>총무에게 받은 8자리 코드를 입력하세요.</Text>
+        <Text style={s.subtitle}>{linked ? '초대 링크로 여행에 들어가는 중이에요.' : '총무에게 받은 8자리 코드를 입력하세요.'}</Text>
         <Text style={s.label}>초대 코드</Text>
         <TextInput accessibilityLabel="초대 코드" value={code} onChangeText={setCode} placeholder="예: ABCD2345" placeholderTextColor={C.textMuted}
-          autoCapitalize="characters" autoCorrect={false} autoComplete="off" maxLength={16} returnKeyType="go" onSubmitEditing={submit}
+          autoCapitalize="characters" autoCorrect={false} autoComplete="off" maxLength={16} returnKeyType="go" onSubmitEditing={() => submit()}
           style={[s.input, !!error && s.invalid]} />
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: join.isPending, busy: join.isPending }} disabled={join.isPending} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || join.isPending) && s.pressed]}>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: join.isPending, busy: join.isPending }} disabled={join.isPending} onPress={() => submit()} style={({ pressed }) => [s.primaryButton, (pressed || join.isPending) && s.pressed]}>
           <Text style={s.primaryText}>들어가기</Text>
         </Pressable>
       </ScrollView>

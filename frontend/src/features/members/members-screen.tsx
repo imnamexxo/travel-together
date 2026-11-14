@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Member } from '@/api/client';
 import { useInviteCode, useMembers, useReissueInviteCode, useRemoveMember } from '@/api/queries';
+import { inviteLink } from '@/features/trip/pending-invite';
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
@@ -71,7 +72,8 @@ function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string
   }
 
   function share(value: string) {
-    void Share.share({ message: `"${tripName}" 여행에 함께해요! 앱에서 초대 코드 ${value}를 입력하면 들어올 수 있어요.` });
+    const link = inviteLink(process.env.EXPO_PUBLIC_API_URL ?? '', value);
+    void Share.share({ message: [`"${tripName}" 여행에 함께해요! 링크를 누르면 앱에서 바로 들어올 수 있어요.`, link, `(초대 코드: ${value})`].join('\n') });
   }
 
   function confirmReissue() {
@@ -97,7 +99,7 @@ function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string
         <Text accessibilityLabel={`초대 코드 ${code.data.code}`} style={s.code} selectable>{code.data.code}</Text>
         <View style={s.cardActions}>
           <Pressable accessibilityRole="button" onPress={() => copy(code.data.code)} style={({ pressed }) => [s.cardButton, pressed && s.pressed]}><Text style={s.cardButtonText}>복사</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={() => share(code.data.code)} style={({ pressed }) => [s.cardButton, pressed && s.pressed]}><Text style={s.cardButtonText}>공유</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => share(code.data.code)} style={({ pressed }) => [s.cardButton, pressed && s.pressed]}><Text style={s.cardButtonText}>링크 보내기</Text></Pressable>
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: reissue.isPending }} disabled={reissue.isPending} onPress={confirmReissue} style={({ pressed }) => [s.cardButton, (pressed || reissue.isPending) && s.pressed]}><Text style={s.cardButtonText}>재발급</Text></Pressable>
         </View>
       </>}

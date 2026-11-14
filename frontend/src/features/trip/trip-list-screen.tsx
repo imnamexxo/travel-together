@@ -1,16 +1,23 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TripSummary } from '@/api/client';
 import { useMe, useTrips } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
+import { takePendingInvite } from './pending-invite';
 import { formatPeriod } from './trip-dates';
 
 export default function TripListScreen() {
   const me = useMe();
   const trips = useTrips();
+  // 로그인 전에 초대 링크를 눌렀으면, 로그인하고 여기 오자마자 이어서 참여한다.
+  useEffect(() => {
+    const code = takePendingInvite();
+    if (code) router.push({ pathname: '/trips/join', params: { code } });
+  }, []);
 
   const header = <View style={s.header}>
     <Text style={s.eyebrow}>TRAVEL TOGETHER</Text>

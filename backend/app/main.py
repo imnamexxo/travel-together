@@ -12,7 +12,7 @@ from app.gemini import GeminiPlanSuggester, PlanSuggester
 from app.place_search import GooglePlaceSearcher, KakaoPlaceSearcher, PlaceSearcher
 from app.receipt_reader import GeminiReceiptReader, ReceiptReader
 from app.storage import ObjectStorage, SupabaseStorage
-from app.routers import expense_places, expenses, health, map, me, members, photos, planner, receipts, settlement, suggestions, transfers, trips
+from app.routers import expense_places, expenses, health, links, map, me, members, photos, planner, receipts, settlement, suggestions, transfers, trips
 
 
 # 서버 로그(Render Logs)에 app.* 의 INFO(예: Gemini 응답 시간)를 남긴다. httpx의 요청마다 찍히는 줄은 끈다.
@@ -48,6 +48,7 @@ def create_app(
     install_error_handlers(app)
     install_request_log(app)
     app.include_router(health.router)
+    app.include_router(links.router)
     app.include_router(me.router)
     app.include_router(trips.router)
     app.include_router(members.router)
