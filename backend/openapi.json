@@ -71,6 +71,156 @@
             "HTTPBearer": []
           }
         ]
+      },
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Delete Me",
+        "description": "회원 탈퇴(ADR 0005). 로그인 계정을 지우고, 여행 데이터는 규칙대로 지우거나 넘기거나 이름만 지운다.\n\n로그인 계정 삭제가 실패하면 DB도 되돌린다(아무것도 바뀌지 않은 채 502).",
+        "operationId": "delete_me_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "로그인 계정 삭제 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Update Me",
+        "description": "표시 이름을 바꾼다. 모든 여행의 멤버 목록·정산에 바뀐 이름이 보인다.",
+        "operationId": "update_me_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/deletion-preview": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Preview Deletion",
+        "description": "탈퇴하면 내 여행들이 어떻게 되는지 미리 본다. 아무것도 바꾸지 않는다.",
+        "operationId": "preview_deletion_me_deletion_preview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/trips": {
@@ -873,6 +1023,105 @@
           },
           "409": {
             "description": "내보낼 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{trip_id}/organizer": {
+      "post": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Hand Over Organizer",
+        "description": "총무가 다른 멤버에게 총무를 넘긴다(ADR 0005). 넘긴 뒤 나는 일반 멤버가 된다.",
+        "operationId": "hand_over_organizer_trips__trip_id__organizer_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizerChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "총무 아님",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "넘길 수 없는 멤버",
             "content": {
               "application/json": {
                 "schema": {
@@ -3243,6 +3492,39 @@
         ],
         "title": "Body_upload_receipt_trips__trip_id__receipts_post"
       },
+      "DeletionPreview": {
+        "properties": {
+          "deleted_trips": {
+            "items": {
+              "$ref": "#/components/schemas/TripRef"
+            },
+            "type": "array",
+            "title": "Deleted Trips"
+          },
+          "handed_over": {
+            "items": {
+              "$ref": "#/components/schemas/HandOver"
+            },
+            "type": "array",
+            "title": "Handed Over"
+          },
+          "kept_records": {
+            "items": {
+              "$ref": "#/components/schemas/TripRef"
+            },
+            "type": "array",
+            "title": "Kept Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_trips",
+          "handed_over",
+          "kept_records"
+        ],
+        "title": "DeletionPreview",
+        "description": "탈퇴하면 일어나는 일. 확인 화면에 그대로 보여 준다."
+      },
       "ErrorDetail": {
         "properties": {
           "field": {
@@ -3737,6 +4019,23 @@
         ],
         "title": "ExpenseSummary"
       },
+      "HandOver": {
+        "properties": {
+          "trip": {
+            "$ref": "#/components/schemas/TripRef"
+          },
+          "new_organizer_name": {
+            "type": "string",
+            "title": "New Organizer Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trip",
+          "new_organizer_name"
+        ],
+        "title": "HandOver"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -4095,6 +4394,20 @@
           "is_organizer"
         ],
         "title": "MyMembership"
+      },
+      "OrganizerChange": {
+        "properties": {
+          "member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Member Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "member_id"
+        ],
+        "title": "OrganizerChange"
       },
       "PhotoList": {
         "properties": {
@@ -4570,6 +4883,21 @@
         ],
         "title": "Profile"
       },
+      "ProfileUpdate": {
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_name"
+        ],
+        "title": "ProfileUpdate"
+      },
       "ReceiptUploadOut": {
         "properties": {
           "expense": {
@@ -5031,6 +5359,25 @@
           "me"
         ],
         "title": "TripDetail"
+      },
+      "TripRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TripRef"
       },
       "TripSummary": {
         "properties": {

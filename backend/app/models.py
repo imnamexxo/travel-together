@@ -39,6 +39,11 @@ class UserProfile(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # 회원 탈퇴한 시각. 탈퇴하면 이름은 "탈퇴한 멤버"가 되고, 남은 토큰으로 아무것도 할 수 없다(ADR 0005).
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+DELETED_NAME = "탈퇴한 멤버"
 
 
 class Trip(Base):
@@ -51,7 +56,7 @@ class Trip(Base):
     name: Mapped[str] = mapped_column(String(TRIP_NAME_MAX))
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
-    # 총무는 여행을 만든 사용자다. 총무 위임은 하지 않는다.
+    # 총무. 처음에는 여행을 만든 사용자이고, 총무가 다른 멤버에게 넘길 수 있다(ADR 0005).
     organizer_user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("user_profiles.user_id")
     )

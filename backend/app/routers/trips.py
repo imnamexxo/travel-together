@@ -12,7 +12,7 @@ from app.currency import DEFAULT_CURRENCY, CurrencyCode
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app.invites import new_invite_code
-from app.models import TRIP_NAME_MAX, Expense, Member, Photo, Place, PlanItem, Receipt, SuggestedItem, SuggestionRequest, Transfer, Trip
+from app.models import TRIP_NAME_MAX, Expense, Member, Photo, Place, PlanItem, Receipt, SuggestedItem, SuggestionRequest, Transfer, Trip, UserProfile
 from app.photos import delete_files, get_storage
 from app.storage import ObjectStorage
 from app.permissions import require_member, require_organizer
@@ -175,7 +175,8 @@ def list_trips(
     rows = session.execute(
         select(Trip, member_count)
         .join(Member, Member.trip_id == Trip.id)
-        .where(Member.user_id == user.id)
+        .join(UserProfile, UserProfile.user_id == Member.user_id)
+        .where(Member.user_id == user.id, UserProfile.deleted_at.is_(None))
         .order_by(Trip.start_date.desc(), Trip.created_at.desc())
     ).all()
     return [
@@ -266,8 +267,14 @@ def delete_trip(
 ) -> None:
     """총무가 여행을 통째로 지운다. 여행에 속한 데이터는 DB cascade로, 사진·영수증 파일은 저장소에서 지운다."""
     me = require_organizer(session, trip_id, user)
-    keys = list(session.scalars(select(Photo.storage_key).where(Photo.trip_id == trip_id)))
-    keys += list(session.scalars(select(Receipt.storage_key).where(Receipt.trip_id == trip_id)))
-    session.delete(me.trip)
+    keys = remove_trip(session, me.trip)
     session.commit()
     delete_files(storage, keys)
+
+
+def remove_trip(session: Session, trip: Trip) -> list[str]:
+    """여행을 지운다(커밋은 호출한 쪽). 커밋 뒤 저장소에서 지울 사진·영수증 파일 키를 돌려준다."""
+    keys = list(session.scalars(select(Photo.storage_key).where(Photo.trip_id == trip.id)))
+    keys += list(session.scalars(select(Receipt.storage_key).where(Receipt.trip_id == trip.id)))
+    session.delete(trip)
+    return keys

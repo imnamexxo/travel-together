@@ -99,6 +99,7 @@ def join_trip(
     session: Session = Depends(get_session),
 ) -> TripDetail:
     """초대 코드로 여행의 멤버가 된다. 이미 멤버면 그대로 돌려준다."""
+    ensure_profile(session, user)  # 탈퇴한 계정이면 여기서 401
     # 같은 여행에 동시에 들어오는 요청이 인원 제한과 가입 순서를 깨지 않도록 여행 행을 잠근다.
     trip = session.scalars(
         select(Trip).where(Trip.invite_code == normalize_code(body.code)).with_for_update()
@@ -118,7 +119,6 @@ def join_trip(
             409, "trip_full", f"이 여행은 멤버가 {MAX_MEMBERS}명이라 더 들어갈 수 없습니다."
         )
 
-    ensure_profile(session, user)
     last_order = session.scalar(
         select(func.max(Member.join_order)).where(Member.trip_id == trip.id)
     )
@@ -179,3 +179,32 @@ def remove_member(
     if target is None:
         raise ApiError(404, "member_not_found", "멤버를 찾을 수 없습니다.")
     _remove(session, storage, target, "내보낼")
+
+
+class OrganizerChange(BaseModel):
+    member_id: uuid.UUID
+
+
+@router.post(
+    "/{trip_id}/organizer",
+    responses={**ORGANIZER_ONLY, 409: {"model": ErrorResponse, "description": "넘길 수 없는 멤버"}},
+)
+def hand_over_organizer(
+    trip_id: uuid.UUID,
+    body: OrganizerChange,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> TripDetail:
+    """총무가 다른 멤버에게 총무를 넘긴다(ADR 0005). 넘긴 뒤 나는 일반 멤버가 된다."""
+    me = require_organizer(session, trip_id, user)
+    trip = me.trip
+    target = next((m for m in trip.members if m.id == body.member_id), None)
+    if target is None:
+        raise ApiError(404, "member_not_found", "멤버를 찾을 수 없습니다.")
+    if target.id == me.id:
+        raise ApiError(409, "already_organizer", "이미 총무입니다.")
+    if target.profile.deleted_at is not None:
+        raise ApiError(409, "member_deleted", "탈퇴한 멤버에게는 넘길 수 없습니다.")
+    trip.organizer_user_id = target.user_id
+    session.commit()
+    return trip_detail(trip, me, member_count_of(session, trip_id))

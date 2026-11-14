@@ -21,7 +21,7 @@ function toAuthError(error: SupabaseAuthError): AuthError {
 }
 
 function toSession(session: Session | null): AuthSession | null {
-  return session ? { userId: session.user.id, email: session.user.email ?? null } : null;
+  return session ? { userId: session.user.id, email: session.user.email ?? null, provider: session.user.app_metadata?.provider ?? 'email' } : null;
 }
 
 export function createSupabaseAuthService(supabase: SupabaseClient): AuthService {
@@ -90,9 +90,21 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       if (error) throw toAuthError(error);
     },
 
+    async changePassword(currentPassword, newPassword) {
+      const { data } = await supabase.auth.getUser();
+      const email = data.user?.email;
+      if (!email) throw new AuthError('이메일로 가입한 계정만 비밀번호를 바꿀 수 있어요.');
+      // 다른 사람이 열어 둔 휴대폰으로 비밀번호를 바꾸지 못하게 현재 비밀번호를 먼저 확인한다.
+      const check = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+      if (check.error) throw new AuthError('현재 비밀번호가 맞지 않습니다.');
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw toAuthError(error);
+    },
+
     async signOut() {
       const { error } = await supabase.auth.signOut();
-      if (error) throw toAuthError(error);
+      // 탈퇴로 계정이 이미 지워졌으면 서버 로그아웃은 실패한다. 이 휴대폰의 세션만이라도 지운다.
+      if (error) await supabase.auth.signOut({ scope: 'local' });
     },
   };
 }

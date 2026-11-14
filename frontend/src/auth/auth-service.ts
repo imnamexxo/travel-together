@@ -6,6 +6,8 @@
 export type AuthSession = {
   userId: string;
   email: string | null;
+  /** 가입한 방법: 'email' | 'kakao' | 'google' (Supabase app_metadata.provider) */
+  provider: string;
 };
 
 export type SignUpResult = {
@@ -34,5 +36,7 @@ export interface AuthService {
   requestPasswordReset(email: string): Promise<void>;
   /** 메일 링크의 code로 새 비밀번호를 정한다. 성공하면 로그인된다. */
   resetPassword(code: string, newPassword: string): Promise<void>;
+  /** 이메일 계정의 비밀번호를 바꾼다. 현재 비밀번호가 맞아야 한다. */
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
   signOut(): Promise<void>;
 }

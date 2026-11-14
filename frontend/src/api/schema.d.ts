@@ -35,6 +35,36 @@ export interface paths {
         get: operations["get_me_me_get"];
         put?: never;
         post?: never;
+        /**
+         * Delete Me
+         * @description 회원 탈퇴(ADR 0005). 로그인 계정을 지우고, 여행 데이터는 규칙대로 지우거나 넘기거나 이름만 지운다.
+         *
+         *     로그인 계정 삭제가 실패하면 DB도 되돌린다(아무것도 바뀌지 않은 채 502).
+         */
+        delete: operations["delete_me_me_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Me
+         * @description 표시 이름을 바꾼다. 모든 여행의 멤버 목록·정산에 바뀐 이름이 보인다.
+         */
+        patch: operations["update_me_me_patch"];
+        trace?: never;
+    };
+    "/me/deletion-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Deletion
+         * @description 탈퇴하면 내 여행들이 어떻게 되는지 미리 본다. 아무것도 바꾸지 않는다.
+         */
+        get: operations["preview_deletion_me_deletion_preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -189,6 +219,26 @@ export interface paths {
          * @description 총무가 다른 멤버를 내보낸다.
          */
         delete: operations["remove_member_trips__trip_id__members__member_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/organizer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hand Over Organizer
+         * @description 총무가 다른 멤버에게 총무를 넘긴다(ADR 0005). 넘긴 뒤 나는 일반 멤버가 된다.
+         */
+        post: operations["hand_over_organizer_trips__trip_id__organizer_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -621,6 +671,18 @@ export interface components {
             /** Idempotency Key */
             idempotency_key: string;
         };
+        /**
+         * DeletionPreview
+         * @description 탈퇴하면 일어나는 일. 확인 화면에 그대로 보여 준다.
+         */
+        DeletionPreview: {
+            /** Deleted Trips */
+            deleted_trips: components["schemas"]["TripRef"][];
+            /** Handed Over */
+            handed_over: components["schemas"]["HandOver"][];
+            /** Kept Records */
+            kept_records: components["schemas"]["TripRef"][];
+        };
         /** ErrorDetail */
         ErrorDetail: {
             /** Field */
@@ -768,6 +830,12 @@ export interface components {
             item_count: number;
             place?: components["schemas"]["PlaceOut"] | null;
         };
+        /** HandOver */
+        HandOver: {
+            trip: components["schemas"]["TripRef"];
+            /** New Organizer Name */
+            new_organizer_name: string;
+        };
         /** Health */
         Health: {
             /** Status */
@@ -902,6 +970,14 @@ export interface components {
             join_order: number;
             /** Is Organizer */
             is_organizer: boolean;
+        };
+        /** OrganizerChange */
+        OrganizerChange: {
+            /**
+             * Member Id
+             * Format: uuid
+             */
+            member_id: string;
         };
         /** PhotoList */
         PhotoList: {
@@ -1062,6 +1138,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Display Name */
+            display_name: string;
+        };
+        /** ProfileUpdate */
+        ProfileUpdate: {
             /** Display Name */
             display_name: string;
         };
@@ -1287,6 +1368,16 @@ export interface components {
             member_count: number;
             me: components["schemas"]["MyMembership"];
         };
+        /** TripRef */
+        TripRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** TripSummary */
         TripSummary: {
             /**
@@ -1376,6 +1467,131 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Profile"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_me_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 로그인 계정 삭제 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_me_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_deletion_me_deletion_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletionPreview"];
                 };
             };
             /** @description 로그인 필요 */
@@ -1982,6 +2198,77 @@ export interface operations {
                 };
             };
             /** @description 내보낼 수 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    hand_over_organizer_trips__trip_id__organizer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizerChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripDetail"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 총무 아님 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 넘길 수 없는 멤버 */
             409: {
                 headers: {
                     [name: string]: unknown;

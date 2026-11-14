@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI
 
 from app.auth import AuthVerifier, SupabaseJwtVerifier
+from app.auth_admin import AuthAdmin, SupabaseAuthAdmin
 from app.config import Settings, load_settings
 from app.db import make_sessionmaker
 from app.errors import install_error_handlers
@@ -28,6 +29,7 @@ def create_app(
     plan_suggester: PlanSuggester | None = None,
     storage: ObjectStorage | None = None,
     receipt_reader: ReceiptReader | None = None,
+    auth_admin: AuthAdmin | None = None,
 ) -> FastAPI:
     settings = settings or load_settings()
     app = FastAPI(title="Travel Together API", version="0.1.0")
@@ -42,6 +44,7 @@ def create_app(
     app.state.plan_suggester = plan_suggester or GeminiPlanSuggester(settings.gemini_api_key, settings.gemini_model)
     app.state.storage = storage or SupabaseStorage(settings.supabase_url, settings.supabase_service_role_key, settings.storage_bucket)
     app.state.receipt_reader = receipt_reader or GeminiReceiptReader(settings.gemini_api_key, settings.gemini_model)
+    app.state.auth_admin = auth_admin or SupabaseAuthAdmin(settings.supabase_url, settings.supabase_service_role_key)
     install_error_handlers(app)
     install_request_log(app)
     app.include_router(health.router)

@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
+import { ApiError, type ApiClient, type DeletionPreview, type Expense, type ExpensePlaceCandidate, type ExpenseSummary, type Member, type Photo, type Place, type PlaceCandidate, type PlanItem, type Settlement, type Suggestion, type Transfer, type Profile, type TripDetail, type TripSummary } from '@/api/client';
 import { AuthError, type AuthService, type AuthSession, type SignUpResult, type SocialProvider, type SocialSignInResult } from '@/auth/auth-service';
 import { toKstParts } from '@/features/expenses/expense-form';
 
@@ -15,8 +15,8 @@ export class FakeAuthService implements AuthService {
     this.users.set(email, { password, displayName });
   }
 
-  signInAs(email: string) {
-    this.session = { userId: email, email };
+  signInAs(email: string, provider = 'email') {
+    this.session = { userId: email, email: provider === 'email' ? email : null, provider };
   }
 
   isSignedIn() {
@@ -42,13 +42,13 @@ export class FakeAuthService implements AuthService {
     if (this.users.get(email)?.password !== password) {
       throw new AuthError('이메일 또는 비밀번호가 맞지 않습니다.');
     }
-    this.setSession({ userId: email, email });
+    this.setSession({ userId: email, email, provider: 'email' });
   }
 
   async signUp(email: string, password: string, displayName: string): Promise<SignUpResult> {
     this.signUps.push({ email, displayName });
     this.users.set(email, { password, displayName });
-    this.setSession({ userId: email, email });
+    this.setSession({ userId: email, email, provider: 'email' });
     return { needsEmailConfirmation: false };
   }
 
@@ -59,7 +59,7 @@ export class FakeAuthService implements AuthService {
   async signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult> {
     this.socialSignIns.push(provider);
     if (this.socialResult instanceof AuthError) throw this.socialResult;
-    if (this.socialResult === 'signed_in') this.setSession({ userId: `${provider}-user`, email: null });
+    if (this.socialResult === 'signed_in') this.setSession({ userId: `${provider}-user`, email: null, provider });
     return this.socialResult;
   }
 
@@ -74,7 +74,17 @@ export class FakeAuthService implements AuthService {
     if (code === 'expired') throw new AuthError('재설정 링크가 만료되었거나 이미 사용되었어요. 비밀번호를 요청한 휴대폰에서 비밀번호 찾기를 다시 해 주세요.');
     const email = this.resetRequests.at(-1) ?? 'minji@example.com';
     this.users.set(email, { password: newPassword, displayName: this.users.get(email)?.displayName ?? '민지' });
-    this.setSession({ userId: email, email });
+    this.setSession({ userId: email, email, provider: 'email' });
+  }
+
+  readonly passwordChanges: string[] = [];
+
+  /** 비밀번호를 정해 두지 않은 사용자는 'current-pw'를 현재 비밀번호로 본다. */
+  async changePassword(currentPassword: string, newPassword: string) {
+    const email = this.session?.email ?? '';
+    if ((this.users.get(email)?.password ?? 'current-pw') !== currentPassword) throw new AuthError('현재 비밀번호가 맞지 않습니다.');
+    this.users.set(email, { password: newPassword, displayName: this.users.get(email)?.displayName ?? '민지' });
+    this.passwordChanges.push(newPassword);
   }
 
   async signOut() {
@@ -129,6 +139,8 @@ type FakeApiOptions = {
   photoLimit?: number;
   /** 지출 장소 후보(검색어가 이름에 들어간 것만) */
   expensePlaceCandidates?: ExpensePlaceCandidate[];
+  /** 탈퇴 미리보기 결과 */
+  deletionPreview?: DeletionPreview;
   /** 영수증 분석 결과로 돌려줄 지출 초안 내용과 분석 상태 */
   receipt?: { expense: Partial<Expense>; analysis: 'read' | 'reused' | 'failed'; receipt_currency?: string | null };
 };
@@ -161,9 +173,9 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [] }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] } }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
-  const profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
+  let profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   const store = [...trips];
   const memberStore: Record<string, Member[]> = Object.fromEntries(Object.entries(members).map(([id, list]) => [id, [...list]]));
   const membersOf = (tripId: string) => memberStore[tripId] ?? [member()];
@@ -224,6 +236,15 @@ export function fakeApi(
   });
   return {
     getMe: jest.fn(async () => profile),
+    updateMe: jest.fn(async (displayName) => (profile = { ...profile, display_name: displayName.trim() })),
+    getDeletionPreview: jest.fn(async () => deletionPreview),
+    deleteMe: jest.fn(async () => undefined),
+    handOverOrganizer: jest.fn(async (tripId, memberId) => {
+      const index = store.findIndex((t) => t.id === tripId);
+      store[index] = { ...store[index], me: { ...store[index].me, is_organizer: false } };
+      memberStore[tripId] = membersOf(tripId).map((m) => ({ ...m, is_organizer: m.member_id === memberId }));
+      return store[index];
+    }),
     listTrips: jest.fn(async () => store.map(summary)),
     createTrip: jest.fn(async (input) => {
       const trip = tripDetail({ ...input, id: `trip-${store.length + 1}` });

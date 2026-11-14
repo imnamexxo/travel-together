@@ -4,7 +4,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
-import { useDeleteTrip, useLeaveTrip, useUpdateTrip } from '@/api/queries';
+import { useDeleteTrip, useHandOverOrganizer, useLeaveTrip, useMembers, useUpdateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
 import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
@@ -28,6 +28,7 @@ export default function TripSettingsScreen() {
         <Text style={s.title}>여행 설정</Text>
         {isOrganizer ? <>
           <EditTripForm />
+          <HandOverOrganizer />
           <DeleteTrip />
         </> : <LeaveTrip />}
       </ScrollView>
@@ -80,6 +81,39 @@ function EditTripForm() {
   </View>;
 }
 
+function HandOverOrganizer() {
+  const { trip } = useCurrentTrip();
+  const members = useMembers(trip.id);
+  const handOver = useHandOverOrganizer(trip.id);
+  const [error, setError] = useState<string | null>(null);
+  const others = (members.data ?? []).filter((m) => !m.is_me);
+
+  function confirm(memberId: string, name: string) {
+    Alert.alert(`${name}님에게 총무를 넘길까요?`, '넘기면 지출·송금 관리, 초대 코드, 여행 설정은 새 총무만 할 수 있어요. 되돌리려면 새 총무가 다시 넘겨줘야 해요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '넘기기', onPress: async () => {
+          setError(null);
+          try {
+            await handOver.mutateAsync(memberId);
+          } catch (e) {
+            setError(errorText(e, '총무를 넘기지 못했어요. 잠시 후 다시 시도해주세요.'));
+          }
+        },
+      },
+    ]);
+  }
+
+  return <View style={s.section}>
+    <Text style={s.heading}>총무 넘기기</Text>
+    <Text style={s.hint}>{others.length ? '다른 멤버에게 총무를 넘길 수 있어요. 넘긴 뒤에는 일반 멤버가 돼요.' : '함께하는 멤버가 들어오면 총무를 넘길 수 있어요.'}</Text>
+    {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
+    {others.map((m) => <Pressable key={m.member_id} accessibilityRole="button" accessibilityLabel={`${m.display_name}에게 총무 넘기기`} disabled={handOver.isPending} onPress={() => confirm(m.member_id, m.display_name)} style={({ pressed }) => [s.rowButton, (pressed || handOver.isPending) && s.pressed]}>
+      <Text style={s.rowText}>{m.display_name}</Text><Text style={s.rowAction}>넘기기 ›</Text>
+    </Pressable>)}
+  </View>;
+}
+
 function DeleteTrip() {
   const { trip } = useCurrentTrip();
   const remove = useDeleteTrip(trip.id);
@@ -104,7 +138,7 @@ function DeleteTrip() {
 
   return <View style={s.section}>
     <Text style={s.heading}>여행 삭제</Text>
-    <Text style={s.hint}>총무는 여행에서 나갈 수 없어요. 여행이 필요 없어지면 삭제해 주세요.</Text>
+    <Text style={s.hint}>총무는 여행에서 나갈 수 없어요. 총무를 넘긴 뒤 나가거나, 여행이 필요 없어지면 삭제해 주세요.</Text>
     {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: remove.isPending }} disabled={remove.isPending} onPress={confirm} style={({ pressed }) => [s.dangerButton, (pressed || remove.isPending) && s.pressed]}>
       <Text style={s.dangerText}>여행 삭제</Text>
@@ -162,5 +196,7 @@ const s = StyleSheet.create({
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
   dangerButton: { minHeight: 52, borderRadius: 13, borderWidth: 1, borderColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
   dangerText: { fontSize: 15, fontWeight: '600', color: C.error },
+  rowButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 50, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.surface, marginTop: 10 },
+  rowText: { fontSize: 15, color: C.text }, rowAction: { fontSize: 13, color: C.accent },
   pressed: { opacity: 0.6 },
 });

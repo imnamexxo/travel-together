@@ -148,11 +148,12 @@ test('서버가 401을 돌려주면 로그아웃되고 로그인 화면으로 �
   await waitFor(() => expect(auth.isSignedIn()).toBe(false));
 });
 
-test('여행 목록에서 로그아웃하면 로그인 화면으로 돌아간다', async () => {
+test('계정 관리에서 로그아웃하면 로그인 화면으로 돌아간다', async () => {
   const auth = new FakeAuthService();
   auth.signInAs('minji@example.com');
   renderApp({ auth, api: fakeApi() });
 
+  fireEvent.press(await screen.findByRole('button', { name: '계정 관리' }));
   fireEvent.press(await screen.findByRole('button', { name: '로그아웃' }));
 
   expect(await screen.findByLabelText('이메일')).toBeOnTheScreen();
