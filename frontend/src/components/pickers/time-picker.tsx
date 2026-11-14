@@ -68,14 +68,15 @@ function Wheel({ values, selected, onChange, unit }: { values: number[]; selecte
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  // 굴리는 동안에도 가운데에 온 숫자를 바로 고른 값으로 삼아 진하게 보인다.
+  const follow = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const i = Math.min(values.length - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.y / ITEM)));
     if (values[i] !== selected) onChange(values[i]);
   };
 
   return <ScrollView ref={ref} style={s.wheel} showsVerticalScrollIndicator={false} snapToInterval={ITEM} decelerationRate="fast"
     nestedScrollEnabled contentContainerStyle={{ paddingVertical: ITEM * Math.floor(VISIBLE / 2) }}
-    onMomentumScrollEnd={settle} onScrollEndDrag={(e) => { if (!e.nativeEvent.velocity?.y) settle(e); }}>
+    scrollEventThrottle={16} onScroll={follow} onMomentumScrollEnd={follow} onScrollEndDrag={follow}>
     {values.map((v, i) => {
       const distance = Math.abs(i - index);
       return <Pressable key={v} accessibilityRole="button" accessibilityLabel={`${v}${unit}`} accessibilityState={{ selected: v === selected }}
