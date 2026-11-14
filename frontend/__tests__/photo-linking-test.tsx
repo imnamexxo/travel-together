@@ -147,5 +147,6 @@ test('지도에서 사진이 연결된 장소는 들른 곳이다', async () => 
   fireEvent.press(await screen.findByRole('tab', { name: '● 들른 곳' }));
 
   expect(await screen.findByText('1곳')).toBeOnTheScreen();
-  expect(screen.getByText('장소 미연결 사진 1장')).toBeOnTheScreen();
+  // 미연결 사진 줄은 지도 정보창에서 뺐다(앨범에서 연결한다).
+  expect(screen.queryByText(/미연결 사진/)).toBeNull();
 });

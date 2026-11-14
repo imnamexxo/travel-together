@@ -11,6 +11,7 @@ import { photoDayIndex } from '@/features/album/album-screen';
 import TravelNotes from './travel-notes';
 import { useAuth } from '@/auth/auth-context';
 import { useCurrentTrip } from './current-trip';
+import ActionSheet from '@/components/action-sheet';
 import PlanItemEditor from './plan-item-editor';
 import { formatPeriod } from './trip-dates';
 
@@ -34,6 +35,7 @@ export default function HomeScreen() {
   const [selectedDay, setDay] = useState(Math.max(todayIndex, 0));
   const day = Math.min(selectedDay, days.length - 1);
   const [editing, setEditing] = useState<Editing>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const plans = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
   // 일정 항목의 장소에 연결된 그날의 사진 수
   // 그날 그 장소에서 쓴 확정된 지출의 합
@@ -51,17 +53,7 @@ export default function HomeScreen() {
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={planItems.isRefetching} onRefresh={refresh} tintColor={C.primary} />}>
       <View style={s.between}><Text style={s.eyebrow}>TOGETHER, EVERYWHERE</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => Alert.alert('여행 메뉴', [
-          me.data && `${me.data.display_name}님으로 로그인했어요.`,
-          isOrganizer && '이 여행의 총무예요.',
-          `멤버 ${trip.member_count}명`,
-        ].filter(Boolean).join('\n'), [
-          { text: '닫기', style: 'cancel' },
-          { text: '멤버·초대 코드', onPress: () => router.navigate(`/trips/${trip.id}/members`) },
-          { text: '여행 설정', onPress: () => router.navigate(`/trips/${trip.id}/settings`) },
-          { text: '내 여행 목록', onPress: () => router.replace('/') },
-          { text: '로그아웃', onPress: () => Alert.alert('로그아웃할까요?', '이 기기에서 로그아웃해요.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
-        ])}><Text style={s.more}>•••</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => setMenuOpen(true)}><Text style={s.more}>•••</Text></Pressable>
       </View>
       <Text style={s.title}>{trip.name}</Text><Text style={s.subtitle}>{formatPeriod(trip.start_date, trip.end_date)}  ·  {trip.member_count}명</Text>
       <TravelNotes />
@@ -94,11 +86,19 @@ export default function HomeScreen() {
       <Pressable accessibilityRole="button" onPress={() => setEditing({})} style={({ pressed }) => [s.add, pressed && s.pressed]}><Text style={s.link}>＋ 일정 추가</Text></Pressable>
       <Text style={s.notice}>당겨서 새로고침하면 다른 멤버가 바꾼 일정이 보여요</Text>
     </ScrollView>
+    <ActionSheet visible={menuOpen} title={trip.name} onClose={() => setMenuOpen(false)}
+      info={[me.data ? `${me.data.display_name}님으로 로그인했어요.` : '', isOrganizer ? '이 여행의 총무예요.' : '', `멤버 ${trip.member_count}명`].filter(Boolean)}
+      actions={[
+        { label: '멤버·초대 코드', onPress: () => router.navigate(`/trips/${trip.id}/members`) },
+        { label: '여행 설정', onPress: () => router.navigate(`/trips/${trip.id}/settings`) },
+        { label: '내 여행 목록', onPress: () => router.replace('/') },
+        { label: '로그아웃', destructive: true, onPress: () => Alert.alert('로그아웃할까요?', '이 기기에서 로그아웃해요.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
+      ]} />
     {editing && <PlanItemEditor item={editing.item} day={days[day]} dayNumber={day + 1} dayItems={plans} onClose={() => setEditing(null)} />}
   </SafeAreaView>;
 }
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
+  screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 72, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted },
   circle: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' }, more: { color: C.textSecondary, fontSize: 18 },
   title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.text, marginTop: 12 }, subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10 },
