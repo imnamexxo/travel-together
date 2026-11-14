@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 
 import { newIdempotencyKey, type ExpenseSummary } from '@/api/client';
@@ -20,7 +21,7 @@ export default function ExpenseList() {
   const receiptKey = useRef(newIdempotencyKey());
 
   function chooseReceipt() {
-    Alert.alert('영수증으로 추가', '영수증을 찍거나 앨범에서 골라 주세요.', [
+    showAlert('영수증으로 추가', '영수증을 찍거나 앨범에서 골라 주세요.', [
       { text: '취소', style: 'cancel' },
       { text: '앨범에서 고르기', onPress: () => void addReceipt('library') },
       { text: '사진 찍기', onPress: () => void addReceipt('camera') },

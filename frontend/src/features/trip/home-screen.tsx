@@ -1,6 +1,7 @@
 import { TravelColors as C } from '@/constants/theme';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -120,7 +121,7 @@ export default function HomeScreen() {
         { label: '멤버·초대 코드', onPress: () => router.navigate(`/trips/${trip.id}/members`) },
         { label: '여행 설정', onPress: () => router.navigate(`/trips/${trip.id}/settings`) },
         { label: '내 여행 목록', onPress: () => router.replace('/') },
-        { label: '로그아웃', destructive: true, onPress: () => Alert.alert('로그아웃할까요?', '이 기기에서 로그아웃해요.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
+        { label: '로그아웃', destructive: true, onPress: () => showAlert('로그아웃할까요?', '이 기기에서 로그아웃해요.', [{ text: '취소', style: 'cancel' }, { text: '로그아웃', style: 'destructive', onPress: () => void signOut() }]) },
       ]} />
     {editing && <PlanItemEditor item={editing.item} day={days[day]} dayNumber={day + 1} onClose={() => setEditing(null)} />}
   </SafeAreaView>;

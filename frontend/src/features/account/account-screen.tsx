@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -123,7 +124,7 @@ function MyTrips() {
   const mine = (trips.data ?? []).filter((t) => t.is_organizer);
 
   function confirm(trip: TripSummary) {
-    Alert.alert(`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.', [
+    showAlert(`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제', style: 'destructive', onPress: async () => {

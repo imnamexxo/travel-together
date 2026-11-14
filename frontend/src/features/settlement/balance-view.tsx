@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -56,14 +57,14 @@ export default function BalanceView() {
   }
 
   function confirmRecord(suggestion: Suggestion) {
-    Alert.alert('송금 완료로 기록할까요?', `${suggestion.from_name} → ${suggestion.to_name} ${money.format(suggestion.amount)}\n앱은 실제로 송금하지 않아요. 은행 앱에서 보낸 뒤 기록해 주세요.`, [
+    showAlert('송금 완료로 기록할까요?', `${suggestion.from_name} → ${suggestion.to_name} ${money.format(suggestion.amount)}\n앱은 실제로 송금하지 않아요. 은행 앱에서 보낸 뒤 기록해 주세요.`, [
       { text: '취소', style: 'cancel' },
       { text: '기록', onPress: () => record(suggestion, suggestion.amount) },
     ]);
   }
 
   function confirmDelete(transferId: string, label: string) {
-    Alert.alert('송금 기록을 지울까요?', `${label}\n잘못 기록한 경우에만 지워 주세요. 잔액이 다시 계산돼요.`, [
+    showAlert('송금 기록을 지울까요?', `${label}\n잘못 기록한 경우에만 지워 주세요. 잔액이 다시 계산돼요.`, [
       { text: '취소', style: 'cancel' },
       { text: '지우기', style: 'destructive', onPress: () => deleteTransfer.mutate(transferId, { onError: (e) => setNotice(e.message) }) },
     ]);

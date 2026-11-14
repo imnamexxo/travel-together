@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -72,7 +73,7 @@ export default function AlbumScreen() {
 
   async function addPhotos() {
     if (pickingRef.current || uploader.busy) return;
-    if (remaining <= 0) { Alert.alert('사진이 가득 찼어요', `이 여행에는 사진을 최대 ${limit}장까지 담을 수 있어요.`); return; }
+    if (remaining <= 0) { showAlert('사진이 가득 찼어요', `이 여행에는 사진을 최대 ${limit}장까지 담을 수 있어요.`); return; }
     pickingRef.current = true; setPicking(true);
     try {
       const picked = await pickPhotos(remaining);
@@ -82,18 +83,18 @@ export default function AlbumScreen() {
       // 촬영 위치는 여기서 장소를 찾는 데만 쓰고 버린다. 서버에는 장소 id만 간다.
       uploader.start(picked, (p) => autoPlaceId(p.gps, p.takenAt, items));
     } catch {
-      Alert.alert('사진을 불러오지 못했어요', '사진 선택 권한과 기기의 사진 상태를 확인하고 다시 시도해주세요.');
+      showAlert('사진을 불러오지 못했어요', '사진 선택 권한과 기기의 사진 상태를 확인하고 다시 시도해주세요.');
     } finally { pickingRef.current = false; setPicking(false); }
   }
 
   function removeSelected() {
     if (!selected) return;
     const id = selected.id;
-    Alert.alert('사진을 지울까요?', '모든 멤버의 앨범에서 지워져요. 기기의 원본 사진은 그대로예요.', [
+    showAlert('사진을 지울까요?', '모든 멤버의 앨범에서 지워져요. 기기의 원본 사진은 그대로예요.', [
       { text: '취소', style: 'cancel' },
       { text: '지우기', style: 'destructive', onPress: () => remove.mutate(id, {
         onSuccess: () => setSelectedId(null),
-        onError: (e) => Alert.alert('지우지 못했어요', e.message),
+        onError: (e) => showAlert('지우지 못했어요', e.message),
       }) },
     ]);
   }

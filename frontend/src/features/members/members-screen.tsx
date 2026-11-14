@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,7 +46,7 @@ function MemberRow({ member, canRemove }: { member: Member; canRemove: boolean }
   const remove = useRemoveMember(trip.id);
 
   function confirm() {
-    Alert.alert(`${member.display_name}님을 내보낼까요?`, '다시 들어오려면 초대 코드가 필요해요.', [
+    showAlert(`${member.display_name}님을 내보낼까요?`, '다시 들어오려면 초대 코드가 필요해요.', [
       { text: '취소', style: 'cancel' },
       { text: '내보내기', style: 'destructive', onPress: () => remove.mutate(member.member_id) },
     ]);
@@ -93,7 +94,7 @@ function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string
   }
 
   function confirmReissue() {
-    Alert.alert('초대 코드를 새로 만들까요?', '지금 코드로는 더 이상 들어올 수 없어요. 이미 들어온 멤버는 그대로예요.', [
+    showAlert('초대 코드를 새로 만들까요?', '지금 코드로는 더 이상 들어올 수 없어요. 이미 들어온 멤버는 그대로예요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '새로 만들기', style: 'destructive', onPress: () => {

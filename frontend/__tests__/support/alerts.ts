@@ -1,9 +1,11 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { Alert, type AlertButton } from 'react-native';
+import type { AlertButton } from 'react-native';
 
-/** 테스트에서는 Alert.alert가 창을 띄우지 않는다. 호출 내용을 가로채 확인한다. */
+import * as dialog from '@/components/dialog';
+
+/** 테스트에서는 확인창(showAlert)을 띄우지 않는다. 호출 내용을 가로채 확인한다. */
 export function spyOnAlerts() {
-  return jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  return jest.spyOn(dialog, 'showAlert').mockImplementation(() => {});
 }
 
 /** "•••" 여행 메뉴(아래에서 올라오는 메뉴)를 열고, 안내 문구와 항목을 누르는 함수를 돌려준다. */

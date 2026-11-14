@@ -5,6 +5,7 @@ import { ApiProvider } from '@/api/api-context';
 import type { ApiClient } from '@/api/client';
 import { createQueryClient } from '@/api/query-client';
 import { AuthProvider, useAuth } from '@/auth/auth-context';
+import { DialogHost } from '@/components/dialog';
 import type { AuthService } from '@/auth/auth-service';
 
 type AppProvidersProps = {
@@ -19,6 +20,7 @@ export function AppProviders({ authService, api, children }: AppProvidersProps) 
     <AuthProvider service={authService}>
       <ApiProvider client={api}>
         <QueryLayer>{children}</QueryLayer>
+        <DialogHost />
       </ApiProvider>
     </AuthProvider>
   );

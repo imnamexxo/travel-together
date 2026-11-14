@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,7 +19,7 @@ export default function DeleteAccountScreen() {
   const [error, setError] = useState<string | null>(null);
 
   function confirm() {
-    Alert.alert('정말 탈퇴할까요?', '계정과 위 내용은 되돌릴 수 없어요.', [
+    showAlert('정말 탈퇴할까요?', '계정과 위 내용은 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '탈퇴', style: 'destructive', onPress: async () => {

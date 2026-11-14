@@ -87,7 +87,7 @@ test('친구 화면에서 친구 링크를 보내고, 친구를 끊는다', asyn
 });
 
 test('친구 링크로 열리면 친구가 되고 알려 준다', async () => {
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const alert = spyOnAlerts();
   const api = fakeApi();
   renderApp({ auth: signedIn(), api, initialUrl: '/friend?code=junh2345' });
 

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Person } from '@/api/client';
@@ -38,7 +39,7 @@ export default function FriendsScreen() {
   }
 
   function confirmRemove(person: Person) {
-    Alert.alert(`${person.display_name}님과 친구를 끊을까요?`, '상대의 친구 목록에서도 사라져요. 함께한 여행은 그대로예요.', [
+    showAlert(`${person.display_name}님과 친구를 끊을까요?`, '상대의 친구 목록에서도 사라져요. 함께한 여행은 그대로예요.', [
       { text: '취소', style: 'cancel' },
       { text: '끊기', style: 'destructive', onPress: () => remove.mutate(person.user_id, { onError: fail }) },
     ]);
