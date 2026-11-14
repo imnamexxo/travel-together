@@ -30,8 +30,8 @@ afterEach(() => jest.restoreAllMocks());
 test('여행 메뉴에서 멤버 화면을 열면 가입 순서대로 멤버와 총무가 보인다', async () => {
   renderApp({ auth: signedIn(), api: fakeApi({}, { trips: [organizerTrip], members: { 'trip-jeju': threeMembers } }), initialUrl: '/trips/trip-jeju' });
 
-  const { buttons } = await openTripMenu();
-  await pressAlertButton(buttons, '멤버·초대 코드');
+  const { choose } = await openTripMenu();
+  await choose('멤버·초대 코드');
 
   expect(await screen.findByText('민지 (나)')).toBeOnTheScreen();
   const names = screen.getAllByText(/^(민지 \(나\)|준호|수빈)$/).map((node) => node.props.children.join?.('') ?? node.props.children);

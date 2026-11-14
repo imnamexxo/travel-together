@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 
 import { ApiError, type PlaceCandidate, type PlanItem } from '@/api/client';
 import { useDeletePlanItem, usePlaceSearch, useReorderPlanItems, useSavePlanItem } from '@/api/queries';
@@ -30,6 +32,8 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   const { trip, isOrganizer, money } = useCurrentTrip();
   const save = useSavePlanItem(trip.id);
   const remove = useDeletePlanItem(trip.id);
+  const keyboard = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
   const reorder = useReorderPlanItems(trip.id);
   const [title, setTitle] = useState(item?.title ?? '');
   const [time, setTime] = useState(item?.time?.slice(0, 5) ?? '');
@@ -104,13 +108,13 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
   }
 
   return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-    <SafeAreaView style={s.screen}><KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <SafeAreaView style={s.screen}>
+      <View style={s.header}>
+        <Pressable accessibilityRole="button" style={s.action} onPress={onClose}><Text style={s.muted}>취소</Text></Pressable>
+        <Text style={s.title}>{item ? '일정 수정' : '일정 추가'}</Text>
+        <View style={s.action} />
+      </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
-        <View style={s.between}>
-          <Pressable accessibilityRole="button" style={s.action} onPress={onClose}><Text style={s.muted}>취소</Text></Pressable>
-          <Text style={s.title}>{item ? '일정 수정' : '일정 추가'}</Text>
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} style={s.action} onPress={submit}><Text style={s.link}>저장</Text></Pressable>
-        </View>
         <Text style={s.caption}>{dayNumber}일 차 · {day.title}</Text>
 
         <Text style={s.label}>장소</Text>
@@ -153,13 +157,21 @@ export default function PlanItemEditor({ item, day, dayNumber, dayItems, onClose
         {canDelete && <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={confirmDelete} style={s.deleteButton}><Text style={s.error}>일정 지우기</Text></Pressable>}
         {item && !canDelete && <Text style={s.caption}>다른 멤버가 만든 일정은 고칠 수 있지만, 지우기는 만든 사람과 총무만 할 수 있어요.</Text>}
       </ScrollView>
-    </KeyboardAvoidingView></SafeAreaView>
+      {/* 저장은 아래에 고정한다. 키보드가 올라오면 그 위로 따라 올라온다. */}
+      <View style={[s.saveBar, { marginBottom: Math.max(0, keyboard - insets.bottom) }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="저장" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={({ pressed }) => [s.saveButton, (pressed || busy) && s.pressedSave]}><Text style={s.saveText}>저장</Text></Pressable>
+      </View>
+    </SafeAreaView>
   </Modal>;
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, flex: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, width: '100%', maxWidth: 600, alignSelf: 'center' },
+  saveBar: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider, backgroundColor: C.background },
+  saveButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 552, alignSelf: 'center' },
+  saveText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressedSave: { opacity: 0.6 },
   action: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
   title: { color: C.text, fontSize: 16, fontWeight: '600' },
   muted: { fontSize: 13, color: C.textSecondary }, link: { fontSize: 14, color: C.accent, fontWeight: '500' },

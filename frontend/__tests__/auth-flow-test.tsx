@@ -165,8 +165,8 @@ test('여행 메뉴에서 로그아웃하면 로그인 화면으로 돌아간다
   auth.signInAs('minji@example.com');
   renderApp({ auth, api: fakeApi({}, { trips: [tripDetail()] }), initialUrl: '/trips/trip-jeju' });
 
-  const { alert, buttons } = await openTripMenu();
-  await pressAlertButton(buttons, '로그아웃');
+  const { alert, choose } = await openTripMenu();
+  await choose('로그아웃');
   await pressAlertButton(alert.mock.calls.at(-1)![2] as AlertButton[], '로그아웃');
 
   expect(await screen.findByLabelText('이메일')).toBeOnTheScreen();

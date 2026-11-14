@@ -31,8 +31,8 @@ test('총무는 여행 메뉴에서 설정을 열어 이름과 기간을 바꾼�
   const api = fakeApi({}, { trips: [organizerTrip] });
   renderApp({ auth: signedIn(), api, initialUrl: '/trips/trip-jeju' });
 
-  const { buttons } = await openTripMenu();
-  await pressAlertButton(buttons, '여행 설정');
+  const { choose } = await openTripMenu();
+  await choose('여행 설정');
   fireEvent.changeText(await screen.findByLabelText('여행 이름'), '제주 3박');
   await pickPeriod('2026-11-12', '2026-11-15');
   fireEvent.press(screen.getByRole('button', { name: '저장' }));

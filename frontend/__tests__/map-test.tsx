@@ -51,7 +51,7 @@ test('날짜를 고르면 그날 계획했거나 들른 장소만 보이고, 들
   expect(screen.getByText('들른 날 1일 차')).toBeOnTheScreen();
 });
 
-test('아래 장소 정보는 손잡이로 접고 펼칠 수 있다(접어도 이름과 요약은 보인다)', async () => {
+test('아래 장소 정보는 손잡이로 접고 펼칠 수 있다(접으면 이름과 주소만 보인다)', async () => {
   render();
   expect(await screen.findByText('플래너 보기')).toBeOnTheScreen();
 
@@ -59,8 +59,19 @@ test('아래 장소 정보는 손잡이로 접고 펼칠 수 있다(접어도 �
 
   // 부드럽게 접힌 뒤에 내용이 빠진다.
   await waitFor(() => expect(screen.queryByText('플래너 보기')).toBeNull());
-  expect(screen.getByText(/^일정 1개 · 사진 1장/)).toBeOnTheScreen();
+  expect(screen.queryByText(/^일정 1개 · 사진 1장/)).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: '장소 정보 펼치기' }));
   expect(await screen.findByText('플래너 보기')).toBeOnTheScreen();
   await waitFor(() => expect(screen.getByRole('button', { name: '장소 정보 접기' })).toBeOnTheScreen());
+});
+
+test('정보창의 사진을 누르면 크게 보고, 미연결 사진 줄은 없다', async () => {
+  render();
+  fireEvent.press(await screen.findByRole('button', { name: '사진 1 크게 보기' }));
+
+  expect(await screen.findByLabelText('크게 본 사진')).toBeOnTheScreen();
+  expect(screen.getByText('1 / 1')).toBeOnTheScreen();
+  expect(screen.queryByText(/미연결 사진/)).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: '사진 닫기' }));
+  await waitFor(() => expect(screen.queryByLabelText('크게 본 사진')).toBeNull());
 });
