@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useJoinTrip } from '@/api/queries';
@@ -49,7 +50,7 @@ export default function JoinTripScreen() {
           autoCapitalize="characters" autoCorrect={false} autoComplete="off" maxLength={16} returnKeyType="go" onSubmitEditing={() => submit()}
           style={[s.input, !!error && s.invalid]} />
         {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: join.isPending, busy: join.isPending }} disabled={join.isPending} onPress={() => submit()} style={({ pressed }) => [s.primaryButton, (pressed || join.isPending) && s.pressed]}>
+        <Pressable haptic accessibilityRole="button" accessibilityState={{ disabled: join.isPending, busy: join.isPending }} disabled={join.isPending} onPress={() => submit()} style={({ pressed }) => [s.primaryButton, (pressed || join.isPending) && s.pressed]}>
           <Text style={s.primaryText}>들어가기</Text>
         </Pressable>
       </ScrollView>

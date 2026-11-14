@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 
 import { newIdempotencyKey, type ExpenseSummary } from '@/api/client';
 import { useExpenses, useUploadReceipt } from '@/api/queries';

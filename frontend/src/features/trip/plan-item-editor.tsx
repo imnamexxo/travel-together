@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
@@ -138,7 +139,7 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
       </ScrollView>
       {/* 저장은 아래에 고정한다. 키보드가 올라오면 그 위로 따라 올라온다. */}
       <View style={[s.saveBar, { marginBottom: Math.max(0, keyboard - insets.bottom) }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="저장" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={({ pressed }) => [s.saveButton, (pressed || busy) && s.pressedSave]}><Text style={s.saveText}>저장</Text></Pressable>
+        <Pressable haptic accessibilityRole="button" accessibilityLabel="저장" accessibilityState={{ disabled: busy }} disabled={busy} onPress={submit} style={({ pressed }) => [s.saveButton, (pressed || busy) && s.pressedSave]}><Text style={s.saveText}>저장</Text></Pressable>
       </View>
     </SafeAreaView>
   </Modal>;

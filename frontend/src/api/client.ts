@@ -12,6 +12,7 @@ export type Friends = components['schemas']['FriendsOut'];
 export type Person = components['schemas']['Person'];
 export type TripInvite = components['schemas']['TripInviteOut'];
 export type FriendSuggestion = components['schemas']['Suggestion'];
+export type InvitableTrip = components['schemas']['InvitableTrip'];
 export type MapData = components['schemas']['MapData'];
 export type MapPlace = components['schemas']['MapPlace'];
 /** 지도 필터. date는 YYYY-MM-DD. */
@@ -92,6 +93,8 @@ export interface ApiClient {
   /** 친구 링크를 눌러 링크 주인과 바로 친구가 된다. */
   befriendByCode(code: string): Promise<Person>;
   inviteFriend(tripId: string, userId: string): Promise<Person>;
+  /** 친구를 초대할 수 있는 내 여행(내가 총무)과 그 친구의 상태 */
+  listTripsForFriend(userId: string): Promise<InvitableTrip[]>;
   listTripInvites(): Promise<TripInvite[]>;
   acceptTripInvite(inviteId: string): Promise<TripDetail>;
   declineTripInvite(inviteId: string): Promise<void>;
@@ -208,6 +211,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     getFriendCode: () => request<{ code: string }>('GET', '/me/friend-code'),
     befriendByCode: (code) => request<Person>('POST', '/friends/by-code', { code }),
     inviteFriend: (tripId, userId) => request<Person>('POST', `${trip(tripId)}/invites`, { user_id: userId }),
+    listTripsForFriend: (userId) => request<InvitableTrip[]>('GET', `/friends/${encodeURIComponent(userId)}/trips`),
     listTripInvites: () => request<TripInvite[]>('GET', '/me/trip-invites'),
     acceptTripInvite: (id) => request<TripDetail>('POST', `/me/trip-invites/${encodeURIComponent(id)}/accept`),
     declineTripInvite: (id) => request<void>('POST', `/me/trip-invites/${encodeURIComponent(id)}/decline`),

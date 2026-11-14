@@ -173,3 +173,18 @@ def test_suggestions_are_trip_mates_without_a_relation(client, auth):
     client.post("/friends/requests", json={"trip_id": first[0]["trip_id"], "member_id": first[0]["member_id"]}, headers=p.h("준호"))
     assert client.get("/friends/suggestions", headers=p.h("준호")).json() == []
     assert client.get("/friends/suggestions", headers=p.h("민지")).json() == []
+
+
+def test_trips_for_friend_show_member_invited_and_open(client, auth):
+    p = People(client, auth)
+    code = client.get("/me/friend-code", headers=p.h("준호")).json()["code"]
+    client.post("/friends/by-code", json={"code": code}, headers=p.h("민지"))
+    busan = client.post("/trips", json={**JEJU, "name": "부산 여행", "start_date": "2026-12-01", "end_date": "2026-12-02"}, headers=p.h("민지")).json()["id"]
+    seoul = client.post("/trips", json={**JEJU, "name": "서울 여행", "start_date": "2026-10-01", "end_date": "2026-10-02"}, headers=p.h("민지")).json()["id"]
+    client.post(f"/trips/{busan}/invites", json={"user_id": str(p.u["준호"].id)}, headers=p.h("민지"))
+
+    trips = client.get(f"/friends/{p.u['준호'].id}/trips", headers=p.h("민지")).json()
+
+    assert [(t["name"], t["state"]) for t in trips] == [("부산 여행", "invited"), ("제주 여행", "member"), ("서울 여행", "none")]
+    assert seoul
+    assert client.get(f"/friends/{p.u['수빈'].id}/trips", headers=p.h("민지")).status_code == 404

@@ -35,24 +35,31 @@ test('멤버 목록에서 친구 추가를 누르면 요청되고, 받은 요청
   await waitFor(() => expect(api.acceptFriend).toHaveBeenCalledWith('req-subin'));
 });
 
-test('총무는 이 여행에 없는 친구를 초대한다', async () => {
+test('친구 화면에서 친구를 내가 총무인 여행에 초대한다', async () => {
   const api = fakeApi({}, {
-    trips: [tripDetail({ me: { member_id: 'm1', join_order: 1, is_organizer: true } })],
-    members: { 'trip-jeju': [members[0]] },
+    trips: [tripDetail({ me: { member_id: 'm1', join_order: 1, is_organizer: true } }), tripDetail({ id: 'trip-other', name: '남의 여행', me: { member_id: 'x', join_order: 2, is_organizer: false } })],
     friends: { friends: [{ user_id: 'u9', display_name: '하늘' }], incoming: [], outgoing: [] },
   });
-  renderApp({ auth: signedIn(), api, initialUrl: '/trips/trip-jeju/members' });
+  renderApp({ auth: signedIn(), api, initialUrl: '/friends' });
 
-  fireEvent.press(await screen.findByRole('button', { name: '하늘 초대' }));
+  fireEvent.press(await screen.findByRole('button', { name: '하늘 여행에 초대' }));
+  expect(await screen.findByText('제주 여행')).toBeOnTheScreen();
+  expect(screen.queryByText('남의 여행')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: '제주 여행에 하늘 초대' }));
 
   await waitFor(() => expect(api.inviteFriend).toHaveBeenCalledWith('trip-jeju', 'u9'));
   expect(await screen.findByText('초대함')).toBeOnTheScreen();
 });
 
-test('받은 여행 초대를 수락하면 그 여행이 열린다', async () => {
+test('받은 여행 초대는 친구 화면에 있고, 수락하면 그 여행이 열린다', async () => {
   const api = fakeApi({}, { tripInvites: [{ id: 'inv1', trip: { id: 'trip-osaka', name: '오사카 여행', start_date: '2026-12-01', end_date: '2026-12-03' }, inviter_name: '준호' }] });
   renderApp({ auth: signedIn(), api });
 
+  // 여행 목록에는 초대 카드가 없고, 계정 아이콘에 빨간 표시만 있다.
+  expect(await screen.findByRole('button', { name: '계정 관리, 받은 친구 요청·초대 1개' })).toBeOnTheScreen();
+  expect(screen.queryByText('준호님이 초대했어요 · 2026. 12. 1 – 12. 3')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: '계정 관리, 받은 친구 요청·초대 1개' }));
+  fireEvent.press(await screen.findByRole('button', { name: '친구 관리' }));
   expect(await screen.findByText('준호님이 초대했어요 · 2026. 12. 1 – 12. 3')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '오사카 여행 초대 수락' }));
 
@@ -72,7 +79,8 @@ test('친구 화면에서 친구 링크를 보내고, 친구를 끊는다', asyn
   fireEvent.press(screen.getByRole('button', { name: '친구 링크 보내기' }));
   expect(share.mock.calls[0][0].message).toMatch(/\/friend\/FRND2345$/);
 
-  fireEvent.press(screen.getByRole('button', { name: '준호 친구 끊기' }));
+  fireEvent.press(screen.getByRole('button', { name: '준호 더보기' }));
+  fireEvent.press(await screen.findByRole('button', { name: '친구 끊기' }));
   await pressAlertButton(alert.mock.calls.at(-1)![2] as AlertButton[], '끊기');
   await waitFor(() => expect(api.removeFriend).toHaveBeenCalledWith('u2'));
   expect(await screen.findByText('내 친구 0명')).toBeOnTheScreen();

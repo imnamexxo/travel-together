@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
@@ -75,7 +76,7 @@ function EditTripForm() {
     <CurrencyField value={currency} onChange={setCurrency} hint="지출이나 송금 기록이 있으면 통화를 바꿀 수 없어요." />
     <OverseasField value={overseas} onChange={setOverseas} hint="장소를 하나라도 고른 뒤에는 바꿀 수 없어요." warning={!overseas && currency !== 'KRW'} />
     {!!message && <Text accessibilityRole={message.error ? 'alert' : undefined} style={message.error ? s.error : s.notice}>{message.text}</Text>}
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: update.isPending, busy: update.isPending }} disabled={update.isPending} onPress={save} style={({ pressed }) => [s.primaryButton, (pressed || update.isPending) && s.pressed]}>
+    <Pressable haptic accessibilityRole="button" accessibilityState={{ disabled: update.isPending, busy: update.isPending }} disabled={update.isPending} onPress={save} style={({ pressed }) => [s.primaryButton, (pressed || update.isPending) && s.pressed]}>
       <Text style={s.primaryText}>저장</Text>
     </Pressable>
   </View>;

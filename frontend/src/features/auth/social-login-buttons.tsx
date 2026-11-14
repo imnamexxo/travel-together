@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 
 import { useAuth } from '@/auth/auth-context';
 import { AuthError, type SocialProvider } from '@/auth/auth-service';

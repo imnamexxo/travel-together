@@ -186,6 +186,7 @@ export function fakeApi(
   let friendState: Friends = { friends: [...initialFriends.friends], incoming: [...initialFriends.incoming], outgoing: [...initialFriends.outgoing] };
   let invites = [...tripInvites];
   let suggestions = [...friendSuggestions];
+  const invitedTrips = new Set<string>();
   const store = [...trips];
   const memberStore: Record<string, Member[]> = Object.fromEntries(Object.entries(members).map(([id, list]) => [id, [...list]]));
   const membersOf = (tripId: string) => memberStore[tripId] ?? [member()];
@@ -273,7 +274,8 @@ export function fakeApi(
       friendState = { ...friendState, friends: [...friendState.friends, person] };
       return person;
     }),
-    inviteFriend: jest.fn(async (_tripId, userId) => friendState.friends.find((p) => p.user_id === userId)!),
+    inviteFriend: jest.fn(async (tripId, userId) => { invitedTrips.add(tripId); return friendState.friends.find((p) => p.user_id === userId)!; }),
+    listTripsForFriend: jest.fn(async () => store.filter((t) => t.me.is_organizer).map((t) => ({ trip_id: t.id, name: t.name, start_date: t.start_date, end_date: t.end_date, state: invitedTrips.has(t.id) ? 'invited' : 'none' }))),
     listTripInvites: jest.fn(async () => invites),
     acceptTripInvite: jest.fn(async (id) => {
       const invite = invites.find((i) => i.id === id)!;

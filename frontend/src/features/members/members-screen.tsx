@@ -1,10 +1,11 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Member } from '@/api/client';
-import { useAnswerFriend, useFriends, useInviteCode, useInviteFriend, useMembers, useReissueInviteCode, useRemoveMember, useRequestFriend } from '@/api/queries';
+import { useAnswerFriend, useInviteCode, useMembers, useReissueInviteCode, useRemoveMember, useRequestFriend } from '@/api/queries';
 import { inviteLink } from '@/features/trip/pending-invite';
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
@@ -23,7 +24,6 @@ export default function MembersScreen() {
       <Text style={s.title}>멤버</Text>
 
       {isOrganizer && <InviteCodeCard tripId={trip.id} tripName={trip.name} />}
-      {isOrganizer && <InviteFriendsCard members={members.data ?? []} />}
 
       <View style={s.between}>
         <Text style={s.heading}>함께하는 멤버</Text>
@@ -75,28 +75,6 @@ function FriendAction({ member }: { member: Member }) {
     case 'none': return <Pressable accessibilityRole="button" accessibilityLabel={`${member.display_name} 친구 추가`} disabled={request.isPending} onPress={() => request.mutate(member.member_id)} style={s.friendButton}><Text style={s.friendButtonText}>친구 추가</Text></Pressable>;
     default: return null;
   }
-}
-
-/** 총무: 아직 이 여행에 없는 친구를 버튼 한 번으로 초대한다. 친구는 받은 초대에서 수락한다. */
-function InviteFriendsCard({ members }: { members: Member[] }) {
-  const { trip } = useCurrentTrip();
-  const friends = useFriends();
-  const invite = useInviteFriend(trip.id);
-  const [invited, setInvited] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const candidates = (friends.data?.friends ?? []).filter((f) => !members.some((m) => m.friend_user_id === f.user_id));
-  if (!friends.data) return null;
-  return <View style={s.friendCard}>
-    <Text style={s.cardLabel}>친구 초대</Text>
-    {!candidates.length ? <Text style={s.notice}>{friends.data.friends.length ? '친구가 모두 이 여행에 있어요.' : '아직 친구가 없어요. 멤버 옆 "친구 추가"나 계정 관리의 친구 링크로 친구를 맺어 보세요.'}</Text>
-      : candidates.map((f) => <View key={f.user_id} style={s.friendRow}>
-        <Text style={s.memberName}>{f.display_name}</Text>
-        {invited.includes(f.user_id) ? <Text style={s.friendMuted}>초대함</Text>
-          : <Pressable accessibilityRole="button" accessibilityLabel={`${f.display_name} 초대`} disabled={invite.isPending} onPress={() => { setError(null); invite.mutate(f.user_id, { onSuccess: () => setInvited((list) => [...list, f.user_id]), onError: (e) => setError(e.message) }); }} style={s.friendButton}><Text style={s.friendButtonText}>초대</Text></Pressable>}
-      </View>)}
-    {!!error && <Text style={s.removeError}>{error}</Text>}
-    {!!invited.length && <Text style={s.notice}>친구가 앱의 받은 초대에서 수락하면 멤버가 돼요.</Text>}
-  </View>;
 }
 
 function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string }) {
@@ -177,7 +155,5 @@ const s = StyleSheet.create({
   hint: { fontSize: 12, color: C.textMuted, marginTop: 20, lineHeight: 18 },
   friendButton: { minHeight: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: C.banner, justifyContent: 'center' }, friendButtonText: { fontSize: 12, fontWeight: '600', color: C.primary },
   friendTag: { fontSize: 12, color: C.accent, fontWeight: '600' }, friendMuted: { fontSize: 12, color: C.textMuted },
-  friendCard: { padding: 20, borderRadius: 16, backgroundColor: C.surface, marginTop: -16, marginBottom: 32, gap: 10 },
-  friendRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
   pressed: { opacity: 0.6 },
 });

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, type TripSummary } from '@/api/client';
@@ -65,7 +66,7 @@ function DisplayName() {
     <Text style={s.hint}>모든 여행의 멤버 목록과 정산에 이 이름이 보여요.</Text>
     <TextInput accessibilityLabel="표시 이름" value={value} onChangeText={setName} maxLength={30} placeholder="이름" placeholderTextColor={C.textMuted} style={s.input} />
     {!!message && <Text accessibilityRole={message.error ? 'alert' : undefined} style={message.error ? s.error : s.notice}>{message.text}</Text>}
-    <Pressable accessibilityRole="button" accessibilityLabel="이름 저장" disabled={update.isPending} onPress={save} style={({ pressed }) => [s.primaryButton, (pressed || update.isPending) && s.pressed]}><Text style={s.primaryText}>저장</Text></Pressable>
+    <Pressable haptic accessibilityRole="button" accessibilityLabel="이름 저장" disabled={update.isPending} onPress={save} style={({ pressed }) => [s.primaryButton, (pressed || update.isPending) && s.pressed]}><Text style={s.primaryText}>저장</Text></Pressable>
   </View>;
 }
 

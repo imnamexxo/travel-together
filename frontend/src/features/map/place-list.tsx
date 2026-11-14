@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Pressable from '@/components/pressable';
 import { TravelColors as C } from '@/constants/theme';
 import type { PlaceMapProps } from './map-types';
 
