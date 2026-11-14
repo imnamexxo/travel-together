@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TravelColors as C } from '@/constants/theme';
@@ -39,7 +40,7 @@ export default function TravelNotes() {
   function remove() {
     if (!draft) return;
     const id = draft.id;
-    Alert.alert('섹션을 삭제할까요?', '메모와 체크 항목이 함께 삭제됩니다.', [
+    showAlert('섹션을 삭제할까요?', '메모와 체크 항목이 함께 삭제됩니다.', [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => {
         setSections((current) => current.filter((section) => section.id !== id));

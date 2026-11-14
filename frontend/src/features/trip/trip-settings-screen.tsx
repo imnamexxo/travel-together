@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -90,7 +91,7 @@ function HandOverOrganizer() {
   const others = (members.data ?? []).filter((m) => !m.is_me);
 
   function confirm(memberId: string, name: string) {
-    Alert.alert(`${name}님에게 총무를 넘길까요?`, '넘기면 지출·송금 관리, 초대 코드, 여행 설정은 새 총무만 할 수 있어요. 되돌리려면 새 총무가 다시 넘겨줘야 해요.', [
+    showAlert(`${name}님에게 총무를 넘길까요?`, '넘기면 지출·송금 관리, 초대 코드, 여행 설정은 새 총무만 할 수 있어요. 되돌리려면 새 총무가 다시 넘겨줘야 해요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '넘기기', onPress: async () => {
@@ -121,7 +122,7 @@ function DeleteTrip() {
   const [error, setError] = useState<string | null>(null);
 
   function confirm() {
-    Alert.alert(`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.', [
+    showAlert(`"${trip.name}"을(를) 삭제할까요?`, '모든 멤버의 일정·사진·지출·송금 기록이 함께 지워지고 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제', style: 'destructive', onPress: async () => {
@@ -153,7 +154,7 @@ function LeaveTrip() {
   const [error, setError] = useState<string | null>(null);
 
   function confirm() {
-    Alert.alert('여행에서 나갈까요?', '다시 들어오려면 총무에게 초대 코드를 받아야 해요.', [
+    showAlert('여행에서 나갈까요?', '다시 들어오려면 총무에게 초대 코드를 받아야 해요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '나가기', style: 'destructive', onPress: async () => {

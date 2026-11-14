@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -123,7 +124,7 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
 
   function onDelete() {
     if (!savedId) return;
-    Alert.alert('지출을 삭제할까요?', status === 'confirmed' ? '확정된 지출이라 정산 금액이 다시 계산돼요.' : '되돌릴 수 없어요.', [
+    showAlert('지출을 삭제할까요?', status === 'confirmed' ? '확정된 지출이라 정산 금액이 다시 계산돼요.' : '되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제', style: 'destructive', onPress: async () => {

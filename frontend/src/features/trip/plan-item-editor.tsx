@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -87,7 +88,7 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
 
   function confirmDelete() {
     if (!item) return;
-    Alert.alert('일정 항목을 지울까요?', item.title, [
+    showAlert('일정 항목을 지울까요?', item.title, [
       { text: '취소', style: 'cancel' },
       { text: '지우기', style: 'destructive', onPress: () => remove.mutate(item.id, { onSuccess: onClose, onError: (e) => setError(errorText(e, '지우지 못했어요.')) }) },
     ]);

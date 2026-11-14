@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,8 +27,8 @@ export default function TripListScreen() {
     if (code) router.push({ pathname: '/trips/join', params: { code } });
     const friendCode = takePendingFriend();
     if (friendCode) befriendMutate(friendCode, {
-      onSuccess: (person) => Alert.alert('친구가 됐어요', `${person.display_name}님과 친구가 됐어요. 이제 여행에 바로 초대할 수 있어요.`),
-      onError: (e) => Alert.alert('친구를 맺지 못했어요', e.message),
+      onSuccess: (person) => showAlert('친구가 됐어요', `${person.display_name}님과 친구가 됐어요. 이제 여행에 바로 초대할 수 있어요.`),
+      onError: (e) => showAlert('친구를 맺지 못했어요', e.message),
     });
   }, [befriendMutate]);
 
