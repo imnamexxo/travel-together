@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, Friends, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -370,5 +370,75 @@ export function useHandOverOrganizer(tripId: string) {
         queryClient.invalidateQueries({ queryKey: queryKeys.trips, exact: true }),
       ]);
     },
+  });
+}
+
+
+export function useFriends() {
+  const api = useApi();
+  return useQuery({ queryKey: ['friends'], queryFn: () => api.listFriends() });
+}
+
+/** 친구 관계가 바뀌면 친구 목록과(멤버 목록에 친구 상태가 보이므로) 여행 멤버 목록을 다시 받는다. */
+function useFriendChange() {
+  const queryClient = useQueryClient();
+  return (friends?: Friends) => {
+    if (friends) queryClient.setQueryData(['friends'], friends);
+    else void queryClient.invalidateQueries({ queryKey: ['friends'] });
+    return queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'trips' && q.queryKey[2] === 'members' });
+  };
+}
+
+export function useRequestFriend(tripId: string) {
+  const api = useApi();
+  const changed = useFriendChange();
+  return useMutation({ mutationFn: (memberId: string) => api.requestFriend(tripId, memberId), onSuccess: changed });
+}
+
+export function useAnswerFriend() {
+  const api = useApi();
+  const changed = useFriendChange();
+  return useMutation({
+    mutationFn: ({ requestId, accept }: { requestId: string; accept: boolean }) => (accept ? api.acceptFriend(requestId) : api.declineFriend(requestId)),
+    onSuccess: changed,
+  });
+}
+
+export function useRemoveFriend() {
+  const api = useApi();
+  const changed = useFriendChange();
+  return useMutation({ mutationFn: (userId: string) => api.removeFriend(userId), onSuccess: changed });
+}
+
+export function useFriendCode() {
+  const api = useApi();
+  return useQuery({ queryKey: ['friends', 'code'], queryFn: () => api.getFriendCode(), staleTime: Infinity });
+}
+
+export function useBefriendByCode() {
+  const api = useApi();
+  const changed = useFriendChange();
+  return useMutation({ mutationFn: (code: string) => api.befriendByCode(code), onSuccess: () => changed() });
+}
+
+export function useInviteFriend(tripId: string) {
+  const api = useApi();
+  return useMutation({ mutationFn: (userId: string) => api.inviteFriend(tripId, userId) });
+}
+
+export function useTripInvites() {
+  const api = useApi();
+  return useQuery({ queryKey: ['trip-invites'], queryFn: () => api.listTripInvites() });
+}
+
+export function useAnswerTripInvite() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ inviteId, accept }: { inviteId: string; accept: boolean }) => (accept ? api.acceptTripInvite(inviteId) : api.declineTripInvite(inviteId).then(() => null)),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['trip-invites'] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.trips, exact: true }),
+    ]),
   });
 }

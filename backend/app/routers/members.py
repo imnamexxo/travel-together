@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app import loading
@@ -11,7 +11,7 @@ from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from app.expenses import has_money_records
 from app.invites import new_invite_code, normalize_code
-from app.models import MAX_MEMBERS, Member, Photo, Trip
+from app.models import MAX_MEMBERS, Friendship, Member, Photo, Trip
 from app.photos import delete_files, get_storage
 from app.storage import ObjectStorage
 from app.permissions import require_member, require_organizer
@@ -33,6 +33,12 @@ class MemberOut(BaseModel):
     join_order: int
     is_organizer: bool
     is_me: bool
+    # 나와의 친구 관계: me(나), friend, requested(내가 요청함), incoming(나에게 요청함), none, deleted(탈퇴한 멤버)
+    friend_status: str = "none"
+    # 친구일 때만: 여행 초대에 쓰는 상대 계정 id
+    friend_user_id: uuid.UUID | None = None
+    # 나에게 온 요청(incoming)일 때만: 수락에 쓰는 요청 id
+    friend_request_id: uuid.UUID | None = None
 
 
 class InviteCode(BaseModel):
@@ -51,16 +57,37 @@ def list_members(
 ) -> list[MemberOut]:
     """여행 멤버, 가입 순서대로."""
     me = require_member(session, trip_id, user)
-    return [
-        MemberOut(
+    relations = {
+        (f.addressee_id if f.requester_id == user.id else f.requester_id): f
+        for f in session.scalars(select(Friendship).where(or_(Friendship.requester_id == user.id, Friendship.addressee_id == user.id)))
+    }
+
+    def status_of(m: Member) -> str:
+        if m.id == me.id:
+            return "me"
+        if m.profile.deleted_at is not None:
+            return "deleted"
+        f = relations.get(m.user_id)
+        if f is None:
+            return "none"
+        if f.status == "accepted":
+            return "friend"
+        return "requested" if f.requester_id == user.id else "incoming"
+
+    out = []
+    for m in loading.trip_members(session, trip_id):
+        state = status_of(m)
+        out.append(MemberOut(
             member_id=m.id,
             display_name=m.profile.display_name,
             join_order=m.join_order,
             is_organizer=m.is_organizer,
             is_me=m.id == me.id,
-        )
-        for m in loading.trip_members(session, trip_id)
-    ]
+            friend_status=state,
+            friend_user_id=m.user_id if state == "friend" else None,
+            friend_request_id=relations[m.user_id].id if state == "incoming" else None,
+        ))
+    return out
 
 
 @router.get("/{trip_id}/invite-code", responses=ORGANIZER_ONLY)
@@ -109,23 +136,27 @@ def join_trip(
             404, "invalid_invite_code", "초대 코드가 맞지 않습니다. 총무에게 새 코드를 받아 주세요."
         )
 
-    existing = next((m for m in trip.members if m.user_id == user.id), None)
-    if existing is not None:
-        return trip_detail(trip, existing, member_count_of(session, trip.id))
+    me = add_member(session, trip, user.id)
+    session.commit()
+    return trip_detail(trip, me, member_count_of(session, trip.id))
 
-    count = member_count_of(session, trip.id)
-    if count >= MAX_MEMBERS:
+
+def add_member(session: Session, trip: Trip, user_id: uuid.UUID) -> Member:
+    """여행에 멤버로 넣는다(이미 멤버면 그대로). 여행 행은 호출한 쪽이 잠가 둔다. 커밋도 호출한 쪽이 한다."""
+    existing = next((m for m in trip.members if m.user_id == user_id), None)
+    if existing is not None:
+        return existing
+    if member_count_of(session, trip.id) >= MAX_MEMBERS:
         raise ApiError(
             409, "trip_full", f"이 여행은 멤버가 {MAX_MEMBERS}명이라 더 들어갈 수 없습니다."
         )
-
     last_order = session.scalar(
         select(func.max(Member.join_order)).where(Member.trip_id == trip.id)
     )
-    me = Member(trip=trip, user_id=user.id, join_order=(last_order or 0) + 1)
+    me = Member(trip=trip, user_id=user_id, join_order=(last_order or 0) + 1)
     session.add(me)
-    session.commit()
-    return trip_detail(trip, me, count + 1)
+    session.flush()
+    return me
 
 
 def _remove(session: Session, storage: ObjectStorage, member: Member, verb: str) -> None:

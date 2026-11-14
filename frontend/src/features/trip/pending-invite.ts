@@ -21,3 +21,23 @@ export function takePendingInvite(): string | null {
 export function inviteLink(apiBaseUrl: string, code: string): string {
   return `${apiBaseUrl.replace(/\/+$/, '')}/join/${encodeURIComponent(code)}`;
 }
+
+const FRIEND_KEY = 'pending-friend-code';
+let friendMemory: string | null = null;
+
+/** 친구 링크로 열렸을 때 맡겨 두는 코드(로그인 전이어도). */
+export function savePendingFriend(code: string) {
+  friendMemory = code;
+  try { localStorage.setItem(FRIEND_KEY, code); } catch { /* 메모리에는 남아 있다 */ }
+}
+
+export function takePendingFriend(): string | null {
+  let code = friendMemory;
+  try { code = localStorage.getItem(FRIEND_KEY) ?? code; localStorage.removeItem(FRIEND_KEY); } catch { /* 메모리 값을 쓴다 */ }
+  friendMemory = null;
+  return code;
+}
+
+export function friendLink(apiBaseUrl: string, code: string): string {
+  return `${apiBaseUrl.replace(/\/+$/, '')}/friend/${encodeURIComponent(code)}`;
+}

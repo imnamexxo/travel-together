@@ -41,6 +41,8 @@ class UserProfile(Base):
     )
     # 회원 탈퇴한 시각. 탈퇴하면 이름은 "탈퇴한 멤버"가 되고, 남은 토큰으로 아무것도 할 수 없다(ADR 0005).
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 친구 링크에 쓰는 코드. 처음 친구 링크를 만들 때 생긴다.
+    friend_code: Mapped[str | None] = mapped_column(String(INVITE_CODE_LENGTH), unique=True)
 
 
 DELETED_NAME = "탈퇴한 멤버"
@@ -336,3 +338,36 @@ class Receipt(Base):
     # Gemini가 돌려준 지출 초안(JSON). 분석에 실패했으면 비어 있다.
     analysis: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Friendship(Base):
+    """두 사용자 사이의 친구 관계 하나. pending이면 requester가 보낸 요청을 addressee가 기다린다."""
+
+    __tablename__ = "friendships"
+    __table_args__ = (CheckConstraint("status IN ('pending', 'accepted')", name="friendships_status_valid"),
+                      CheckConstraint("requester_id <> addressee_id", name="friendships_not_self"))
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    requester_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_profiles.user_id", ondelete="CASCADE"))
+    addressee_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_profiles.user_id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    requester: Mapped[UserProfile] = relationship(foreign_keys=[requester_id])
+    addressee: Mapped[UserProfile] = relationship(foreign_keys=[addressee_id])
+
+
+class TripInvite(Base):
+    """친구를 여행에 초대한 것. 받은 사람이 수락하면 멤버가 되고, 수락·거절하면 지운다."""
+
+    __tablename__ = "trip_invites"
+    __table_args__ = (UniqueConstraint("trip_id", "invitee_id", name="trip_invites_one_per_user"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    invitee_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_profiles.user_id", ondelete="CASCADE"))
+    inviter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_profiles.user_id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    trip: Mapped[Trip] = relationship()
+    inviter: Mapped[UserProfile] = relationship(foreign_keys=[inviter_id])

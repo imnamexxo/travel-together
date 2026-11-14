@@ -1,23 +1,39 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TripSummary } from '@/api/client';
-import { useMe, useTrips } from '@/api/queries';
+import { useAnswerTripInvite, useBefriendByCode, useMe, useTripInvites, useTrips } from '@/api/queries';
 import { TravelColors as C } from '@/constants/theme';
-import { takePendingInvite } from './pending-invite';
+import { takePendingFriend, takePendingInvite } from './pending-invite';
 import { formatPeriod } from './trip-dates';
 
 export default function TripListScreen() {
   const me = useMe();
   const trips = useTrips();
-  // 로그인 전에 초대 링크를 눌렀으면, 로그인하고 여기 오자마자 이어서 참여한다.
+  const invites = useTripInvites();
+  const answer = useAnswerTripInvite();
+  const befriend = useBefriendByCode();
+  const { mutate: befriendMutate } = befriend;
+  // 로그인 전에 초대·친구 링크를 눌렀으면, 로그인하고 여기 오자마자 이어서 처리한다.
   useEffect(() => {
     const code = takePendingInvite();
     if (code) router.push({ pathname: '/trips/join', params: { code } });
-  }, []);
+    const friendCode = takePendingFriend();
+    if (friendCode) befriendMutate(friendCode, {
+      onSuccess: (person) => Alert.alert('친구가 됐어요', `${person.display_name}님과 친구가 됐어요. 이제 여행에 바로 초대할 수 있어요.`),
+      onError: (e) => Alert.alert('친구를 맺지 못했어요', e.message),
+    });
+  }, [befriendMutate]);
+
+  function answerInvite(inviteId: string, accept: boolean) {
+    answer.mutate({ inviteId, accept }, {
+      onSuccess: (trip) => { if (trip) router.push(`/trips/${trip.id}`); },
+      onError: (e) => Alert.alert('초대를 처리하지 못했어요', e.message),
+    });
+  }
 
   const header = <View style={s.header}>
     <Text style={s.eyebrow}>TRAVEL TOGETHER</Text>
@@ -30,6 +46,17 @@ export default function TripListScreen() {
     </View>
     {!!me.data && <Text style={s.subtitle}>{me.data.display_name}님, 함께 떠날 여행을 골라요.</Text>}
     <Pressable accessibilityRole="button" onPress={() => router.push('/trips/join')} style={s.joinButton}><Text style={s.link}>초대 코드로 들어가기 ›</Text></Pressable>
+    {!!invites.data?.length && <View style={s.invites}>
+      <Text style={s.invitesTitle}>받은 초대</Text>
+      {invites.data.map((i) => <View key={i.id} style={s.inviteCard}>
+        <Text style={s.cardTitle}>{i.trip.name}</Text>
+        <Text style={s.cardMeta}>{i.inviter_name}님이 초대했어요 · {formatPeriod(i.trip.start_date, i.trip.end_date)}</Text>
+        <View style={s.inviteActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${i.trip.name} 초대 거절`} disabled={answer.isPending} onPress={() => answerInvite(i.id, false)} style={({ pressed }) => [s.declineButton, pressed && s.pressed]}><Text style={s.declineText}>거절</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${i.trip.name} 초대 수락`} disabled={answer.isPending} onPress={() => answerInvite(i.id, true)} style={({ pressed }) => [s.acceptButton, pressed && s.pressed]}><Text style={s.acceptText}>수락</Text></Pressable>
+        </View>
+      </View>)}
+    </View>}
   </View>;
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
@@ -91,6 +118,11 @@ const s = StyleSheet.create({
   textButton: { minHeight: 44, justifyContent: 'center' },
   joinButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 4 },
   link: { fontSize: 14, fontWeight: '600', color: C.accent },
+  invites: { marginTop: 20, gap: 10 }, invitesTitle: { fontSize: 13, fontWeight: '700', color: C.text },
+  inviteCard: { padding: 16, borderRadius: 14, backgroundColor: C.banner, gap: 6 },
+  inviteActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  declineButton: { flex: 1, minHeight: 42, borderRadius: 12, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' }, declineText: { fontSize: 14, color: C.text },
+  acceptButton: { flex: 1, minHeight: 42, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' }, acceptText: { fontSize: 14, fontWeight: '600', color: C.onPrimary },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   accountButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.65 },

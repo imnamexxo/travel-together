@@ -10,11 +10,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.expenses import has_money_records
-from app.models import DELETED_NAME, Member, Photo, Trip, UserProfile
+from app.models import DELETED_NAME, Friendship, Member, Photo, Trip, TripInvite, UserProfile
 
 
 def active_members(trip: Trip) -> list[Member]:
@@ -76,6 +76,11 @@ def delete_account(session: Session, profile: UserProfile, remove_trip) -> list[
             session.delete(photo)
         if member.trip_id not in kept:
             session.delete(member)
+    # 친구 관계와 대기 중인 여행 초대도 지운다.
+    uid = profile.user_id
+    session.execute(delete(Friendship).where(or_(Friendship.requester_id == uid, Friendship.addressee_id == uid)))
+    session.execute(delete(TripInvite).where(or_(TripInvite.invitee_id == uid, TripInvite.inviter_id == uid)))
+    profile.friend_code = None
     profile.display_name = DELETED_NAME
     profile.deleted_at = datetime.now(UTC)
     return keys

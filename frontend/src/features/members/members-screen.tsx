@@ -4,7 +4,7 @@ import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Share,
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Member } from '@/api/client';
-import { useInviteCode, useMembers, useReissueInviteCode, useRemoveMember } from '@/api/queries';
+import { useAnswerFriend, useFriends, useInviteCode, useInviteFriend, useMembers, useReissueInviteCode, useRemoveMember, useRequestFriend } from '@/api/queries';
 import { inviteLink } from '@/features/trip/pending-invite';
 import { TravelColors as C } from '@/constants/theme';
 import { goBack } from '@/navigation';
@@ -23,6 +23,7 @@ export default function MembersScreen() {
       <Text style={s.title}>멤버</Text>
 
       {isOrganizer && <InviteCodeCard tripId={trip.id} tripName={trip.name} />}
+      {isOrganizer && <InviteFriendsCard members={members.data ?? []} />}
 
       <View style={s.between}>
         <Text style={s.heading}>함께하는 멤버</Text>
@@ -34,7 +35,7 @@ export default function MembersScreen() {
           <Pressable accessibilityRole="button" onPress={() => members.refetch()} style={s.textButton}><Text style={s.link}>다시 시도</Text></Pressable>
         </View>
         : members.data.map((member) => <MemberRow key={member.member_id} member={member} canRemove={isOrganizer && !member.is_organizer} />)}
-      {!isOrganizer && <Text style={s.hint}>친구를 초대하려면 총무에게 초대 코드를 받아 공유해 주세요.</Text>}
+      {!isOrganizer && <Text style={s.hint}>친구를 초대하려면 총무에게 초대 링크를 받아 공유해 주세요.</Text>}
     </ScrollView>
   </SafeAreaView>;
 }
@@ -55,9 +56,46 @@ function MemberRow({ member, canRemove }: { member: Member; canRemove: boolean }
       <View style={s.avatar}><Text style={s.avatarText}>{member.display_name.slice(0, 1)}</Text></View>
       <Text style={s.memberName}>{member.display_name}{member.is_me ? ' (나)' : ''}</Text>
       {member.is_organizer && <Text style={s.badge}>총무</Text>}
+      <FriendAction member={member} />
       {canRemove && <Pressable accessibilityRole="button" accessibilityLabel={`${member.display_name} 내보내기`} accessibilityState={{ disabled: remove.isPending }} disabled={remove.isPending} onPress={confirm} style={s.removeButton}><Text style={s.removeText}>내보내기</Text></Pressable>}
     </View>
     {remove.isError && <Text accessibilityRole="alert" style={s.removeError}>{remove.error.message}</Text>}
+  </View>;
+}
+
+/** 멤버 줄의 친구 버튼: 친구 추가 → 요청됨, 받은 요청은 수락, 이미 친구면 표시만. */
+function FriendAction({ member }: { member: Member }) {
+  const { trip } = useCurrentTrip();
+  const request = useRequestFriend(trip.id);
+  const answer = useAnswerFriend();
+  switch (member.friend_status) {
+    case 'friend': return <Text style={s.friendTag}>친구</Text>;
+    case 'requested': return <Text style={s.friendMuted}>요청됨</Text>;
+    case 'incoming': return <Pressable accessibilityRole="button" accessibilityLabel={`${member.display_name} 친구 요청 수락`} disabled={!member.friend_request_id || answer.isPending} onPress={() => member.friend_request_id && answer.mutate({ requestId: member.friend_request_id, accept: true })} style={s.friendButton}><Text style={s.friendButtonText}>수락</Text></Pressable>;
+    case 'none': return <Pressable accessibilityRole="button" accessibilityLabel={`${member.display_name} 친구 추가`} disabled={request.isPending} onPress={() => request.mutate(member.member_id)} style={s.friendButton}><Text style={s.friendButtonText}>친구 추가</Text></Pressable>;
+    default: return null;
+  }
+}
+
+/** 총무: 아직 이 여행에 없는 친구를 버튼 한 번으로 초대한다. 친구는 받은 초대에서 수락한다. */
+function InviteFriendsCard({ members }: { members: Member[] }) {
+  const { trip } = useCurrentTrip();
+  const friends = useFriends();
+  const invite = useInviteFriend(trip.id);
+  const [invited, setInvited] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const candidates = (friends.data?.friends ?? []).filter((f) => !members.some((m) => m.friend_user_id === f.user_id));
+  if (!friends.data) return null;
+  return <View style={s.friendCard}>
+    <Text style={s.cardLabel}>친구 초대</Text>
+    {!candidates.length ? <Text style={s.notice}>{friends.data.friends.length ? '친구가 모두 이 여행에 있어요.' : '아직 친구가 없어요. 멤버 옆 "친구 추가"나 계정 관리의 친구 링크로 친구를 맺어 보세요.'}</Text>
+      : candidates.map((f) => <View key={f.user_id} style={s.friendRow}>
+        <Text style={s.memberName}>{f.display_name}</Text>
+        {invited.includes(f.user_id) ? <Text style={s.friendMuted}>초대함</Text>
+          : <Pressable accessibilityRole="button" accessibilityLabel={`${f.display_name} 초대`} disabled={invite.isPending} onPress={() => { setError(null); invite.mutate(f.user_id, { onSuccess: () => setInvited((list) => [...list, f.user_id]), onError: (e) => setError(e.message) }); }} style={s.friendButton}><Text style={s.friendButtonText}>초대</Text></Pressable>}
+      </View>)}
+    {!!error && <Text style={s.removeError}>{error}</Text>}
+    {!!invited.length && <Text style={s.notice}>친구가 앱의 받은 초대에서 수락하면 멤버가 돼요.</Text>}
   </View>;
 }
 
@@ -137,5 +175,9 @@ const s = StyleSheet.create({
   muted: { fontSize: 13, color: C.textSecondary },
   textButton: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 14, fontWeight: '600', color: C.accent },
   hint: { fontSize: 12, color: C.textMuted, marginTop: 20, lineHeight: 18 },
+  friendButton: { minHeight: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: C.banner, justifyContent: 'center' }, friendButtonText: { fontSize: 12, fontWeight: '600', color: C.primary },
+  friendTag: { fontSize: 12, color: C.accent, fontWeight: '600' }, friendMuted: { fontSize: 12, color: C.textMuted },
+  friendCard: { padding: 20, borderRadius: 16, backgroundColor: C.surface, marginTop: -16, marginBottom: 32, gap: 10 },
+  friendRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
   pressed: { opacity: 0.6 },
 });
