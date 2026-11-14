@@ -14,7 +14,7 @@ export default function TripListScreen() {
 
   const header = <View style={s.header}>
     <Text style={s.eyebrow}>TRAVEL TOGETHER</Text>
-    <View style={s.between}>
+    <View style={s.titleRow}>
       <Text style={s.title}>내 여행</Text>
       <View style={s.headerActions}>
       <Pressable accessibilityRole="button" accessibilityLabel="새 여행 만들기" onPress={() => router.push('/trips/new')} style={({ pressed }) => [s.newButton, pressed && s.pressed]}><Text style={s.newText}>＋ 새 여행</Text></Pressable>
@@ -65,9 +65,10 @@ const s = StyleSheet.create({
   header: { marginBottom: 24 },
   eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted, marginTop: 12 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary, marginTop: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },
+  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10 },
-  newButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: C.banner, justifyContent: 'center', marginTop: 12 },
+  newButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: C.banner, justifyContent: 'center' },
   newText: { fontSize: 14, fontWeight: '600', color: C.primary },
   card: { padding: 18, borderRadius: 16, backgroundColor: C.surface },
   cardTitle: { flexShrink: 1, fontSize: 17, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
