@@ -31,6 +31,7 @@
 | 기획서 용어를 `GLOSSARY.md`에 맞춰 수정 ("그룹", "이용자", "송금 목록" 등) | 제출 전 | 대기 |
 | 기획서 4장 UI 목업 이미지 새로 그리기 | 제출 전 | 대기 |
 | README 수정본(스펙 결정에 맞춤)을 팀원에게 공유·확인 | 다음 팀 회의 | 대기 |
+| iPhone 설치용 Apple Developer Program(연 $99) → EAS 내부 배포(Ad Hoc)·TestFlight. 그전까지 iPhone은 Expo Go(`npx expo start --go --tunnel`, 초대·친구 링크는 코드 직접 입력) | 출시 준비 때 | 보류(2026-11-15, 비용) |
 | 정식 출시 시: 위치정보법 해당 여부 공식 확인(ADR-0003으로 위험은 줄였음), 스토어 등록, Supabase·Render·Gemini 유료 전환 | 출시 결정 시 | 대기 |
 
 ## 열린 질문
