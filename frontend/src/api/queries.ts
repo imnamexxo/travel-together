@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, Friends, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, PlanItem, Friends, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -241,9 +241,13 @@ export function useDeletePlanItem(tripId: string) {
 export function useReorderPlanItems(tripId: string) {
   const api = useApi();
   const refresh = useRefreshPlan(tripId);
+  const queryClient = useQueryClient();
+  // 성공하면 서버가 돌려준 그날의 새 순서를 바로 넣는다(다시 받아 오기 전에 예전 순서가 잠깐 보이지 않도록).
   // 실패해도(그사이 바뀜 409) 최신 일정을 다시 불러온다.
   return useMutation({
     mutationFn: ({ date, itemIds }: { date: string; itemIds: string[] }) => api.reorderPlanItems(tripId, date, itemIds),
+    onSuccess: (dayItems, { date }) => queryClient.setQueryData<PlanItem[]>(queryKeys.planItems(tripId), (all) =>
+      all ? [...all.filter((item) => item.date !== date), ...dayItems] : dayItems),
     onSettled: refresh,
   });
 }
