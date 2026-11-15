@@ -48,6 +48,9 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
   // 끄는 동안 화면에 그리는 순서(키). 끄지 않을 때는 items 순서 그대로.
   const [order, setOrder] = useState<string[] | null>(null);
   const byKey = new Map(items.map((item) => [keyOf(item), item]));
+  // 놓은 뒤에는 바깥(items)이 같은 순서로 바뀐 걸 본 다음에야 끄는 중 순서를 버린다.
+  // 바로 버리면 바깥이 새 순서를 넘겨주기 전 한 번 예전 순서로 그려져 깜빡인다.
+  if (order && !dragKey && (items.length !== order.length || items.map(keyOf).join('|') === order.join('|'))) setOrder(null);
   const shown = order ? order.map((k) => byKey.get(k)).filter((i): i is T => i !== undefined) : items;
   const heightOf = (key: string) => box.heights[key] ?? 60;
   const offsetOf = (key: string) => (box.offsets[key] ??= new Animated.Value(0));
@@ -110,10 +113,10 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
     // 비켜 주던 움직임이 남아 있으면 지금 자리(0)로 끝낸다. 남은 값이 다음 그리기에서 예전 자리로 보이지 않게.
     Object.values(box.offsets).forEach((offset) => { offset.stopAnimation(); offset.setValue(0); });
     setDragKey(null);
-    setOrder(null);
     onDragChange?.(false);
     const next = finalOrder.map((k) => byKey.get(k)).filter((i): i is T => i !== undefined);
     if (next.some((item, i) => item !== items[i])) onReorder(next);
+    else setOrder(null);
   }
 
   return <View>
