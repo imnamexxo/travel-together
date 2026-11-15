@@ -18,6 +18,8 @@ type Props<T> = {
 const LONG_PRESS_MS = 250;
 // 다른 줄이 비켜 주는 움직임(밀리초)
 const MAKE_WAY_MS = 140;
+// 놓은 줄이 자기 칸으로 내려앉는 시간(밀리초)
+const SETTLE_MS = 120;
 
 function move<T>(list: T[], from: number, to: number): T[] {
   const next = [...list];
@@ -40,7 +42,7 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
   // consumed: 순서를 바꾸며 지나온 줄 높이의 합(다음 자리 바꿈을 판단할 때 쓴다)
   const [box] = useState(() => ({
     heights: {} as Record<string, number>, ys: {} as Record<string, number>, offsets: {} as Record<string, Animated.Value>,
-    dragY: new Animated.Value(0), consumed: 0, active: false, order: [] as string[], dragKey: null as string | null,
+    dragY: new Animated.Value(0), consumed: 0, active: false, order: [] as string[], dragKey: null as string | null, floatTop: 0,
   }));
   const [dragKey, setDragKey] = useState<string | null>(null);
   // 떠 있는 복사본의 시작 위치(끌기 시작할 때 그 줄의 y)
@@ -76,7 +78,8 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
     box.dragY.setValue(0);
     box.order = items.map(keyOf);
     box.dragKey = key;
-    setFloatTop(box.ys[key] ?? 0);
+    box.floatTop = box.ys[key] ?? 0;
+    setFloatTop(box.floatTop);
     setOrder(box.order);
     setDragKey(key);
     onDragChange?.(true);
@@ -105,6 +108,15 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
     }
   }
 
+  /** 손을 떼면 떠 있는 복사본을 자기 칸으로 부드럽게 내려앉힌 뒤 끝낸다(바로 사라지면 칸으로 순간이동해 깜빡여 보인다). */
+  function settle() {
+    box.active = false;
+    const key = box.dragKey;
+    const slotTop = key !== null ? box.ys[key] : undefined;
+    if (slotTop === undefined) { finish(); return; }
+    Animated.timing(box.dragY, { toValue: slotTop - box.floatTop, duration: SETTLE_MS, useNativeDriver: false }).start(() => finish());
+  }
+
   function finish() {
     box.active = false;
     box.dragKey = null;
@@ -129,7 +141,7 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
         .activateAfterLongPress(LONG_PRESS_MS)
         .onStart(() => start(key))
         .onUpdate((e) => follow(key, e.translationY))
-        .onFinalize(() => { if (box.active) finish(); });
+        .onFinalize(() => { if (box.active) settle(); });
       return <GestureDetector key={key} gesture={pan}>
         <Animated.View
           testID={`draggable-${key}`}
