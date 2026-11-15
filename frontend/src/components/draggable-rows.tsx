@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Animated, View, type LayoutChangeEvent } from 'react-native';
+import { Animated, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 type Props<T> = {
@@ -29,19 +29,22 @@ function move<T>(list: T[], from: number, to: number): T[] {
 /**
  * 꾹 눌러 위아래로 끌어 순서를 바꾸는 목록(플래너 일정). 줄 높이가 달라도 된다.
  *
- * 끄는 줄이 다음 줄의 절반을 넘으면 실제로 순서를 바꿔 그린다. 비켜 준 줄만 예전 자리에서 새 자리로 미끄러진다
- * (새 위치를 잰 뒤 그 차이만큼 되돌려 놓고 0으로 움직인다). 끄는 줄은 애니메이션 없이 손가락에 붙어 있다.
+ * 끄는 줄은 목록 위에 뜬 복사본으로 그려 손가락만 따라간다(목록 안 자리는 투명한 빈칸으로 남는다).
+ * 끄는 줄이 다음 줄의 절반을 넘으면 실제로 순서를 바꿔 그리고, 비켜 준 줄만 예전 자리에서 새 자리로 미끄러진다
+ * (새 위치를 잰 뒤 그 차이만큼 되돌려 놓고 0으로 움직인다). 복사본은 목록 배치와 상관없어 흔들리지 않는다.
  * 끄는 줄은 손가락 아래에 남도록, 이미 지나온 줄 높이만큼 빼고 따라간다.
  * 짧게 누르면 줄 안의 버튼이 그대로 눌린다. 화면 읽기 사용자는 "위로/아래로 옮기기" 동작으로 바꾼다.
  */
 export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, onReorder, onDragChange, disabled }: Props<T>) {
   // 끄는 동안 바뀌는 값은 다시 그리지 않고 이 상자에 둔다.
-  // consumed: 순서를 바꾸며 지나온 줄 높이의 합(끄는 줄 위치를 손가락에 맞추는 데 쓴다)
+  // consumed: 순서를 바꾸며 지나온 줄 높이의 합(다음 자리 바꿈을 판단할 때 쓴다)
   const [box] = useState(() => ({
     heights: {} as Record<string, number>, ys: {} as Record<string, number>, offsets: {} as Record<string, Animated.Value>,
     dragY: new Animated.Value(0), consumed: 0, active: false, order: [] as string[], dragKey: null as string | null,
   }));
   const [dragKey, setDragKey] = useState<string | null>(null);
+  // 떠 있는 복사본의 시작 위치(끌기 시작할 때 그 줄의 y)
+  const [floatTop, setFloatTop] = useState(0);
   // 끄는 동안 화면에 그리는 순서(키). 끄지 않을 때는 items 순서 그대로.
   const [order, setOrder] = useState<string[] | null>(null);
   const byKey = new Map(items.map((item) => [keyOf(item), item]));
@@ -69,6 +72,7 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
     box.dragY.setValue(0);
     box.order = items.map(keyOf);
     box.dragKey = key;
+    setFloatTop(box.ys[key] ?? 0);
     setOrder(box.order);
     setDragKey(key);
     onDragChange?.(true);
@@ -90,7 +94,7 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
           keys.splice(at - 1, 2, key, above); box.consumed -= heightOf(above); at -= 1; changed = true;
         } else break;
       }
-      box.dragY.setValue(translationY - box.consumed);
+      box.dragY.setValue(translationY);
       if (!changed) return;
       box.order = keys;
       setOrder(keys);
@@ -129,13 +133,17 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
             const to = e.nativeEvent.actionName === 'moveUp' ? index - 1 : e.nativeEvent.actionName === 'moveDown' ? index + 1 : index;
             if (!disabled && to >= 0 && to < items.length && to !== index) onReorder(move(items, index, to));
           }}
-          style={[
-            { transform: [{ translateY: dragging ? box.dragY : offsetOf(key) }] },
-            dragging && { zIndex: 10, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-          ]}>
-          {renderItem(item, index, { dragging })}
+          style={[{ transform: [{ translateY: dragging ? 0 : offsetOf(key) }] }, dragging && { opacity: 0 }]}>
+          {renderItem(item, index, { dragging: false })}
         </Animated.View>
       </GestureDetector>;
     })}
+    {dragKey && byKey.has(dragKey) && <Animated.View pointerEvents="none" style={[s.floating, { top: floatTop, transform: [{ translateY: box.dragY }] }]}>
+      {renderItem(byKey.get(dragKey)!, -1, { dragging: true })}
+    </Animated.View>}
   </View>;
 }
+
+const s = StyleSheet.create({
+  floating: { position: 'absolute', left: 0, right: 0, zIndex: 10, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+});
