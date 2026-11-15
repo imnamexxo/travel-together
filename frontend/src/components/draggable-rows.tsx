@@ -62,7 +62,8 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
     if (box.active && before !== undefined && before !== y) {
       const offset = offsetOf(key);
       offset.setValue(before - y);
-      Animated.timing(offset, { toValue: 0, duration: MAKE_WAY_MS, useNativeDriver: true }).start();
+      // JS로 움직인다. 네이티브로 돌리면 놓는 순간 다시 그릴 때 시작값(예전 자리)이 한 번 다시 적용돼 깜빡인다.
+      Animated.timing(offset, { toValue: 0, duration: MAKE_WAY_MS, useNativeDriver: false }).start();
     }
   }
 
