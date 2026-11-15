@@ -107,6 +107,8 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
     box.dragKey = null;
     const finalOrder = box.order;
     box.dragY.setValue(0);
+    // 비켜 주던 움직임이 남아 있으면 지금 자리(0)로 끝낸다. 남은 값이 다음 그리기에서 예전 자리로 보이지 않게.
+    Object.values(box.offsets).forEach((offset) => { offset.stopAnimation(); offset.setValue(0); });
     setDragKey(null);
     setOrder(null);
     onDragChange?.(false);
