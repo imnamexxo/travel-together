@@ -49,14 +49,16 @@ export default function HomeScreen() {
   const lastDragEnd = useRef(0);
   const sorted = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
   const plans = pendingOrder ? pendingOrder.map((id) => sorted.find((i) => i.id === id)).filter((i): i is PlanItem => !!i) : sorted;
+  // 서버 순서가 바꾼 순서와 같아지면 임시 순서를 지운다(그 전에 지우면 예전 순서가 잠깐 보인다).
+  if (pendingOrder && !reorder.isPending && sorted.map((i) => i.id).join(',') === pendingOrder.join(',')) setPendingOrder(null);
 
   function saveOrder(next: PlanItem[]) {
     const ids = next.map((i) => i.id);
     setPendingOrder(ids);
     setOrderError(null);
     reorder.mutate({ date: days[day].iso, itemIds: ids }, {
-      onError: () => setOrderError('순서를 바꾸지 못했어요. 다른 멤버가 일정을 바꿨다면 새로 불러온 순서를 확인해 주세요.'),
-      onSettled: () => setPendingOrder(null),
+      // 성공하면 받아 온 순서가 바꾼 순서와 같아졌을 때(아래 useEffect) 임시 순서를 지운다. 실패하면 바로 서버 순서로.
+      onError: () => { setPendingOrder(null); setOrderError('순서를 바꾸지 못했어요. 다른 멤버가 일정을 바꿨다면 새로 불러온 순서를 확인해 주세요.'); },
     });
   }
   // 일정 항목의 장소에 연결된 그날의 사진 수
