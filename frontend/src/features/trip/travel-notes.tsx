@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TravelColors as C } from '@/constants/theme';
+import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 
 type CheckItem = { id: string; text: string; done: boolean };
 type Section = { id: string; title: string; kind: 'memo' | 'checklist'; body: string; items: CheckItem[] };
@@ -15,6 +17,8 @@ export default function TravelNotes() {
   const [draft, setDraft] = useState<Section | null>(null);
   const [error, setError] = useState('');
   const sequence = useRef(0);
+  const keyboard = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
   const nextId = () => `note-${Date.now()}-${sequence.current++}`;
   const existing = !!draft && sections.some((section) => section.id === draft.id);
 
@@ -85,13 +89,13 @@ export default function TravelNotes() {
     })}
 
     <Modal visible={!!draft} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setDraft(null)}>
-      <SafeAreaView style={s.screen}><KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <SafeAreaView style={s.screen}>
+        <View style={s.editorHeader}>
+          <Pressable accessibilityRole="button" onPress={() => setDraft(null)} style={s.action}><Text style={s.cancel}>취소</Text></Pressable>
+          <Text style={s.editorTitle}>{existing ? '여행 메모 수정' : '여행 메모 추가'}</Text>
+          <View style={s.action} />
+        </View>
         {draft && <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.editor}>
-          <View style={s.header}>
-            <Pressable accessibilityRole="button" onPress={() => setDraft(null)} style={s.action}><Text style={s.cancel}>취소</Text></Pressable>
-            <Text style={s.editorTitle}>{existing ? '여행 메모 수정' : '여행 메모 추가'}</Text>
-            <Pressable accessibilityRole="button" onPress={save} style={s.action}><Text style={s.link}>저장</Text></Pressable>
-          </View>
           <View style={s.types}>{(['memo', 'checklist'] as const).map((kind) => <Pressable key={kind} accessibilityRole="radio" accessibilityState={{ checked: draft.kind === kind }}
             onPress={() => { setDraft({ ...draft, kind }); setError(''); }} style={[s.type, draft.kind === kind && s.typeSelected]}>
             <Text style={[s.typeText, draft.kind === kind && s.typeTextSelected]}>{kind === 'memo' ? '메모' : '체크리스트'}</Text>
@@ -103,25 +107,47 @@ export default function TravelNotes() {
             <TextInput accessibilityLabel="메모 내용" value={draft.body} onChangeText={(body) => setDraft({ ...draft, body })} placeholder="여행에 필요한 내용을 적어보세요." placeholderTextColor={C.textMuted} style={[s.input, s.memoInput]} multiline maxLength={2000} />
             <Text style={s.count}>{draft.body.length} / 2,000</Text>
           </> : <>
-            {draft.items.map((item, index) => <View key={item.id} style={s.editRow}>
-              <TextInput accessibilityLabel={`${index + 1}번째 체크 항목`} value={item.text} placeholder={`항목 ${index + 1}`} placeholderTextColor={C.textMuted} maxLength={120} style={[s.input, s.itemInput]}
+            {draft.items.map((item, index) => <View key={item.id} style={s.itemRow}>
+              <View style={s.itemMark} />
+              <TextInput accessibilityLabel={`${index + 1}번째 체크 항목`} value={item.text} placeholder={`항목 ${index + 1}`} placeholderTextColor={C.textMuted} maxLength={120} style={s.itemInput}
                 onChangeText={(text) => setDraft({ ...draft, items: draft.items.map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />
-              <Pressable accessibilityRole="button" accessibilityLabel={`${index + 1}번째 항목 삭제`} onPress={() => setDraft({ ...draft, items: draft.items.filter((entry) => entry.id !== item.id) })} style={s.removeAction}><Text style={s.removeText}>−</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={`${index + 1}번째 항목 삭제`} hitSlop={6} onPress={() => setDraft({ ...draft, items: draft.items.filter((entry) => entry.id !== item.id) })} style={s.removeAction}>
+                <Ionicons name="close-circle" size={20} color={C.textMuted} />
+              </Pressable>
             </View>)}
-            <Pressable accessibilityRole="button" disabled={draft.items.length >= 30} onPress={() => setDraft({ ...draft, items: [...draft.items, { id: nextId(), text: '', done: false }] })} style={s.action}>
+            <Pressable accessibilityRole="button" disabled={draft.items.length >= 30} onPress={() => setDraft({ ...draft, items: [...draft.items, { id: nextId(), text: '', done: false }] })} style={s.addItem}>
               <Text style={draft.items.length >= 30 ? s.sub : s.link}>{draft.items.length >= 30 ? '항목은 최대 30개까지 추가할 수 있어요' : '＋ 항목 추가'}</Text>
             </Pressable>
           </>}
           {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-          {existing && <Pressable accessibilityRole="button" style={s.action} onPress={remove}><Text style={s.error}>섹션 삭제</Text></Pressable>}
+          {existing && <Pressable accessibilityRole="button" style={s.deleteButton} onPress={remove}><Text style={s.error}>섹션 삭제</Text></Pressable>}
           <Text style={s.hint}>현재는 이 기기의 미리보기에만 반영돼요. 앱 재시작 시 초기화됩니다.</Text>
         </ScrollView>}
-      </KeyboardAvoidingView></SafeAreaView>
+        {/* 저장은 아래에 고정한다(일정 편집과 같은 모양). 키보드가 올라오면 그 위로 따라 올라온다. */}
+        <View style={[s.saveBar, { marginBottom: Math.max(0, keyboard - insets.bottom) }]}>
+          <Pressable haptic accessibilityRole="button" accessibilityLabel="저장" onPress={save} style={s.saveButton}><Text style={s.saveText}>저장</Text></Pressable>
+        </View>
+      </SafeAreaView>
     </Modal>
   </View>;
 }
 
 const s = StyleSheet.create({
+  // 편집 화면은 일정 편집(plan-item-editor)과 같은 모양
+  editorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, width: '100%', maxWidth: 600, alignSelf: 'center' },
+  editor: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
+  editorTitle: { color: C.text, fontSize: 16, fontWeight: '600' },
+  label: { fontSize: 13, color: C.textSecondary, marginTop: 25, marginBottom: 10 },
+  input: { backgroundColor: C.surface, borderRadius: 12, padding: 16, fontSize: 16, color: C.text, minHeight: 52 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderRadius: 12, paddingLeft: 16, paddingRight: 8, minHeight: 52, marginBottom: 8 },
+  itemMark: { width: 16, height: 16, borderRadius: 4, borderWidth: 1.5, borderColor: C.inactive },
+  itemInput: { flex: 1, fontSize: 16, color: C.text, paddingVertical: 14 },
+  removeAction: { minWidth: 36, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+  addItem: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 4 },
+  deleteButton: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
+  saveBar: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider, backgroundColor: C.background },
+  saveButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 552, alignSelf: 'center' },
+  saveText: { fontSize: 16, fontWeight: '600', color: C.onPrimary },
   section: { marginTop: 16, marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   heading: { fontSize: 15, fontWeight: '600', color: C.primary },
@@ -145,22 +171,14 @@ const s = StyleSheet.create({
   editAction: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'flex-end' },
   editText: { fontSize: 12, color: C.accent },
   screen: { flex: 1, backgroundColor: C.background },
-  editor: { paddingHorizontal: 24, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
-  editorTitle: { fontSize: 17, fontWeight: '600', color: C.text },
   cancel: { fontSize: 15, color: C.textSecondary },
   types: { flexDirection: 'row', gap: 6, backgroundColor: C.surface, padding: 4, borderRadius: 12, marginTop: 20 },
   type: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: 9 },
   typeSelected: { backgroundColor: C.primary },
   typeText: { fontSize: 14, color: C.textSecondary },
   typeTextSelected: { color: C.onPrimary, fontWeight: '600' },
-  label: { fontSize: 13, color: C.textSecondary, marginTop: 24, marginBottom: 10 },
-  input: { backgroundColor: C.surface, borderRadius: 12, padding: 15, minHeight: 50, fontSize: 16, color: C.text },
   memoInput: { minHeight: 180, textAlignVertical: 'top', lineHeight: 26 },
   count: { fontSize: 12, color: C.textMuted, marginTop: 10, textAlign: 'right' },
-  editRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  itemInput: { flex: 1 },
-  removeAction: { minWidth: 44, minHeight: 50, justifyContent: 'center', alignItems: 'center' },
-  removeText: { fontSize: 24, color: C.textMuted },
   error: { fontSize: 13, color: C.error, lineHeight: 20 },
   hint: { fontSize: 12, color: C.textMuted, lineHeight: 20, marginTop: 20 },
 });
