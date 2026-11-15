@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Animated, LayoutAnimation, View, type LayoutChangeEvent } from 'react-native';
+import { Animated, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 type Props<T> = {
@@ -16,8 +16,8 @@ type Props<T> = {
 };
 
 const LONG_PRESS_MS = 250;
-// 다른 줄이 비켜 주는 움직임
-const MAKE_WAY = { duration: 140, update: { type: LayoutAnimation.Types.easeInEaseOut } };
+// 다른 줄이 비켜 주는 움직임(밀리초)
+const MAKE_WAY_MS = 140;
 
 function move<T>(list: T[], from: number, to: number): T[] {
   const next = [...list];
@@ -29,26 +29,46 @@ function move<T>(list: T[], from: number, to: number): T[] {
 /**
  * 꾹 눌러 위아래로 끌어 순서를 바꾸는 목록(플래너 일정). 줄 높이가 달라도 된다.
  *
- * 끄는 줄이 다음 줄의 절반을 넘으면 실제로 순서를 바꿔 그린다(다른 줄은 부드럽게 자리를 옮긴다).
+ * 끄는 줄이 다음 줄의 절반을 넘으면 실제로 순서를 바꿔 그린다. 비켜 준 줄만 예전 자리에서 새 자리로 미끄러진다
+ * (새 위치를 잰 뒤 그 차이만큼 되돌려 놓고 0으로 움직인다). 끄는 줄은 애니메이션 없이 손가락에 붙어 있다.
  * 끄는 줄은 손가락 아래에 남도록, 이미 지나온 줄 높이만큼 빼고 따라간다.
  * 짧게 누르면 줄 안의 버튼이 그대로 눌린다. 화면 읽기 사용자는 "위로/아래로 옮기기" 동작으로 바꾼다.
  */
 export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, onReorder, onDragChange, disabled }: Props<T>) {
   // 끄는 동안 바뀌는 값은 다시 그리지 않고 이 상자에 둔다.
   // consumed: 순서를 바꾸며 지나온 줄 높이의 합(끄는 줄 위치를 손가락에 맞추는 데 쓴다)
-  const [box] = useState(() => ({ heights: {} as Record<string, number>, dragY: new Animated.Value(0), consumed: 0, active: false, order: [] as string[] }));
+  const [box] = useState(() => ({
+    heights: {} as Record<string, number>, ys: {} as Record<string, number>, offsets: {} as Record<string, Animated.Value>,
+    dragY: new Animated.Value(0), consumed: 0, active: false, order: [] as string[], dragKey: null as string | null,
+  }));
   const [dragKey, setDragKey] = useState<string | null>(null);
   // 끄는 동안 화면에 그리는 순서(키). 끄지 않을 때는 items 순서 그대로.
   const [order, setOrder] = useState<string[] | null>(null);
   const byKey = new Map(items.map((item) => [keyOf(item), item]));
   const shown = order ? order.map((k) => byKey.get(k)).filter((i): i is T => i !== undefined) : items;
   const heightOf = (key: string) => box.heights[key] ?? 60;
+  const offsetOf = (key: string) => (box.offsets[key] ??= new Animated.Value(0));
+
+  function measured(key: string, e: LayoutChangeEvent) {
+    const { y, height } = e.nativeEvent.layout;
+    const before = box.ys[key];
+    box.ys[key] = y;
+    if (key === box.dragKey) return;
+    box.heights[key] = height;
+    // 끄는 중에 자리가 바뀐 줄: 예전 자리에서 시작해 새 자리로 미끄러진다.
+    if (box.active && before !== undefined && before !== y) {
+      const offset = offsetOf(key);
+      offset.setValue(before - y);
+      Animated.timing(offset, { toValue: 0, duration: MAKE_WAY_MS, useNativeDriver: true }).start();
+    }
+  }
 
   function start(key: string) {
     box.active = true;
     box.consumed = 0;
     box.dragY.setValue(0);
     box.order = items.map(keyOf);
+    box.dragKey = key;
     setOrder(box.order);
     setDragKey(key);
     onDragChange?.(true);
@@ -73,13 +93,13 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
       box.dragY.setValue(translationY - box.consumed);
       if (!changed) return;
       box.order = keys;
-      LayoutAnimation.configureNext(MAKE_WAY);
       setOrder(keys);
     }
   }
 
   function finish() {
     box.active = false;
+    box.dragKey = null;
     const finalOrder = box.order;
     box.dragY.setValue(0);
     setDragKey(null);
@@ -103,14 +123,15 @@ export default function DraggableRows<T>({ items, keyOf, labelOf, renderItem, on
       return <GestureDetector key={key} gesture={pan}>
         <Animated.View
           testID={`draggable-${key}`}
-          onLayout={(e: LayoutChangeEvent) => { if (!dragging) box.heights[key] = e.nativeEvent.layout.height; }}
+          onLayout={(e: LayoutChangeEvent) => measured(key, e)}
           accessibilityActions={[{ name: 'moveUp', label: `${labelOf(item)} 위로 옮기기` }, { name: 'moveDown', label: `${labelOf(item)} 아래로 옮기기` }]}
           onAccessibilityAction={(e) => {
             const to = e.nativeEvent.actionName === 'moveUp' ? index - 1 : e.nativeEvent.actionName === 'moveDown' ? index + 1 : index;
             if (!disabled && to >= 0 && to < items.length && to !== index) onReorder(move(items, index, to));
           }}
           style={[
-            dragging && { transform: [{ translateY: box.dragY }], zIndex: 10, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+            { transform: [{ translateY: dragging ? box.dragY : offsetOf(key) }] },
+            dragging && { zIndex: 10, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
           ]}>
           {renderItem(item, index, { dragging })}
         </Animated.View>
