@@ -59,7 +59,7 @@ test('받은 여행 초대는 친구 화면에 있고, 수락하면 그 여행�
   expect(await screen.findByRole('button', { name: '계정 관리, 받은 친구 요청·초대 1개' })).toBeOnTheScreen();
   expect(screen.queryByText('준호님이 초대했어요 · 2026. 12. 1 – 12. 3')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: '계정 관리, 받은 친구 요청·초대 1개' }));
-  fireEvent.press(await screen.findByRole('button', { name: '친구 관리' }));
+  fireEvent.press(await screen.findByRole('button', { name: /^친구 관리/ }));
   expect(await screen.findByText('준호님이 초대했어요 · 2026. 12. 1 – 12. 3')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '오사카 여행 초대 수락' }));
 
@@ -73,7 +73,7 @@ test('친구 화면에서 친구 링크를 보내고, 친구를 끊는다', asyn
   const api = fakeApi({}, { friends: { friends: [{ user_id: 'u2', display_name: '준호' }], incoming: [], outgoing: [] } });
   renderApp({ auth: signedIn(), api, initialUrl: '/account' });
 
-  fireEvent.press(await screen.findByRole('button', { name: '친구 관리' }));
+  fireEvent.press(await screen.findByRole('button', { name: /^친구 관리/ }));
   expect(await screen.findByText('내 친구 1명')).toBeOnTheScreen();
   await waitFor(() => expect(screen.getByRole('button', { name: '친구 링크 보내기' })).toBeEnabled());
   fireEvent.press(screen.getByRole('button', { name: '친구 링크 보내기' }));
@@ -119,4 +119,15 @@ test('참여자도 친구 화면의 함께 여행한 사람에서 친구를 추�
 
   await waitFor(() => expect(api.requestFriend).toHaveBeenCalledWith('trip-jeju', 'm1'));
   expect(await screen.findByText('보낸 요청')).toBeOnTheScreen();
+});
+
+test('계정 관리의 친구 관리 버튼에도 받은 요청·초대 수가 뜬다', async () => {
+  const api = fakeApi({}, {
+    friends: { friends: [], incoming: [{ id: 'r1', person: { user_id: 'u2', display_name: '준호' } }], outgoing: [] },
+    tripInvites: [{ id: 'inv1', trip: { id: 't9', name: '부산', start_date: '2026-12-01', end_date: '2026-12-02' }, inviter_name: '수빈' }],
+  });
+  renderApp({ auth: signedIn(), api, initialUrl: '/account' });
+
+  expect(await screen.findByRole('button', { name: '친구 관리, 받은 친구 요청·초대 2개' })).toBeOnTheScreen();
+  expect(screen.getByText('2')).toBeOnTheScreen();
 });
