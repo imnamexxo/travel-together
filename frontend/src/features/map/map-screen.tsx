@@ -63,6 +63,12 @@ export default function MapScreen() {
   const [bodyHeight] = useState(() => new Animated.Value(SHEET_BODY));
   // 내용 높이만큼 펼친다(최대 화면의 절반).
   const [full, setFull] = useState(SHEET_BODY);
+  // Android는 글자 높이를 화면 위치에 맞춰 반올림해서, 시트 높이를 바꾸면 내용 높이가 1~2px 달라질 수 있다.
+  // 그 차이까지 따라가면 높이 바꿈 → 내용 높이 바뀜 → 다시 높이 바꿈이 반복되어 시트가 떨린다. 작은 차이는 무시한다.
+  const fitBody = (h: number) => {
+    const next = Math.min(maxBody, Math.ceil(h));
+    setFull((prev) => (Math.abs(prev - next) <= 3 ? prev : next));
+  };
   useEffect(() => { if (expanded && !moving) bodyHeight.setValue(full); }, [full, expanded, moving, bodyHeight]);
   const settle = useCallback((open: boolean) => {
     setMoving(true);
@@ -97,7 +103,7 @@ export default function MapScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel={expanded ? '장소 정보 접기' : '장소 정보 펼치기'} onPress={() => settle(!expanded)} style={s.handleArea}><View style={s.handle} /></Pressable>
         <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selected.place.name}</Text><Text style={s.area}>{selected.place.road_address ?? selected.place.address}</Text></View><View style={s.kind}><View style={[s.kindDot, !selected.visited && s.kindDotOpen]} /><Text style={s.kindText}>{selected.visited ? '들른 곳' : '계획만 한 곳'}</Text></View></View>
         </View>
-        {(expanded || moving) && <Animated.View style={{ height: bodyHeight, overflow: 'hidden' }}><ScrollView style={{ maxHeight: maxBody }} contentContainerStyle={s.sheetContent} onContentSizeChange={(_, h) => setFull(Math.min(maxBody, Math.ceil(h)))}>
+        {(expanded || moving) && <Animated.View style={{ height: bodyHeight, overflow: 'hidden' }}><ScrollView style={{ maxHeight: maxBody }} contentContainerStyle={s.sheetContent} onContentSizeChange={(_, h) => fitBody(h)}>
         <MetaLine textStyle={s.counts} parts={[`일정 ${selected.plan_items.length}개`, `사진 ${selected.photos.length}장`, !!selected.expense_count && `지출 ${money.format(selected.expense_total)}`]} />
         {!!selected.visited_dates.length && <Text style={s.visitedOn}>들른 날 {selected.visited_dates.map(dayLabel).filter(Boolean).join(', ')}</Text>}
         {selected.plan_items.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{dayLabel(item.date)} {item.time?.slice(0, 5) ?? ''}</Text><Text style={s.memo}>{item.memo || item.title}</Text></View>)}
