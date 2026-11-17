@@ -40,3 +40,18 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   });
   return { __esModule: true, default: Swipeable };
 });
+
+// 끌어서 순서 바꾸기(Reanimated)는 실기기에서 확인한다. 테스트에서는 스크롤과 줄만 그대로 그린다.
+jest.mock('react-native-reorderable-list', () => {
+  const { ScrollView, View } = require('react-native');
+  const reorderItems = <T,>(list: T[], from: number, to: number) => { const next = [...list]; const [item] = next.splice(from, 1); next.splice(to, 0, item); return next; };
+  type MockListProps = { data: unknown[]; keyExtractor: (item: unknown, index: number) => string; renderItem: (info: { item: unknown; index: number }) => React.ReactNode };
+  return {
+    __esModule: true,
+    ScrollViewContainer: ScrollView,
+    NestedReorderableList: ({ data, keyExtractor, renderItem }: MockListProps) => <View>{data.map((item, index) => <View key={keyExtractor(item, index)}>{renderItem({ item, index })}</View>)}</View>,
+    useReorderableDrag: () => () => {},
+    useIsActive: () => false,
+    reorderItems,
+  };
+});
