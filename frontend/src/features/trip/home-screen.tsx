@@ -1,6 +1,6 @@
 import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
@@ -9,7 +9,8 @@ import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { PlanItem } from '@/api/client';
 import { queryKeys, useExpenses, useMe, usePhotos, usePlanItems, useReorderPlanItems } from '@/api/queries';
-import DraggableRows from '@/components/draggable-rows';
+import DraggableRows, { LONG_PRESS_MS } from '@/components/draggable-rows';
+import { ScrollViewContainer } from 'react-native-reorderable-list';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { photoDayIndex } from '@/features/album/album-screen';
 import TravelNotes from './travel-notes';
@@ -45,10 +46,7 @@ export default function HomeScreen() {
   const reorder = useReorderPlanItems(trip.id);
   // 끌어서 바꾼 순서를 서버가 답하기 전에 먼저 보여 준다.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  // 끌기를 막 끝낸 손가락이 일정 편집을 열지 않게 한다.
-  const lastDragEnd = useRef(0);
   const sorted = (planItems.data ?? []).filter((item) => item.date === days[day].iso).sort((a, b) => a.position - b.position);
   const plans = pendingOrder ? pendingOrder.map((id) => sorted.find((i) => i.id === id)).filter((i): i is PlanItem => !!i) : sorted;
   // 서버 순서가 바꾼 순서와 같아지면 임시 순서를 지운다(그 전에 지우면 예전 순서가 잠깐 보인다).
@@ -76,7 +74,7 @@ export default function HomeScreen() {
   }
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
-    <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!dragging} contentContainerStyle={s.content}
+    <ScrollViewContainer showsVerticalScrollIndicator={false} contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={planItems.isRefetching} onRefresh={refresh} tintColor={C.primary} />}>
       <View style={s.between}><Pressable accessibilityRole="button" onPress={() => router.replace('/')} style={s.action}><Text style={s.link}>‹ 내 여행</Text></Pressable>
         <View style={s.headerButtons}>
@@ -102,12 +100,11 @@ export default function HomeScreen() {
           : planItems.isError ? <View style={s.empty}><Text style={s.caption}>{planItems.error.message}</Text><Pressable accessibilityRole="button" onPress={() => planItems.refetch()} style={s.action}><Text style={s.link}>다시 시도</Text></Pressable></View>
           : !plans.length && <View style={s.empty}><Text style={s.itemTitle}>아직 정해진 일정이 없어요</Text><Text style={s.caption}>함께 가고 싶은 곳을 담아보세요.</Text></View>}
         <DraggableRows items={plans} keyOf={(item) => item.id} labelOf={(item) => item.title} onReorder={saveOrder} disabled={reorder.isPending}
-          onDragChange={(active) => { setDragging(active); if (!active) lastDragEnd.current = Date.now(); }}
-          renderItem={(item, index, { dragging: lifted }) => {
+          renderItem={(item, index, { dragging: lifted, drag }) => {
           const time = item.time?.slice(0, 5) ?? '';
           const photosHere = photoCount(item);
           const spent = spentAt(item);
-          return <Pressable accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} accessibilityHint="꾹 눌러 끌면 순서를 바꿀 수 있어요" onPress={() => { if (Date.now() - lastDragEnd.current > 400) setEditing({ item }); }} style={({ pressed }) => [s.row, lifted && s.lifted, pressed && !lifted && s.pressed]}>
+          return <Pressable accessibilityRole="button" accessibilityLabel={`${time ? `${time} ` : ''}${item.title}, 일정 수정`} accessibilityHint="꾹 눌러 끌면 순서를 바꿀 수 있어요" onPress={() => setEditing({ item })} onLongPress={drag} delayLongPress={LONG_PRESS_MS} style={({ pressed }) => [s.row, lifted && s.lifted, pressed && !lifted && s.pressed]}>
             <Text style={s.time}>{time || '—'}</Text><View style={s.rail}><View style={[s.dot, index === 0 && s.activeDot]} />{index < plans.length - 1 && <View style={s.line} />}</View>
             <View style={s.item}>
               <View style={s.between}><Text style={s.itemTitle}>{item.title}</Text><Text style={s.chevron}>›</Text></View>
@@ -126,7 +123,7 @@ export default function HomeScreen() {
       {plans.length > 1 && <Text style={s.dragHint}>일정을 꾹 눌러 위아래로 끌면 순서를 바꿀 수 있어요</Text>}
       <Pressable accessibilityRole="button" onPress={() => setEditing({})} style={({ pressed }) => [s.add, pressed && s.pressed]}><Text style={s.link}>＋ 일정 추가</Text></Pressable>
       <Text style={s.notice}>당겨서 새로고침하면 다른 멤버가 바꾼 일정이 보여요</Text>
-    </ScrollView>
+    </ScrollViewContainer>
     <ActionSheet visible={menuOpen} title={trip.name} onClose={() => setMenuOpen(false)}
       info={[me.data ? `${me.data.display_name}님으로 로그인했어요.` : '', isOrganizer ? '이 여행의 총무예요.' : '', `멤버 ${trip.member_count}명`].filter(Boolean)}
       actions={[
