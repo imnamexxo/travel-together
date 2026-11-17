@@ -5,6 +5,7 @@ import { ApiProvider } from '@/api/api-context';
 import type { ApiClient } from '@/api/client';
 import { createQueryClient } from '@/api/query-client';
 import { AuthProvider, useAuth } from '@/auth/auth-context';
+import { TravelThemeProvider } from '@/theme/theme-context';
 import { DialogHost } from '@/components/dialog';
 import type { AuthService } from '@/auth/auth-service';
 
@@ -17,12 +18,14 @@ type AppProvidersProps = {
 /** 앱 전역 의존성. 실제 앱과 테스트가 서로 다른 인증 서비스·API 클라이언트를 넣는다. */
 export function AppProviders({ authService, api, children }: AppProvidersProps) {
   return (
-    <AuthProvider service={authService}>
+    <TravelThemeProvider>
+      <AuthProvider service={authService}>
       <ApiProvider client={api}>
         <QueryLayer>{children}</QueryLayer>
         <DialogHost />
       </ApiProvider>
     </AuthProvider>
+    </TravelThemeProvider>
   );
 }
 

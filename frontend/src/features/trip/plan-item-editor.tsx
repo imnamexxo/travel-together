@@ -10,7 +10,8 @@ import { ApiError, type PlaceCandidate, type PlanItem } from '@/api/client';
 import { useDeletePlanItem, usePlaceSearch, useSavePlanItem } from '@/api/queries';
 import PickerField from '@/components/pickers/picker-field';
 import TimePicker from '@/components/pickers/time-picker';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useCurrentTrip } from './current-trip';
 import type { TripDay } from './trip-dates';
 
@@ -30,6 +31,8 @@ function errorText(e: unknown, fallback: string) {
 }
 
 export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer, money } = useCurrentTrip();
   const save = useSavePlanItem(trip.id);
   const remove = useDeletePlanItem(trip.id);
@@ -146,7 +149,7 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, width: '100%', maxWidth: 600, alignSelf: 'center' },

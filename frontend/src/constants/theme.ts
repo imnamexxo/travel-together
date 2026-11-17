@@ -8,14 +8,14 @@ import { Platform } from 'react-native';
 /** Shared palette for the travel screens. Change these values to recolor the app. */
 export const TravelColors = {
   background: '#FFFFFF',
-  primary: '#223858',
-  accent: '#365F8A',
+  primary: '#1C304D',
+  accent: '#326183',
   text: '#202C3E',
   textSecondary: '#5F6F83',
   textMuted: '#6E7E92',
   onPrimary: '#FFFFFF',
-  surface: '#F4F6F9',
-  banner: '#EDF2F8',
+  surface: '#F1F5F7',
+  banner: '#E8EEF5',
   border: '#DBE3ED',
   divider: '#E7ECF3',
   inactive: '#8D9AAF',
@@ -23,7 +23,20 @@ export const TravelColors = {
   waveFront: '#ADBED5',
   sun: '#D9C9B1',
   error: '#B1443F',
+  ticketBackground: '#1C304D',
+  ticketText: '#FFFFFF',
+  ticketMuted: '#B4C1D2',
 } as const;
+
+export type TravelPalette = { [K in keyof typeof TravelColors]: string };
+export const DarkTravelColors: TravelPalette = {
+  background: '#101925', primary: '#AFCDF2', accent: '#94BFE7',
+  text: '#EFF4FB', textSecondary: '#B4C2D3', textMuted: '#98AAC0',
+  onPrimary: '#142339', surface: '#1B293B', banner: '#263A53',
+  border: '#435570', divider: '#2E4057', inactive: '#8A9CB3',
+  ticketBackground: '#1C304D', ticketText: '#FFFFFF', ticketMuted: '#B4C1D2',
+  waveBack: '#263A53', waveFront: '#3D5878', sun: '#C8AE78', error: '#FF9E98',
+};
 
 export const Colors = {
   light: {

@@ -5,13 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, type Suggestion } from '@/api/client';
 import { useAdoptSuggestions, useAskSuggestions } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
 
 const PRESETS = ['맛집 위주', '여유로운 일정', '자연·풍경', '실내 위주', '아이와 함께'];
 
 export default function SuggestionsScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, days } = useCurrentTrip();
   const ask = useAskSuggestions(trip.id);
   const adopt = useAdoptSuggestions(trip.id);
@@ -120,7 +123,7 @@ export default function SuggestionsScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 48, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },

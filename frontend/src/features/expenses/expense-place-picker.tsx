@@ -3,7 +3,8 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-nati
 import Pressable from '@/components/pressable';
 
 import { useExpensePlaceCandidates } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
 type Chosen = { source_place_id: string; name: string } | null;
 
@@ -18,6 +19,8 @@ type Props = {
 
 /** 지출의 장소: 상호(또는 고친 검색어)로 후보를 받아 고르거나 비워 둔다. 자동으로 붙이지 않는다. */
 export default function ExpensePlacePicker({ tripId, merchant, value, onChange, editable }: Props) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -65,7 +68,7 @@ export default function ExpensePlacePicker({ tripId, merchant, value, onChange, 
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   value: { fontSize: 15, color: C.text, marginTop: 6 },
   chosen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: 12, borderRadius: 12, backgroundColor: C.banner },
   chosenName: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: C.text },

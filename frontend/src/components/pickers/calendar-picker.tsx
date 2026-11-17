@@ -3,7 +3,8 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 import { WEEKDAY_HEADERS, dayLabel, formatDay, inRange, isIso, monthGrid, monthOf, nights, pickRange, shiftMonth, todayIso, type Range } from './calendar-logic';
 
 type Props = {
@@ -23,6 +24,7 @@ export default function CalendarPicker(props: Props) {
 }
 
 function Sheet(props: Props) {
+  const s = useThemedStyles(sStyles);
   const today = todayIso();
   const initial: Range = props.mode === 'range'
     ? { start: isIso(props.start) ? props.start : null, end: isIso(props.end) ? props.end : null }
@@ -73,7 +75,7 @@ function Sheet(props: Props) {
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' }, dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { backgroundColor: C.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12, width: '100%', maxWidth: 520, alignSelf: 'center' },
   title: { fontSize: 17, fontWeight: '700', color: C.text, marginBottom: 6 },

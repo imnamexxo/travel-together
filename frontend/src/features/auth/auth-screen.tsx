@@ -7,12 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/auth-context';
 import { AuthError } from '@/auth/auth-service';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import SocialLoginButtons from './social-login-buttons';
 import { validateAuth, type AuthErrors } from './validation';
 
 
 export default function AuthScreen({ signup = false }: { signup?: boolean }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { signIn, signUp } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24, width: '100%', maxWidth: 480, alignSelf: 'center' },
   hero: { paddingTop: 40, marginBottom: 28 }, signupHero: { paddingTop: 10, marginBottom: 18 },

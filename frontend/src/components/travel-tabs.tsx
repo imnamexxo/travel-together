@@ -1,4 +1,4 @@
-import { TravelColors as C } from '@/constants/theme';
+import { useTravelColors } from '@/theme/theme-context';
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 
@@ -10,6 +10,7 @@ const screens = [
 ] as const;
 
 export default function TravelTabs() {
+  const C = useTravelColors();
   return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: C.accent, tabBarInactiveTintColor: C.inactive, tabBarStyle: { backgroundColor: C.background, borderTopColor: C.divider }, tabBarLabelStyle: { fontSize: 10, fontWeight: '500' }, sceneStyle: { backgroundColor: C.background } }}>
     {screens.map((screen) => <Tabs.Screen key={screen.name} name={screen.name} options={{ title: screen.title, tabBarIcon: ({ color }) => <SymbolView name={{ ios: screen.ios, android: screen.other, web: screen.other }} tintColor={color} size={23} /> }} />)}
   </Tabs>;

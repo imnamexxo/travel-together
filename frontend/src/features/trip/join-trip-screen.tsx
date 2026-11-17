@@ -5,7 +5,8 @@ import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useJoinTrip } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
 /** 대소문자와 공백은 무시한다. 0/O, 1/I는 코드에 없으므로 바꿔 끼우지 않고 서버 판정을 따른다. */
 export function normalizeInviteCode(raw: string): string {
@@ -13,6 +14,8 @@ export function normalizeInviteCode(raw: string): string {
 }
 
 export default function JoinTripScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const join = useJoinTrip();
   // 초대 링크로 왔으면 코드가 채워져 있고 바로 참여한다.
   const params = useLocalSearchParams<{ code?: string }>();
@@ -58,7 +61,7 @@ export default function JoinTripScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },

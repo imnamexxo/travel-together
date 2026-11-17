@@ -11,7 +11,8 @@ import CalendarPicker from '@/components/pickers/calendar-picker';
 import { formatDay } from '@/components/pickers/calendar-logic';
 import PickerField from '@/components/pickers/picker-field';
 import TimePicker from '@/components/pickers/time-picker';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import ExpensePlacePicker from './expense-place-picker';
@@ -32,6 +33,8 @@ function detailErrors(e: ApiError): FormErrors {
 }
 
 export default function ExpenseEditorScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip } = useCurrentTrip();
   const { expenseId, analysis, receiptCurrency } = useLocalSearchParams<{ expenseId?: string; analysis?: string; receiptCurrency?: string }>();
   const members = useMembers(trip.id);
@@ -57,6 +60,8 @@ const ANALYSIS_NOTICE: Record<string, string> = {
 };
 
 function Editor({ members, expense, analysis, receiptCurrency }: { members: Member[]; expense: Expense | undefined; analysis?: string; receiptCurrency?: string }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer, money } = useCurrentTrip();
   const memberOrder = members.map((m) => m.member_id);
   const nameOf = (id: string) => members.find((m) => m.member_id === id)?.display_name ?? '알 수 없음';
@@ -239,7 +244,7 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 48, width: '100%', maxWidth: 600, alignSelf: 'center' },

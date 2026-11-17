@@ -1,4 +1,5 @@
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { showAlert } from '@/components/dialog';
@@ -17,7 +18,6 @@ import { useCurrentTrip } from './current-trip';
 import ActionSheet from '@/components/action-sheet';
 import FriendButton from '@/components/friend-button';
 import PlanItemEditor from './plan-item-editor';
-import { formatPeriod } from './trip-dates';
 
 /** 한국 시간 기준 오늘(YYYY-MM-DD). */
 export function todayInKorea(now = new Date()): string {
@@ -27,6 +27,8 @@ export function todayInKorea(now = new Date()): string {
 type Editing = { item?: PlanItem } | null;
 
 export default function HomeScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const me = useMe();
   const { signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -76,13 +78,21 @@ export default function HomeScreen() {
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!dragging} contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={planItems.isRefetching} onRefresh={refresh} tintColor={C.primary} />}>
-      <View style={s.between}><Text style={s.eyebrow}>TOGETHER, EVERYWHERE</Text>
+      <View style={s.between}><Pressable accessibilityRole="button" onPress={() => router.replace('/')} style={s.action}><Text style={s.link}>‹ 내 여행</Text></Pressable>
         <View style={s.headerButtons}>
           <FriendButton style={s.circle} />
           <Pressable accessibilityRole="button" accessibilityLabel="여행 메뉴" style={s.circle} onPress={() => setMenuOpen(true)}><Text style={s.more}>•••</Text></Pressable>
         </View>
       </View>
-      <Text style={s.title}>{trip.name}</Text><Text style={s.subtitle}>{formatPeriod(trip.start_date, trip.end_date)}  ·  {trip.member_count}명</Text>
+      <View style={s.ticket}>
+        <Text style={s.title}>{trip.name}</Text>
+        <View style={s.ticketRule} />
+        <View style={s.ticketDetails}>
+          <View><Text style={s.ticketLabel}>가는 날</Text><Text style={s.ticketValue}>{days[0].date} ({days[0].weekday})</Text></View>
+          <View><Text style={s.ticketLabel}>오는 날</Text><Text style={s.ticketValue}>{days[days.length - 1].date} ({days[days.length - 1].weekday})</Text></View>
+          <View><Text style={s.ticketLabel}>멤버</Text><Text style={s.ticketValue}>{trip.member_count}명</Text></View>
+        </View>
+      </View>
       <TravelNotes />
       <View style={s.between}><Text style={s.heading}>여행 일정</Text><Pressable accessibilityRole="button" style={s.action} onPress={() => router.push(`/trips/${trip.id}/suggestions`)}><Text style={s.link}>✧ 추천 일정</Text></Pressable></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.days}>{days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="tab" accessibilityState={{ selected: day === index }} accessibilityLabel={`${index + 1}일 차 ${entry.date}${index === todayIndex ? ' 오늘' : ''}`} onPress={() => setDay(index)} style={[s.day, index === day && s.selected, index === todayIndex && index !== day && s.today]}><Text style={[s.dayTitle, index === day && s.white]}>{index === todayIndex ? '오늘' : `${index + 1}일 차`}</Text><Text style={[s.dayDate, index === day && s.white]}>{entry.date} ({entry.weekday})</Text></Pressable>)}</ScrollView>
@@ -128,15 +138,15 @@ export default function HomeScreen() {
     {editing && <PlanItemEditor item={editing.item} day={days[day]} dayNumber={day + 1} onClose={() => setEditing(null)} />}
   </SafeAreaView>;
 }
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lifted: { backgroundColor: C.background, borderRadius: 12 }, orderError: { fontSize: 12, color: C.error, marginTop: 8 }, dragHint: { fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 10 },
   screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 72, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted },
   circle: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' }, more: { color: C.textSecondary, fontSize: 18 },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.text, marginTop: 12 }, subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10 },
+  ticket: { backgroundColor: C.ticketBackground, borderRadius: 24, padding: 24, marginTop: 16, marginBottom: 20 }, ticketRule: { borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#718096', marginVertical: 24 }, ticketDetails: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, ticketLabel: { fontSize: 12, color: C.ticketMuted, marginBottom: 10 }, ticketValue: { fontSize: 16, fontWeight: '700', color: C.ticketText }, title: { fontSize: 27, letterSpacing: -0.9, fontWeight: '800', color: C.ticketText }, subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10 },
   heading: { fontSize: 20, fontWeight: '700', letterSpacing: -0.5, color: C.text }, action: { minHeight: 44, minWidth: 44, justifyContent: 'center' }, link: { fontSize: 14, color: C.accent, fontWeight: '500' },
-  days: { flexGrow: 1, flexDirection: 'row', gap: 8, marginTop: 15, marginBottom: 25 }, day: { flexGrow: 1, minWidth: 96, paddingHorizontal: 12, paddingVertical: 12, borderRadius: 13, alignItems: 'center', gap: 6, backgroundColor: C.surface }, selected: { backgroundColor: C.primary }, today: { borderWidth: 1.5, borderColor: C.accent }, dayTitle: { fontSize: 14, fontWeight: '600', color: C.textSecondary }, dayDate: { fontSize: 11, color: C.textMuted }, white: { color: C.onPrimary },
+  days: { flexGrow: 1, flexDirection: 'row', gap: 8, marginTop: 15, marginBottom: 25 }, day: { flexGrow: 1, minWidth: 96, paddingHorizontal: 12, paddingVertical: 17, borderRadius: 17, alignItems: 'center', gap: 10, backgroundColor: C.surface }, selected: { backgroundColor: C.primary }, today: { borderWidth: 1.5, borderColor: C.accent }, dayTitle: { fontSize: 14, fontWeight: '600', color: C.textSecondary }, dayDate: { fontSize: 11, color: C.textMuted }, white: { color: C.onPrimary },
   date: { fontSize: 15, color: C.text, fontWeight: '600' }, caption: { fontSize: 12, color: C.textMuted, marginTop: 7, lineHeight: 19 }, timeline: { marginTop: 25 }, row: { flexDirection: 'row', minHeight: 103 }, pressed: { opacity: 0.55 }, time: { width: 46, fontSize: 12, fontVariant: ['tabular-nums'], color: C.textSecondary, paddingTop: 4 },
   rail: { width: 26, alignItems: 'center' }, dot: { width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: C.border, marginTop: 7, backgroundColor: C.background }, activeDot: { borderColor: C.accent }, line: { width: 1, flex: 1, backgroundColor: C.divider, marginTop: 7 },
   item: { flex: 1, paddingBottom: 27 }, itemTitle: { flexShrink: 1, color: C.text, fontSize: 16, fontWeight: '600', letterSpacing: -0.3, lineHeight: 24 }, chevron: { fontSize: 23, color: C.inactive }, memo: { fontSize: 12, color: C.textSecondary, lineHeight: 19, marginTop: 5 }, meta: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 10 }, metaText: { fontSize: 11, color: C.textSecondary }, photoText: { fontSize: 11, color: C.accent },

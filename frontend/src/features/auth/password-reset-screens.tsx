@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/auth-context';
 import { AuthError } from '@/auth/auth-service';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { validateAuth } from './validation';
 
 function message(e: unknown) {
@@ -14,6 +15,7 @@ function message(e: unknown) {
 }
 
 function Frame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+  const s = useThemedStyles(sStyles);
   return <SafeAreaView style={s.screen}>
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
@@ -28,6 +30,8 @@ function Frame({ title, subtitle, children }: { title: string; subtitle: string;
 
 /** 비밀번호 찾기: 가입한 이메일로 재설정 링크를 보낸다. */
 export function ForgotPasswordScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { requestPasswordReset } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +68,8 @@ export function ForgotPasswordScreen() {
 
 /** 메일의 링크로 열린다(traveltogether://reset-password?code=…). 새 비밀번호를 정하면 로그인된다. */
 export function ResetPasswordScreen({ code, linkError }: { code: string | null; linkError: string | null }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { resetPassword } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -105,7 +111,7 @@ export function ResetPasswordScreen({ code, linkError }: { code: string | null; 
   </Frame>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24, width: '100%', maxWidth: 480, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },

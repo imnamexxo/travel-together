@@ -40,7 +40,8 @@ test('총무는 여행 메뉴에서 설정을 열어 이름과 기간을 바꾼�
   expect(await screen.findByText('저장했어요.')).toBeOnTheScreen();
   expect(api.updateTrip).toHaveBeenCalledWith('trip-jeju', { name: '제주 3박', start_date: '2026-11-12', end_date: '2026-11-15', currency: 'KRW', is_overseas: false });
   fireEvent.press(screen.getByRole('button', { name: '플래너로 돌아가기' }));
-  expect(await screen.findByText('2026. 11. 12 – 11. 15  ·  2명')).toBeOnTheScreen();
+  expect((await screen.findAllByText('11.15 (일)')).length).toBeGreaterThan(0);
+  expect(screen.getByText('2명')).toBeOnTheScreen();
 });
 
 test('기간을 줄였다가 서버가 거절하면 어느 날짜 때문인지 보인다', async () => {

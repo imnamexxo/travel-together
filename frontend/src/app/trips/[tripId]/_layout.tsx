@@ -5,10 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isNotFound } from '@/api/client';
 import { useTrip } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { CurrentTripProvider } from '@/features/trip/current-trip';
 
 export default function TripLayout() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const trip = useTrip(tripId);
 
@@ -30,7 +33,7 @@ export default function TripLayout() {
   </CurrentTripProvider>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10, backgroundColor: C.background },
   title: { fontSize: 20, fontWeight: '700', color: C.text },
   message: { fontSize: 13, color: C.textSecondary, textAlign: 'center', lineHeight: 20 },

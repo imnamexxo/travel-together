@@ -11,14 +11,18 @@ import {
 } from '@/api/queries';
 import ActionSheet from '@/components/action-sheet';
 import Pressable from '@/components/pressable';
-import { TravelColors as C } from '@/constants/theme';
-import { accountStyles as s } from '@/features/account/account-screen';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
+import { accountStyles } from '@/features/account/account-screen';
 import { friendLink } from '@/features/trip/pending-invite';
 import { formatPeriod } from '@/features/trip/trip-dates';
 import { goBack } from '@/navigation';
 
 /** 친구와 여행 초대: 받은 여행 초대, 받은 친구 요청, 내 친구(여행에 초대·끊기), 함께 여행한 사람, 보낸 요청. */
 export default function FriendsScreen() {
+  const C = useTravelColors();
+  const f = useThemedStyles(fStyles);
+  const s = useThemedStyles(accountStyles);
   const friends = useFriends();
   const invites = useTripInvites();
   const code = useFriendCode();
@@ -119,6 +123,9 @@ export default function FriendsScreen() {
 
 /** 친구를 초대할 내 여행 고르기(내가 총무인 여행만). */
 function TripPicker({ friend, onError }: { friend: Person; onError: (e: Error) => void }) {
+  const C = useTravelColors();
+  const f = useThemedStyles(fStyles);
+  const s = useThemedStyles(accountStyles);
   const trips = useTripsForFriend(friend.user_id);
   const invite = useInviteFriendTo();
   if (trips.isPending) return <ActivityIndicator style={f.picker} color={C.primary} />;
@@ -135,7 +142,7 @@ function TripPicker({ friend, onError }: { friend: Person; onError: (e: Error) =
   </View>;
 }
 
-const f = StyleSheet.create({
+const fStyles = (C: TravelPalette) => StyleSheet.create({
   inviteCard: { padding: 16, borderRadius: 14, backgroundColor: C.banner, gap: 4, marginTop: 10 },
   inviteActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   declineButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' }, declineText: { fontSize: 14, color: C.text },

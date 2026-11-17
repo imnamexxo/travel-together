@@ -9,7 +9,8 @@ import { useHandOverOrganizer, useMembers, useUpdateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
 import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
 import { validateNewTrip, type NewTripErrors } from './new-trip-validation';
@@ -19,6 +20,7 @@ function errorText(e: unknown, fallback: string) {
 }
 
 export default function TripSettingsScreen() {
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer } = useCurrentTrip();
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
@@ -38,6 +40,8 @@ export default function TripSettingsScreen() {
 }
 
 function EditTripForm() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, money } = useCurrentTrip();
   const update = useUpdateTrip(trip.id);
   const [name, setName] = useState(trip.name);
@@ -83,6 +87,7 @@ function EditTripForm() {
 }
 
 function HandOverOrganizer() {
+  const s = useThemedStyles(sStyles);
   const { trip } = useCurrentTrip();
   const members = useMembers(trip.id);
   const handOver = useHandOverOrganizer(trip.id);
@@ -115,7 +120,7 @@ function HandOverOrganizer() {
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },

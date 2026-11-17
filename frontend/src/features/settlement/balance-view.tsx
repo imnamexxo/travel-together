@@ -8,7 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Settlement } from '@/api/client';
 import { useDeleteTransfer, useRecordTransfer, useSettlement, useTransfers } from '@/api/queries';
 import { toKstParts } from '@/features/expenses/expense-form';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { Money } from '@/lib/money';
 
@@ -22,6 +23,8 @@ export function transferGuide(tripName: string, settlement: Settlement, money: M
 
 /** 정산 현황. 서버가 계산한 결과만 그린다. 금액을 앱에서 다시 계산하지 않는다. */
 export default function BalanceView() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer, money } = useCurrentTrip();
   const settlement = useSettlement(trip.id);
   const transfers = useTransfers(trip.id);
@@ -146,6 +149,7 @@ type Suggestion = Settlement['suggested_transfers'][number];
 
 /** 일부만 보낸 경우: 보낸 멤버·받은 멤버는 송금 제안 그대로, 금액만 직접 입력한다. */
 function PartialTransferSheet({ suggestion, busy, onClose, onSubmit }: { suggestion: Suggestion; busy: boolean; onClose: () => void; onSubmit: (amount: number) => void }) {
+  const s = useThemedStyles(sStyles);
   const { money } = useCurrentTrip();
   const [amount, setAmount] = useState(money.toText(suggestion.amount));
   const [error, setError] = useState<string | null>(null);
@@ -171,11 +175,11 @@ function PartialTransferSheet({ suggestion, busy, onClose, onSubmit }: { suggest
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, maxWidth: 600, width: '100%', alignSelf: 'center' },
   loading: { marginTop: 24 },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 24, paddingBottom: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, total: { fontSize: 20, color: C.primary, fontWeight: '600', fontVariant: ['tabular-nums'] }, secondary: { fontSize: 12, lineHeight: 20, color: C.textSecondary },
-  balanceSection: { paddingVertical: 25 }, balance: { fontSize: 38, fontWeight: '700', color: C.primary, letterSpacing: -1, marginTop: 8, fontVariant: ['tabular-nums'] }, amountRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 18 }, emphasis: { fontSize: 13, fontWeight: '600', color: C.text }, basisButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, marginTop: 12 }, link: { fontSize: 13, color: C.accent, fontWeight: '500' },
+  balanceSection: { padding: 22, borderRadius: 22, backgroundColor: C.surface, marginTop: 20 }, balance: { fontSize: 40, fontWeight: '700', color: C.primary, letterSpacing: -1, marginTop: 8, fontVariant: ['tabular-nums'] }, amountRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 18 }, emphasis: { fontSize: 13, fontWeight: '600', color: C.text }, basisButton: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: C.border, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, marginTop: 12 }, link: { fontSize: 13, color: C.accent, fontWeight: '500' },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginTop: 25, marginBottom: 12 },
   transfer: { paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, transferNames: { fontSize: 15, fontWeight: '500', color: C.text }, arrow: { color: C.textMuted }, transferAmount: { fontSize: 17, fontWeight: '600', color: C.primary },
   copyButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: 8 },

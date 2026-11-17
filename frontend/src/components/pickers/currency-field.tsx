@@ -3,7 +3,8 @@ import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 import { CURRENCIES, CURRENCY_CODES, currencyName, type CurrencyCode } from '@/lib/money';
 import PickerField from './picker-field';
 
@@ -13,6 +14,7 @@ export default function CurrencyField({ value, onChange, hint }: {
   onChange: (code: CurrencyCode) => void;
   hint?: string;
 }) {
+  const s = useThemedStyles(sStyles);
   const [open, setOpen] = useState(false);
   return <>
     <Text style={s.label}>통화</Text>
@@ -38,7 +40,7 @@ export default function CurrencyField({ value, onChange, hint }: {
   </>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 18 },
   hint: { fontSize: 12, lineHeight: 18, color: C.textMuted, marginTop: 7 },
   backdrop: { flex: 1, justifyContent: 'flex-end' }, dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },

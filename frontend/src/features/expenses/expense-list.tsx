@@ -6,13 +6,16 @@ import Pressable from '@/components/pressable';
 
 import { newIdempotencyKey, type ExpenseSummary } from '@/api/client';
 import { useExpenses, useUploadReceipt } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import { STATUS_LABEL, toKstParts } from './expense-form';
 import { pickReceipt, prepareReceipt, type ReceiptSource } from './receipt-prep';
 
 /** 지출 내역: 확인이 필요한 지출(초안·검사 실패)을 위에 모으고, 그 아래 확정된 지출. */
 export default function ExpenseList() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer } = useCurrentTrip();
   const expenses = useExpenses(trip.id);
   const upload = useUploadReceipt(trip.id);
@@ -74,6 +77,7 @@ export default function ExpenseList() {
 }
 
 function ExpenseRow({ expense, tripId }: { expense: ExpenseSummary; tripId: string }) {
+  const s = useThemedStyles(sStyles);
   const { money } = useCurrentTrip();
   const name = expense.merchant_name ?? '이름 없는 지출';
   const date = expense.paid_at ? toKstParts(expense.paid_at).date.slice(5).replace('-', '.') : '';
@@ -88,7 +92,7 @@ function ExpenseRow({ expense, tripId }: { expense: ExpenseSummary; tripId: stri
   </Pressable>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   loading: { marginTop: 24 },
   empty: { paddingVertical: 20, alignItems: 'flex-start' },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginTop: 25, marginBottom: 12 },

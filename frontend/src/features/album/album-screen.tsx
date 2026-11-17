@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Photo, PhotoPlaceLink, Place } from '@/api/client';
 import { useDeletePhoto, useLinkPhotoPlace, usePhotos, usePlaceSearch, usePlanItems } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
@@ -45,6 +46,8 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
 }
 
 export default function AlbumScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, days, isOrganizer } = useCurrentTrip();
   const photoList = usePhotos(trip.id);
   const planItems = usePlanItems(trip.id);
@@ -178,6 +181,8 @@ export default function AlbumScreen() {
 
 /** 사진 상세의 장소: 연결된 장소와 그날 그 장소의 일정, 연결 바꾸기·해제, 일정에 없던 곳 검색해 연결. */
 function PlaceSection({ photo }: { photo: Photo }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, days } = useCurrentTrip();
   const planItems = usePlanItems(trip.id);
   const link = useLinkPhotoPlace(trip.id);
@@ -220,12 +225,12 @@ function PlaceSection({ photo }: { photo: Photo }) {
   </>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 28, maxWidth: 600, width: '100%', alignSelf: 'center', flexGrow: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   titleCopy: { flex: 1 }, eyebrow: { fontSize: 12, color: C.textMuted, marginBottom: 8 },
-  title: { fontSize: 30, fontWeight: '700', color: C.primary, letterSpacing: -1 },
+  title: { fontSize: 32, fontWeight: '800', color: C.primary, letterSpacing: -1 },
   plus: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
   plusText: { fontSize: 26, lineHeight: 30, color: C.onPrimary }, pressed: { opacity: 0.6 },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 13 },
@@ -237,7 +242,7 @@ const s = StyleSheet.create({
   mode: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 46, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   modeSelected: { borderBottomColor: C.primary }, modeText: { fontSize: 14, color: C.textMuted }, modeTextSelected: { color: C.primary, fontWeight: '600' },
   chips: { flexDirection: 'row', gap: 8, paddingTop: 18, paddingBottom: 6 },
-  chip: { borderRadius: 18, paddingHorizontal: 13, minHeight: 36, justifyContent: 'center', backgroundColor: C.surface },
+  chip: { borderRadius: 22, paddingHorizontal: 16, minHeight: 40, justifyContent: 'center', backgroundColor: C.surface },
   chipSelected: { backgroundColor: C.banner }, chipText: { fontSize: 12, color: C.textSecondary }, chipTextSelected: { color: C.primary, fontWeight: '600' },
   groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 24, paddingBottom: 12 },
   groupTitle: { fontSize: 14, fontWeight: '600', color: C.text }, count: { fontSize: 12, color: C.textMuted },

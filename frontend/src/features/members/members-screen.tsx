@@ -8,13 +8,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Member } from '@/api/client';
 import { useAnswerFriend, useInviteCode, useMembers, useReissueInviteCode, useRemoveMember, useRequestFriend } from '@/api/queries';
 import { inviteLink } from '@/features/trip/pending-invite';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 
 const MAX_MEMBERS = 10;
 
 export default function MembersScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer } = useCurrentTrip();
   const members = useMembers(trip.id);
 
@@ -42,6 +45,7 @@ export default function MembersScreen() {
 }
 
 function MemberRow({ member, canRemove }: { member: Member; canRemove: boolean }) {
+  const s = useThemedStyles(sStyles);
   const { trip } = useCurrentTrip();
   const remove = useRemoveMember(trip.id);
 
@@ -66,6 +70,7 @@ function MemberRow({ member, canRemove }: { member: Member; canRemove: boolean }
 
 /** 멤버 줄의 친구 버튼: 친구 추가 → 요청됨, 받은 요청은 수락, 이미 친구면 표시만. */
 function FriendAction({ member }: { member: Member }) {
+  const s = useThemedStyles(sStyles);
   const { trip } = useCurrentTrip();
   const request = useRequestFriend(trip.id);
   const answer = useAnswerFriend();
@@ -79,6 +84,8 @@ function FriendAction({ member }: { member: Member }) {
 }
 
 function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const code = useInviteCode(tripId, { enabled: true });
   const reissue = useReissueInviteCode(tripId);
   const [notice, setNotice] = useState<string | null>(null);
@@ -124,7 +131,7 @@ function InviteCodeCard({ tripId, tripName }: { tripId: string; tripName: string
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },

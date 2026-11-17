@@ -4,7 +4,8 @@ import { Animated, Image, PanResponder, ScrollView, StyleSheet, Text, useWindowD
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import { useMapData, useMembers } from '@/api/queries';
 import type { MapPlace } from '@/api/client';
@@ -33,6 +34,7 @@ function createSheetDrag(bodyHeight: Animated.Value, onStart: () => void) {
 }
 
 export default function MapScreen() {
+  const s = useThemedStyles(sStyles);
   const { trip, days, money } = useCurrentTrip();
   const [day, setDay] = useState<number | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
@@ -109,10 +111,10 @@ export default function MapScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, heading: { paddingHorizontal: 24, paddingTop: 20 },
   title: { fontSize: 30, fontWeight: '800', color: C.primary, letterSpacing: -1 },
-  dates: { paddingTop: 20, gap: 8, paddingBottom: 5 }, chip: { minHeight: 36, borderRadius: 18, paddingHorizontal: 13, justifyContent: 'center', backgroundColor: C.surface }, chipActive: { backgroundColor: C.primary }, chipText: { fontSize: 12, color: C.textSecondary }, chipActiveText: { color: C.onPrimary, fontWeight: '500' },
+  dates: { paddingTop: 20, gap: 8, paddingBottom: 5 }, chip: { minHeight: 40, borderRadius: 22, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: C.surface }, chipActive: { backgroundColor: C.primary }, chipText: { fontSize: 12, color: C.textSecondary }, chipActiveText: { color: C.onPrimary, fontWeight: '500' },
   memberScroll: { flexGrow: 0 }, members: { paddingTop: 8, paddingBottom: 6, gap: 6, alignItems: 'center' }, memberChip: { minHeight: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: C.border }, memberActive: { borderColor: C.primary, backgroundColor: C.banner }, memberText: { fontSize: 12, color: C.textSecondary }, memberActiveText: { color: C.primary, fontWeight: '600' },
   visitedOn: { fontSize: 12, color: C.accent, marginTop: 6 },
   filters: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 }, filterButton: { minHeight: 44, justifyContent: 'center' }, filterText: { fontSize: 12, color: C.textMuted }, activeText: { color: C.primary, fontWeight: '600' }, placeCount: { fontSize: 11, color: C.textMuted, marginLeft: 'auto' },

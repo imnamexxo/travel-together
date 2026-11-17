@@ -3,7 +3,8 @@ import Constants from 'expo-constants';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import MapView, { Marker } from 'react-native-maps';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelTheme } from '@/theme/theme-context';
 import type { PlaceMapProps } from './map-types';
 import PlaceList from './place-list';
 
@@ -19,11 +20,13 @@ export default function PlaceMap(props: PlaceMapProps) {
 }
 
 function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
+  const { scheme } = useTravelTheme();
+  const s = useThemedStyles(sStyles);
   const map = useRef<MapView>(null);
   const [ready, setReady] = useState(false);
   // Android 구글 지도는 직접 그린 핀을 그림으로 찍어 쓴다. 숫자가 다 그려지기 전에 찍히면 숫자가 빠지므로,
   // 핀이 바뀌면 잠깐 동안 다시 그리게 두었다가(tracksViewChanges) 멈춘다(계속 켜 두면 느려진다).
-  const changeKey = useMemo(() => `${pins.map((p) => `${p.id}:${p.visited}`).join('|')}#${selectedId}#${ready}`, [pins, selectedId, ready]);
+  const changeKey = useMemo(() => `${pins.map((p) => `${p.id}:${p.visited}`).join('|')}#${selectedId}#${ready}#${scheme}`, [pins, selectedId, ready, scheme]);
   const [settledKey, setSettledKey] = useState<string | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setSettledKey(changeKey), 800);
@@ -41,7 +44,7 @@ function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
   useEffect(() => { fit(); }, [fit]);
 
   return <View style={s.container}>
-    <MapView ref={map} style={s.map} onMapReady={() => setReady(true)}
+    <MapView userInterfaceStyle={scheme} ref={map} style={s.map} onMapReady={() => setReady(true)}
       initialRegion={{ latitude: 33.523, longitude: 126.581, latitudeDelta: 0.12, longitudeDelta: 0.25 }}
       showsUserLocation={false} showsMyLocationButton={false} showsCompass={false} showsPointsOfInterests={false} toolbarEnabled={false}>
       {pins.map((pin, index) => <Marker key={`${pin.id}-${pin.visited}-${pin.id === selectedId}`} coordinate={pin}
@@ -55,7 +58,7 @@ function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
     {!pins.length && <View style={s.empty}><Text style={s.emptyText}>선택한 조건에 해당하는 장소가 없어요</Text></View>}
   </View>;
 }
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.surface }, map: { width: '100%', height: '100%' },
   pin: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: C.primary, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' },
   visited: { backgroundColor: C.primary }, selected: { borderColor: C.accent, borderWidth: 4 },

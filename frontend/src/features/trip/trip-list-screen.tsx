@@ -10,11 +10,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TripSummary } from '@/api/client';
 import { useBefriendByCode, useDeleteAnyTrip, useFriends, useLeaveAnyTrip, useMe, useTripInvites, useTrips } from '@/api/queries';
 import { Badge } from '@/components/friend-button';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { takePendingFriend, takePendingInvite } from './pending-invite';
 import { formatPeriod } from './trip-dates';
 
 export default function TripListScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const me = useMe();
   const trips = useTrips();
   const invites = useTripInvites();
@@ -35,7 +38,7 @@ export default function TripListScreen() {
 
 
   const header = <View style={s.header}>
-    <Text style={s.eyebrow}>TRAVEL TOGETHER</Text>
+
     <View style={s.titleRow}>
       <Text style={s.title}>내 여행</Text>
       <View style={s.headerActions}>
@@ -74,9 +77,13 @@ export default function TripListScreen() {
 
 /** 여행 카드. 왼쪽으로 밀면 총무는 "삭제", 참여자는 "나가기" 버튼이 나온다(확인창을 거친다). */
 function TripCard({ trip }: { trip: TripSummary }) {
+  const s = useThemedStyles(sStyles);
   const swipe = useRef<SwipeableMethods>(null);
   const remove = useDeleteAnyTrip();
   const leave = useLeaveAnyTrip();
+  const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  const remaining = Math.round((Date.parse(trip.start_date) - Date.parse(today)) / 86400000);
+  const status = today > trip.end_date ? '다녀옴' : remaining > 0 ? `D-${remaining}` : '여행 중';
   const label = trip.is_organizer ? '삭제' : '나가기';
 
   function confirm() {
@@ -102,30 +109,30 @@ function TripCard({ trip }: { trip: TripSummary }) {
     <Pressable accessibilityRole="button" accessibilityLabel={`${trip.name} 열기`}
       accessibilityActions={[{ name: 'remove', label: `${trip.name} ${label}` }]} onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'remove') confirm(); }}
       dim={false} onPress={() => router.push(`/trips/${trip.id}`)} style={s.card}>
-      <View style={s.between}>
+      <View style={s.ticketBody}><View style={s.between}>
         <Text style={s.cardTitle} numberOfLines={1}>{trip.name}</Text>
         {trip.is_organizer && <Text style={s.badge}>총무</Text>}
       </View>
-      <Text style={s.cardMeta}>{formatPeriod(trip.start_date, trip.end_date)}  ·  멤버 {trip.member_count}명</Text>
+      <Text style={s.cardMeta}>{formatPeriod(trip.start_date, trip.end_date)}  ·  {trip.member_count}명</Text></View><View style={s.ticketStub}><Text style={s.ticketStatus}>{status}</Text></View><View pointerEvents="none" style={s.cutTop} /><View pointerEvents="none" style={s.cutBottom} />
     </Pressable>
   </Swipeable>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   swipeAction: { width: 92, marginLeft: 10, borderRadius: 18, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', gap: 4 },
   swipeText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   swipeHint: { fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 16 },
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center', flexGrow: 1 },
-  header: { marginBottom: 24 },
+  header: { marginBottom: 32 },
   eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted, marginTop: 12 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary },
+  title: { fontSize: 32, letterSpacing: -1.1, fontWeight: '800', color: C.primary },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10 },
   newButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: C.banner, justifyContent: 'center' },
   newText: { fontSize: 14, fontWeight: '600', color: C.primary },
-  card: { padding: 18, borderRadius: 16, backgroundColor: C.surface },
+  card: { flexDirection: 'row', borderRadius: 20, backgroundColor: C.surface, overflow: 'hidden', minHeight: 104 }, ticketBody: { flex: 1, padding: 20, justifyContent: 'center' }, ticketStub: { width: 86, borderLeftWidth: 1.5, borderLeftColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }, ticketStatus: { color: C.primary, fontSize: 15, fontWeight: '700' }, cutTop: { position: 'absolute', right: 79, top: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.background }, cutBottom: { position: 'absolute', right: 79, bottom: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.background },
   cardTitle: { flexShrink: 1, fontSize: 17, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
   cardMeta: { fontSize: 12, color: C.textSecondary, marginTop: 8 },
   badge: { fontSize: 11, fontWeight: '600', color: C.primary, backgroundColor: C.banner, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 9, overflow: 'hidden' },

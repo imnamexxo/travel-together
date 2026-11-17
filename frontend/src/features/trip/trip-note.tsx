@@ -3,10 +3,13 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, Te
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
 // Local preview state, independent of the selected day. Server sharing comes later.
 export default function TripNote() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const [note, setNote] = useState('');
   const [draft, setDraft] = useState('');
   const [visible, setVisible] = useState(false);
@@ -61,7 +64,7 @@ export default function TripNote() {
   );
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   section: { marginTop: 26, marginBottom: 24 },
   card: { backgroundColor: C.banner, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16 },
   pressed: { opacity: 0.6 },

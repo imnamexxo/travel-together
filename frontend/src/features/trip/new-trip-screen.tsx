@@ -9,11 +9,14 @@ import { useCreateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
 import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/lib/money';
 import { validateNewTrip, type NewTripErrors } from './new-trip-validation';
 
 export default function NewTripScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const createTrip = useCreateTrip();
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -67,7 +70,7 @@ export default function NewTripScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
