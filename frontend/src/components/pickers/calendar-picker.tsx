@@ -40,8 +40,8 @@ function Sheet(props: Props) {
     if (props.mode === 'range') { if (range.end) props.onConfirm(range.start, range.end); } else props.onConfirm(range.start);
   };
   const summary = props.mode === 'range'
-    ? range.start && range.end ? `${formatDay(range.start, today)} – ${formatDay(range.end, today)} · ${nights({ start: range.start, end: range.end })}일`
-      : range.start ? `${formatDay(range.start, today)}부터 · 끝나는 날을 눌러 주세요` : '시작하는 날을 눌러 주세요'
+    ? range.start && range.end ? `${formatDay(range.start, today)} – ${formatDay(range.end, today)} (${nights({ start: range.start, end: range.end })}일)`
+      : range.start ? `${formatDay(range.start, today)}부터, 끝나는 날을 눌러 주세요` : '시작하는 날을 눌러 주세요'
     : range.start ? formatDay(range.start, today) : '날짜를 눌러 주세요';
 
   return <View style={s.backdrop}>
@@ -90,7 +90,7 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   sunday: { color: '#C2410C' }, saturday: { color: C.accent },
   summary: { fontSize: 13, color: C.textSecondary, textAlign: 'center', marginTop: 10 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  button: { flex: 1, minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cancel: { backgroundColor: C.surface }, cancelText: { fontSize: 15, color: C.text },
   ok: { backgroundColor: C.primary }, okText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, disabled: { opacity: 0.4 },
 });

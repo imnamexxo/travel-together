@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { IBMPlexSansKR_400Regular, IBMPlexSansKR_500Medium, IBMPlexSansKR_600SemiBold, IBMPlexSansKR_700Bold, useFonts } from '@expo-google-fonts/ibm-plex-sans-kr';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -13,6 +14,9 @@ import { apiClient, authService } from '@/dependencies';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  // 제목·숫자 글꼴. 다 받기 전에는 스플래시를 그대로 둔다(글꼴이 바뀌며 화면이 튀지 않게).
+  const [fontsLoaded, fontError] = useFonts({ IBMPlexSansKR_400Regular, IBMPlexSansKR_500Medium, IBMPlexSansKR_600SemiBold, IBMPlexSansKR_700Bold });
+  if (!fontsLoaded && !fontError) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProviders authService={authService} api={apiClient}>

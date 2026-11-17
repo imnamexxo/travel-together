@@ -8,8 +8,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Settlement } from '@/api/client';
 import { useDeleteTransfer, useRecordTransfer, useSettlement, useTransfers } from '@/api/queries';
 import { toKstParts } from '@/features/expenses/expense-form';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
+import MetaLine from '@/components/meta-line';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { Money } from '@/lib/money';
 
@@ -79,7 +80,7 @@ export default function BalanceView() {
   }
 
   return <>
-    <View style={s.totalRow}><Text style={s.secondary}>확정된 총지출 · {data.confirmed_count}건</Text><Text style={s.total}>{money.format(data.confirmed_total)}</Text></View>
+    <View style={s.totalRow}><Text style={s.secondary}>확정된 총지출 {data.confirmed_count}건</Text><Text style={s.total}>{money.format(data.confirmed_total)}</Text></View>
     {me && <View style={s.balanceSection}>
       <Text style={s.secondary}>{me.balance > 0 ? '내가 받을 금액' : me.balance < 0 ? '내가 보낼 금액' : '내 정산이 완료됐어요'}</Text>
       <Text style={s.balance}>{money.format(Math.abs(me.balance))}</Text>
@@ -118,7 +119,7 @@ export default function BalanceView() {
         const label = `${t.from_name} → ${t.to_name} ${money.format(t.amount)}`;
         const when = toKstParts(t.recorded_at);
         return <View key={t.id} style={s.history}>
-          <View style={s.historyCopy}><Text style={s.historyTitle}>{t.from_name} → {t.to_name}</Text><Text style={s.helper}>{money.format(t.amount)} · {when.date.slice(5).replace('-', '.')} {when.time} 기록</Text></View>
+          <View style={s.historyCopy}><Text style={s.historyTitle}>{t.from_name} → {t.to_name}</Text><MetaLine textStyle={s.helper} parts={[money.format(t.amount), `${when.date.slice(5).replace('-', '.')} ${when.time} 기록`]} /></View>
           {isOrganizer && <Pressable accessibilityRole="button" accessibilityLabel={`${label} 기록 지우기`} disabled={deleteTransfer.isPending} onPress={() => confirmDelete(t.id, label)} style={s.textAction}><Text style={s.link}>지우기</Text></Pressable>}
         </View>;
       })}
@@ -134,7 +135,7 @@ export default function BalanceView() {
           {Object.values(sharesByExpense).map((shares) => <View key={shares[0].expense_id} style={s.basisGroup}>
             <Text style={s.expenseName}>{shares[0].expense_name}</Text>
             {shares.map((share, index) => <View key={`${share.expense_id}-${index}`} style={s.basisRow}>
-              <View style={s.expenseCopy}><Text style={s.secondary}>{share.item_name}</Text><Text style={s.helper}>품목 {money.format(share.item_amount)} · {share.sharer_count}명 분담</Text></View>
+              <View style={s.expenseCopy}><Text style={s.secondary}>{share.item_name}</Text><MetaLine textStyle={s.helper} parts={[`품목 ${money.format(share.item_amount)}`, `${share.sharer_count}명 분담`]} /></View>
               <Text style={s.emphasis}>{money.format(share.amount)}</Text>
             </View>)}
           </View>)}
@@ -179,19 +180,19 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, maxWidth: 600, width: '100%', alignSelf: 'center' },
   loading: { marginTop: 24 },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 24, paddingBottom: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, total: { fontSize: 20, color: C.primary, fontWeight: '600', fontVariant: ['tabular-nums'] }, secondary: { fontSize: 12, lineHeight: 20, color: C.textSecondary },
-  balanceSection: { padding: 22, borderRadius: 22, backgroundColor: C.surface, marginTop: 20 }, balance: { fontSize: 40, fontWeight: '700', color: C.primary, letterSpacing: -1, marginTop: 8, fontVariant: ['tabular-nums'] }, amountRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 18 }, emphasis: { fontSize: 13, fontWeight: '600', color: C.text }, basisButton: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: C.border, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, marginTop: 12 }, link: { fontSize: 13, color: C.accent, fontWeight: '500' },
+  balanceSection: { padding: 22, borderRadius: 22, backgroundColor: C.surface, marginTop: 20 }, balance: { fontSize: 40, fontFamily: Type.display, color: C.primary, letterSpacing: -1, marginTop: 8, fontVariant: ['tabular-nums'] }, amountRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 18 }, emphasis: { fontSize: 13, fontWeight: '600', color: C.text }, basisButton: { borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: C.border, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, marginTop: 12 }, link: { fontSize: 13, color: C.accent, fontWeight: '500' },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginTop: 25, marginBottom: 12 },
   transfer: { paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, transferNames: { fontSize: 15, fontWeight: '500', color: C.text }, arrow: { color: C.textMuted }, transferAmount: { fontSize: 17, fontWeight: '600', color: C.primary },
   copyButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: 8 },
   recordActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10 },
-  recordButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 9, backgroundColor: C.banner }, recordText: { fontSize: 12, color: C.accent },
+  recordButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: C.banner }, recordText: { fontSize: 12, color: C.accent },
   partialButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12 }, partialText: { fontSize: 12, color: C.textSecondary },
   history: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, historyCopy: { flex: 1 }, historyTitle: { fontSize: 13, color: C.text },
-  label: { fontSize: 13, color: C.textSecondary, marginTop: 24, marginBottom: 10 }, input: { backgroundColor: C.surface, borderRadius: 12, padding: 16, minHeight: 52, color: C.text, fontSize: 18 }, error: { fontSize: 12, color: C.error, lineHeight: 20, marginTop: 10 },
-  primaryButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 24 }, primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.6 },
+  label: { fontSize: 13, color: C.textSecondary, marginTop: 24, marginBottom: 10 }, input: { backgroundColor: C.surface, borderRadius: 14, padding: 16, minHeight: 52, color: C.text, fontSize: 18 }, error: { fontSize: 12, color: C.error, lineHeight: 20, marginTop: 10 },
+  primaryButton: { minHeight: 52, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 24 }, primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.6 },
   helper: { fontSize: 11, lineHeight: 19, color: C.textMuted, marginTop: 6 },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54 }, avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.banner, alignItems: 'center', justifyContent: 'center' }, avatarText: { fontSize: 12, color: C.primary }, memberName: { fontSize: 13, color: C.text, flex: 1 }, memberBalance: { fontSize: 12, color: C.textSecondary, flexShrink: 1, textAlign: 'right' },
   textAction: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
   expenseCopy: { flex: 1 }, expenseName: { fontSize: 14, color: C.text, fontWeight: '500' },
-  empty: { paddingVertical: 20 }, emptyTitle: { fontSize: 15, color: C.primary, fontWeight: '600' }, sheetTitle: { fontSize: 16, color: C.text, fontWeight: '600' }, navSpacer: { width: 44 }, detailName: { fontSize: 20, color: C.text, fontWeight: '600', marginTop: 24 }, detailAmount: { fontSize: 30, color: C.primary, fontWeight: '700', marginTop: 10 }, basisGroup: { paddingVertical: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, basisRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, alignItems: 'center', paddingTop: 12 },
+  empty: { paddingVertical: 20 }, emptyTitle: { fontSize: 15, color: C.primary, fontWeight: '600' }, sheetTitle: { fontSize: 16, color: C.text, fontWeight: '600' }, navSpacer: { width: 44 }, detailName: { fontSize: 20, color: C.text, fontWeight: '600', marginTop: 24 }, detailAmount: { fontSize: 30, color: C.primary, fontFamily: Type.display, marginTop: 10 }, basisGroup: { paddingVertical: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, basisRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, alignItems: 'center', paddingTop: 12 },
 });

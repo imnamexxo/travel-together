@@ -10,6 +10,7 @@ import {
   useRemoveFriend, useRequestFriendFrom, useTripInvites, useTripsForFriend,
 } from '@/api/queries';
 import ActionSheet from '@/components/action-sheet';
+import MetaLine from '@/components/meta-line';
 import Pressable from '@/components/pressable';
 import type { TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
@@ -66,7 +67,7 @@ export default function FriendsScreen() {
         <Text style={s.heading}>받은 여행 초대</Text>
         {invites.data.map((i) => <View key={i.id} style={f.inviteCard}>
           <Text style={s.tripName}>{i.trip.name}</Text>
-          <Text style={s.tripMeta}>{i.inviter_name}님이 초대했어요 · {formatPeriod(i.trip.start_date, i.trip.end_date)}</Text>
+          <MetaLine textStyle={s.tripMeta} parts={[`${i.inviter_name}님이 초대했어요`, formatPeriod(i.trip.start_date, i.trip.end_date)]} />
           <View style={f.inviteActions}>
             <Pressable accessibilityRole="button" accessibilityLabel={`${i.trip.name} 초대 거절`} disabled={answerInvite.isPending} onPress={() => respondInvite(i.id, false)} style={f.declineButton}><Text style={f.declineText}>거절</Text></Pressable>
             <Pressable haptic accessibilityRole="button" accessibilityLabel={`${i.trip.name} 초대 수락`} disabled={answerInvite.isPending} onPress={() => respondInvite(i.id, true)} style={f.acceptButton}><Text style={f.acceptText}>수락</Text></Pressable>
@@ -145,8 +146,8 @@ function TripPicker({ friend, onError }: { friend: Person; onError: (e: Error) =
 const fStyles = (C: TravelPalette) => StyleSheet.create({
   inviteCard: { padding: 16, borderRadius: 14, backgroundColor: C.banner, gap: 4, marginTop: 10 },
   inviteActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  declineButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' }, declineText: { fontSize: 14, color: C.text },
-  acceptButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' }, acceptText: { fontSize: 14, fontWeight: '600', color: C.onPrimary },
+  declineButton: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' }, declineText: { fontSize: 14, color: C.text },
+  acceptButton: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' }, acceptText: { fontSize: 14, fontWeight: '600', color: C.onPrimary },
   more: { minWidth: 32, minHeight: 36, alignItems: 'center', justifyContent: 'center' }, moreText: { fontSize: 18, color: C.textMuted },
   picker: { marginLeft: 16, marginTop: 6, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: C.divider },
   pickRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 },

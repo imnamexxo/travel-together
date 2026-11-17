@@ -185,5 +185,5 @@ test('지도에는 일정에 넣은 장소가 핀으로 보인다', async () => 
 
   expect(await screen.findByText('1곳')).toBeOnTheScreen();
   expect(screen.getAllByText('동문시장').length).toBeGreaterThan(0);
-  expect(screen.getByText('일정 1개 · 사진 0장')).toBeOnTheScreen();
+  expect(screen.getByText('일정 1개')).toBeOnTheScreen();
 });

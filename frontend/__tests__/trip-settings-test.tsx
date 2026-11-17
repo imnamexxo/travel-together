@@ -66,7 +66,7 @@ test('달력은 지금 기간을 보여 주고, 취소하면 기간이 그대로
 
   fireEvent.press(await screen.findByRole('button', { name: '여행 기간' }));
   // 칸과 달력 아래 요약 둘 다 지금 기간을 보여 준다
-  expect(screen.getAllByText('11월 12일 (목) – 11월 14일 (토) · 3일')).toHaveLength(2);
+  expect(screen.getAllByText('11월 12일 (목) – 11월 14일 (토) (3일)')).toHaveLength(2);
   fireEvent.press(screen.getByRole('button', { name: '11월 20일' }));
   fireEvent.press(screen.getByRole('button', { name: '취소' }));
   fireEvent.press(screen.getByRole('button', { name: '저장' }));

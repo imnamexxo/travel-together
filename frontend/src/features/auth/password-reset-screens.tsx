@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/auth-context';
 import { AuthError } from '@/auth/auth-service';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { validateAuth } from './validation';
 
@@ -115,10 +115,10 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24, width: '100%', maxWidth: 480, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
-  title: { fontSize: 30, fontWeight: '800', letterSpacing: -1, color: C.primary, marginTop: 16 }, subtitle: { fontSize: 14, lineHeight: 22, color: C.textSecondary, marginTop: 10, marginBottom: 6 },
+  title: { fontSize: 30, fontFamily: Type.display, letterSpacing: -0.5, color: C.primary, marginTop: 16 }, subtitle: { fontSize: 14, lineHeight: 22, color: C.textSecondary, marginTop: 10, marginBottom: 6 },
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 18 },
-  input: { minHeight: 54, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
+  input: { minHeight: 54, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
   invalid: { borderColor: C.error }, error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 7 }, notice: { fontSize: 13, lineHeight: 20, color: C.textSecondary, marginTop: 10 },
-  primary: { minHeight: 54, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 22 }, primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
+  primary: { minHeight: 54, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 22 }, primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
   linkButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'center', marginTop: 8 }, link: { fontSize: 13, fontWeight: '600', color: C.accent },
 });

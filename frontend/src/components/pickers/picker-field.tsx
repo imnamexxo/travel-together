@@ -22,6 +22,6 @@ export default function PickerField({ label, value, placeholder, onPress, invali
 }
 
 const sStyles = (C: TravelPalette) => StyleSheet.create({
-  field: { minHeight: 52, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },
+  field: { minHeight: 52, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },
   invalid: { borderColor: C.error }, text: { flex: 1, fontSize: 16, color: C.text }, placeholder: { color: C.textMuted }, icon: { fontSize: 12, color: C.textMuted, marginLeft: 8 },
 });

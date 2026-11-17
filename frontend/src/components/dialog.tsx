@@ -73,7 +73,7 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   message: { fontSize: 14, lineHeight: 21, color: C.textSecondary, marginTop: 10 },
   buttons: { flexDirection: 'row', gap: 8, marginTop: 22 }, stacked: { flexDirection: 'column' },
-  button: { minHeight: 48, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, flex: { flex: 1 },
+  button: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, flex: { flex: 1 },
   primary: { backgroundColor: C.primary }, destructive: { backgroundColor: C.error }, cancel: { backgroundColor: C.surface },
   buttonText: { fontSize: 15, fontWeight: '600' }, primaryText: { color: C.onPrimary }, cancelText: { color: C.text },
 });

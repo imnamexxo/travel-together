@@ -49,10 +49,10 @@ test('여행 기간은 달력에서 시작일과 종료일을 차례로 누르�
   // 시작일보다 앞을 누르면 그 날이 새 시작일이 된다
   fireEvent.press(screen.getByRole('button', { name: '11월 18일' }));
   fireEvent.press(screen.getByRole('button', { name: '11월 21일' }));
-  expect(screen.getByText('11월 18일 (수) – 11월 21일 (토) · 4일')).toBeOnTheScreen();
+  expect(screen.getByText('11월 18일 (수) – 11월 21일 (토) (4일)')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '확인' }));
 
-  expect(await screen.findByText('11월 18일 (수) – 11월 21일 (토) · 4일')).toBeOnTheScreen();
+  expect(await screen.findByText('11월 18일 (수) – 11월 21일 (토) (4일)')).toBeOnTheScreen();
 });
 
 test('기간을 고르지 않으면 서버에 보내지 않고 이유를 보여준다', async () => {

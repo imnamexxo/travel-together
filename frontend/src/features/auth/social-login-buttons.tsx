@@ -47,7 +47,7 @@ export default function SocialLoginButtons() {
 const sStyles = (C: TravelPalette) => StyleSheet.create({
   container: { gap: 10, marginTop: 18 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }, line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border }, dividerText: { fontSize: 12, color: C.textMuted },
-  button: { minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  button: { minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   google: { backgroundColor: C.background, borderWidth: 1, borderColor: C.border },
   googleText: { fontSize: 14, fontWeight: '500', color: C.text },
   kakao: { backgroundColor: '#FEE500' },

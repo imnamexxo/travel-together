@@ -11,8 +11,9 @@ import CalendarPicker from '@/components/pickers/calendar-picker';
 import { formatDay } from '@/components/pickers/calendar-logic';
 import PickerField from '@/components/pickers/picker-field';
 import TimePicker from '@/components/pickers/time-picker';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
+import MetaLine from '@/components/meta-line';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import ExpensePlacePicker from './expense-place-picker';
@@ -188,7 +189,7 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
         {input('총액', form.total, (v) => update({ total: v }), { placeholder: '0', keyboardType: money.decimals ? 'decimal-pad' : 'number-pad', maxLength: 12 })}
         {fieldError('total_amount')}
 
-        <Text style={s.label}>누가 함께 썼나요? · 기본 분담 대상</Text>
+        <Text style={s.label}>누가 함께 썼나요? (기본 분담 대상)</Text>
         <View style={s.chips}>{members.map((m) => chip(m.display_name, form.defaultSharerIds.includes(m.member_id), () => setForm((f) => toggleDefaultSharer(f, m.member_id, memberOrder)), 'checkbox', `기본 분담 대상 ${m.display_name}`))}</View>
         <Text style={s.hint}>예외로 바꾸지 않은 품목에 함께 적용돼요.</Text>
 
@@ -217,7 +218,7 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
         {editable && <Pressable accessibilityRole="button" onPress={() => update({ items: [...form.items, newItem(form.defaultSharerIds)] })} style={s.addItem}><Text style={s.link}>＋ 품목 추가</Text></Pressable>}
 
         <View style={s.summary}>
-          <Text style={s.summaryText}>품목 합계 {money.format(sum)} · 총액 {total === null ? '미입력' : money.format(total)}</Text>
+          <MetaLine textStyle={s.summaryText} parts={[`품목 합계 ${money.format(sum)}`, `총액 ${total === null ? '미입력' : money.format(total)}`]} />
           {total !== null && <Text style={[s.summaryDiff, sum !== total && s.mismatch]}>{sum === total ? '품목 합계와 총액이 같아요' : `차이 ${money.format(Math.abs(total - sum))}`}</Text>}
         </View>
 
@@ -238,7 +239,7 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
         <Pressable accessibilityRole="button" onPress={() => setReceiptOpen(false)} style={s.viewerClose}><Text style={s.viewerCloseText}>닫기</Text></Pressable>
         {/* 화면에 맞춰 보여 주고, 두 손가락으로 확대·이동, 두 번 탭하면 확대/원래대로 */}
         <ZoomableImage uri={expense.receipt_url} accessibilityLabel="영수증 원본" />
-        <Text style={s.viewerHint}>두 손가락으로 확대 · 두 번 탭하면 크게</Text>
+        <Text style={s.viewerHint}>두 손가락으로 확대하고, 두 번 탭하면 크게 봐요</Text>
       </SafeAreaView>
     </Modal>}
   </SafeAreaView>;
@@ -251,12 +252,12 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 }, flex: { flex: 1 }, quantity: { width: 84 },
-  title: { fontSize: 28, letterSpacing: -1, fontWeight: '700', color: C.primary, marginTop: 8 },
-  status: { fontSize: 12, fontWeight: '600', color: C.textSecondary, backgroundColor: C.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, overflow: 'hidden', marginTop: 8 },
+  title: { fontSize: 28, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 8 },
+  status: { fontSize: 12, fontWeight: '600', color: C.textSecondary, backgroundColor: C.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, overflow: 'hidden', marginTop: 8 },
   statusWarn: { color: C.error }, statusDone: { color: C.primary, backgroundColor: C.banner },
   heading: { fontSize: 18, fontWeight: '700', color: C.text, marginTop: 28 },
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 8, marginTop: 18 },
-  input: { minHeight: 50, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: C.text, marginTop: 6 },
+  input: { minHeight: 50, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: C.text, marginTop: 6 },
   readOnly: { backgroundColor: C.background, paddingHorizontal: 0 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.surface, justifyContent: 'center' },
@@ -265,7 +266,7 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   itemTitle: { fontSize: 14, fontWeight: '600', color: C.text },
   tag: { fontSize: 11, color: C.textMuted }, tagException: { color: C.accent, fontWeight: '600' },
   smallButton: { minHeight: 36, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
-  addItem: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 12, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border },
+  addItem: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 12, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: C.border },
   summary: { marginTop: 24, padding: 16, borderRadius: 14, backgroundColor: C.banner, gap: 6 },
   summaryText: { fontSize: 14, color: C.text, fontVariant: ['tabular-nums'] },
   summaryDiff: { fontSize: 13, color: C.textSecondary }, mismatch: { color: C.error, fontWeight: '600' },
@@ -274,9 +275,9 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   notice: { fontSize: 13, color: C.textSecondary, marginTop: 14 },
   muted: { fontSize: 13, color: C.textSecondary, textAlign: 'center' },
   textButton: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 14, fontWeight: '600', color: C.accent },
-  secondaryButton: { flex: 1, minHeight: 52, borderRadius: 13, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  secondaryButton: { flex: 1, minHeight: 52, borderRadius: 14, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   secondaryText: { fontSize: 15, fontWeight: '600', color: C.primary },
-  primaryButton: { flex: 1, minHeight: 52, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  primaryButton: { flex: 1, minHeight: 52, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
   deleteButton: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 12 },
   removeText: { fontSize: 13, color: C.error },

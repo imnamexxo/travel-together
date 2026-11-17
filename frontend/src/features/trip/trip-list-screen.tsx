@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TripSummary } from '@/api/client';
 import { useBefriendByCode, useDeleteAnyTrip, useFriends, useLeaveAnyTrip, useMe, useTripInvites, useTrips } from '@/api/queries';
 import { Badge } from '@/components/friend-button';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { takePendingFriend, takePendingInvite } from './pending-invite';
 import { formatPeriod } from './trip-dates';
@@ -128,12 +128,12 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   eyebrow: { fontSize: 10, letterSpacing: 2, fontWeight: '600', color: C.textMuted, marginTop: 12 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },
-  title: { fontSize: 32, letterSpacing: -1.1, fontWeight: '800', color: C.primary },
+  title: { fontSize: 32, letterSpacing: -1, fontFamily: Type.display, color: C.primary },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10 },
   newButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: C.banner, justifyContent: 'center' },
   newText: { fontSize: 14, fontWeight: '600', color: C.primary },
-  card: { flexDirection: 'row', borderRadius: 20, backgroundColor: C.surface, overflow: 'hidden', minHeight: 104 }, ticketBody: { flex: 1, padding: 20, justifyContent: 'center' }, ticketStub: { width: 86, borderLeftWidth: 1.5, borderLeftColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }, ticketStatus: { color: C.primary, fontSize: 15, fontWeight: '700' }, cutTop: { position: 'absolute', right: 79, top: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.background }, cutBottom: { position: 'absolute', right: 79, bottom: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.background },
-  cardTitle: { flexShrink: 1, fontSize: 17, fontWeight: '600', color: C.text, letterSpacing: -0.3 },
+  card: { flexDirection: 'row', borderRadius: 20, backgroundColor: C.surface, overflow: 'hidden', minHeight: 104 }, ticketBody: { flex: 1, padding: 20, justifyContent: 'center' }, ticketStub: { width: 86, borderLeftWidth: 1.5, borderLeftColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }, ticketStatus: { color: C.primary, fontSize: 15, fontFamily: Type.display, fontVariant: ['tabular-nums'] }, cutTop: { position: 'absolute', right: 79, top: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.background }, cutBottom: { position: 'absolute', right: 79, bottom: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.background },
+  cardTitle: { flexShrink: 1, fontSize: 17, fontFamily: Type.heading, color: C.text },
   cardMeta: { fontSize: 12, color: C.textSecondary, marginTop: 8 },
   badge: { fontSize: 11, fontWeight: '600', color: C.primary, backgroundColor: C.banner, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 9, overflow: 'hidden' },
   gap: { height: 12 },
@@ -141,7 +141,7 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: C.primary },
   emptyText: { fontSize: 13, color: C.textSecondary, textAlign: 'center', lineHeight: 20 },
-  primaryButton: { minHeight: 50, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, marginTop: 12 },
+  primaryButton: { minHeight: 50, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, marginTop: 12 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
   textButton: { minHeight: 44, justifyContent: 'center' },
   joinButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 4 },

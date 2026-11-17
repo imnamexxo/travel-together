@@ -3,7 +3,7 @@ import { Modal, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pressable from '@/components/pressable';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles } from '@/theme/theme-context';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
@@ -98,12 +98,12 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   band: { position: 'absolute', left: 0, right: 0, top: ITEM * Math.floor(VISIBLE / 2), height: ITEM, borderRadius: 14, backgroundColor: C.surface },
   wheel: { width: 96, height: ITEM * VISIBLE, flexGrow: 0 },
   item: { height: ITEM, alignItems: 'center', justifyContent: 'center' },
-  itemText: { fontVariant: ['tabular-nums'], fontWeight: '700' },
+  itemText: { fontVariant: ['tabular-nums'], fontFamily: Type.heading },
   itemOn: { fontSize: 34, color: C.text }, itemNear: { fontSize: 26, color: C.textMuted }, itemFar: { fontSize: 22, color: C.divider },
-  colon: { fontSize: 32, fontWeight: '700', color: C.text, marginHorizontal: 18, marginBottom: 4 },
+  colon: { fontSize: 32, fontFamily: Type.display, color: C.text, marginHorizontal: 18, marginBottom: 4 },
   preview: { fontSize: 13, color: C.textSecondary, textAlign: 'center', marginTop: 6 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  button: { flex: 1, minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cancel: { backgroundColor: C.surface }, cancelText: { fontSize: 15, color: C.text },
   ok: { backgroundColor: C.primary }, okText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
 });

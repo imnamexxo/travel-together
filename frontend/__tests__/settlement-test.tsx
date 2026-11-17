@@ -59,7 +59,7 @@ test('서버가 계산한 내 잔액·결제액·부담액을 그대로 보여�
   expect(await screen.findByText('내가 보낼 금액')).toBeOnTheScreen();
   // 결제액 0 − 부담액 8,500이면 8,500이지만, 화면은 서버 값(7,777)을 그린다.
   expect(screen.getByText('7,777원')).toBeOnTheScreen();
-  expect(screen.getByText('확정된 총지출 · 1건')).toBeOnTheScreen();
+  expect(screen.getByText('확정된 총지출 1건')).toBeOnTheScreen();
   expect(screen.getByText('30,000원')).toBeOnTheScreen();
 });
 
@@ -88,8 +88,10 @@ test('부담액 근거 화면에는 내 품목별 부담만 지출별로 보인�
   fireEvent.press(await screen.findByRole('button', { name: '내 부담액의 계산 근거' }));
 
   expect(await screen.findByText('부담액 계산 근거')).toBeOnTheScreen();
-  expect(screen.getByText('품목 12,000원 · 3명 분담')).toBeOnTheScreen();
-  expect(screen.getByText('품목 9,000원 · 2명 분담')).toBeOnTheScreen();
+  expect(screen.getByText('품목 12,000원')).toBeOnTheScreen();
+  expect(screen.getByText('3명 분담')).toBeOnTheScreen();
+  expect(screen.getByText('품목 9,000원')).toBeOnTheScreen();
+  expect(screen.getByText('2명 분담')).toBeOnTheScreen();
   expect(screen.getByText('4,500원')).toBeOnTheScreen();
   // 민지의 간식 몫은 내 근거가 아니다.
   expect(screen.getAllByText('간식')).toHaveLength(1);

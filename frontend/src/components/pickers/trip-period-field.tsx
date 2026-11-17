@@ -16,7 +16,7 @@ export default function TripPeriodField({ start, end, onChange, error }: {
 }) {
   const s = useThemedStyles(sStyles);
   const [open, setOpen] = useState(false);
-  const value = isIso(start) && isIso(end) ? `${formatDay(start)} – ${formatDay(end)} · ${nights({ start, end })}일` : null;
+  const value = isIso(start) && isIso(end) ? `${formatDay(start)} – ${formatDay(end)} (${nights({ start, end })}일)` : null;
   return <>
     <Text style={s.label}>여행 기간</Text>
     <PickerField label="여행 기간" value={value} placeholder="날짜를 골라 주세요" onPress={() => setOpen(true)} invalid={!!error} />

@@ -66,7 +66,7 @@ export default function TripNote() {
 
 const sStyles = (C: TravelPalette) => StyleSheet.create({
   section: { marginTop: 26, marginBottom: 24 },
-  card: { backgroundColor: C.banner, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16 },
+  card: { backgroundColor: C.banner, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 16 },
   pressed: { opacity: 0.6 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   title: { fontSize: 14, fontWeight: '600', color: C.primary },

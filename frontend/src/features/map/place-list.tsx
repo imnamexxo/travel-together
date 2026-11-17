@@ -14,4 +14,4 @@ export default function PlaceList({ pins, selectedId, onSelect, hint }: PlaceMap
     {!pins.length && <Text style={s.hint}>선택한 조건에 해당하는 장소가 없어요.</Text>}
   </View>;
 }
-const sStyles = (C: TravelPalette) => StyleSheet.create({ container: { flex: 1, padding: 20, backgroundColor: C.surface }, hint: { fontSize: 13, lineHeight: 22, color: C.textSecondary, marginBottom: 16 }, row: { padding: 16, borderRadius: 12, marginBottom: 8 }, selected: { backgroundColor: C.banner }, name: { color: C.primary, fontSize: 15 } });
+const sStyles = (C: TravelPalette) => StyleSheet.create({ container: { flex: 1, padding: 20, backgroundColor: C.surface }, hint: { fontSize: 13, lineHeight: 22, color: C.textSecondary, marginBottom: 16 }, row: { padding: 16, borderRadius: 14, marginBottom: 8 }, selected: { backgroundColor: C.banner }, name: { color: C.primary, fontSize: 15 } });

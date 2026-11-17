@@ -5,7 +5,10 @@
 
 import { Platform } from 'react-native';
 
-/** Shared palette for the travel screens. Change these values to recolor the app. */
+/**
+ * 여행 화면의 색. 남색 잉크 + 종이 흰색 + 옅은 안개색 바탕, 강조는 탑승권의 노란 도장 하나뿐(D-day, 오늘).
+ * 노란색은 글자색으로 쓰지 않는다(흰 바탕에서 읽기 어렵다). 노란 바탕 위 글자는 ticketInk.
+ */
 export const TravelColors = {
   background: '#FFFFFF',
   primary: '#1C304D',
@@ -26,6 +29,9 @@ export const TravelColors = {
   ticketBackground: '#1C304D',
   ticketText: '#FFFFFF',
   ticketMuted: '#B4C1D2',
+  /** 노란 도장(D-day 등) 바탕과 그 위 글자. 노란색은 글자색으로 쓰지 않는다. */
+  ticket: '#F4C542',
+  ticketInk: '#3A2E05',
 } as const;
 
 export type TravelPalette = { [K in keyof typeof TravelColors]: string };
@@ -35,8 +41,20 @@ export const DarkTravelColors: TravelPalette = {
   onPrimary: '#142339', surface: '#1B293B', banner: '#263A53',
   border: '#435570', divider: '#2E4057', inactive: '#8A9CB3',
   ticketBackground: '#1C304D', ticketText: '#FFFFFF', ticketMuted: '#B4C1D2',
+  ticket: '#F4C542', ticketInk: '#3A2E05',
   waveBack: '#263A53', waveFront: '#3D5878', sun: '#C8AE78', error: '#FF9E98',
 };
+
+/** 제목·숫자용 글꼴(IBM Plex Sans KR). 본문은 시스템 글꼴. 글꼴을 지정한 글자에는 fontWeight를 함께 쓰지 않는다. */
+export const Type = {
+  display: 'IBMPlexSansKR_700Bold',
+  heading: 'IBMPlexSansKR_600SemiBold',
+  medium: 'IBMPlexSansKR_500Medium',
+  body: 'IBMPlexSansKR_400Regular',
+} as const;
+
+/** 모서리 둥글기 세 단계: 칩·입력 보조(sm), 카드·버튼(md), 시트·큰 카드(lg). */
+export const Radius = { sm: 8, md: 14, lg: 22 } as const;
 
 export const Colors = {
   light: {

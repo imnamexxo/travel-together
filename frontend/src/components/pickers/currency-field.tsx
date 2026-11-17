@@ -18,7 +18,7 @@ export default function CurrencyField({ value, onChange, hint }: {
   const [open, setOpen] = useState(false);
   return <>
     <Text style={s.label}>통화</Text>
-    <PickerField label="통화" value={`${currencyName(value)} · ${value}`} placeholder="통화 고르기" onPress={() => setOpen(true)} />
+    <PickerField label="통화" value={`${currencyName(value)}  ${value}`} placeholder="통화 고르기" onPress={() => setOpen(true)} />
     {!!hint && <Text style={s.hint}>{hint}</Text>}
     <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
       <View style={s.backdrop}>
@@ -47,7 +47,7 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   sheet: { backgroundColor: C.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12, width: '100%', maxWidth: 520, alignSelf: 'center', maxHeight: '75%' },
   title: { fontSize: 17, fontWeight: '700', color: C.text }, sub: { fontSize: 12, color: C.textMuted, marginTop: 4, marginBottom: 10 },
   list: { flexGrow: 0 },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingHorizontal: 12, borderRadius: 12, gap: 12 }, rowOn: { backgroundColor: C.surface },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingHorizontal: 12, borderRadius: 14, gap: 12 }, rowOn: { backgroundColor: C.surface },
   symbol: { width: 40, fontSize: 15, color: C.primary, fontWeight: '600' }, name: { flex: 1, fontSize: 15, color: C.text }, nameOn: { fontWeight: '700' },
   code: { fontSize: 12, color: C.textMuted },
 });

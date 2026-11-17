@@ -26,7 +26,7 @@ test('여행을 만들 때 통화를 고르면 그 통화로 만든다', async (
   await pickPeriod('2026-12-01', '2026-12-03');
   fireEvent.press(screen.getByRole('button', { name: '통화' }));
   fireEvent.press(screen.getByRole('button', { name: '엔 (일본)' }));
-  expect(screen.getByText('엔 (일본) · JPY')).toBeOnTheScreen();
+  expect(screen.getByText('엔 (일본)  JPY')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '여행 만들기' }));
 
   await waitFor(() => expect(api.createTrip).toHaveBeenCalledWith(expect.objectContaining({ currency: 'JPY' })));
@@ -40,7 +40,8 @@ test('달러 여행에서는 소수점으로 입력하고, 센트로 저장하�
   fireEvent.changeText(screen.getByLabelText('총액'), '45.50');
   fireEvent.changeText(screen.getByLabelText('품목 1 이름'), '버거');
   fireEvent.changeText(screen.getByLabelText('품목 1 금액'), '45.5');
-  expect(screen.getByText('품목 합계 $45.50 · 총액 $45.50')).toBeOnTheScreen();
+  expect(screen.getByText('품목 합계 $45.50')).toBeOnTheScreen();
+  expect(screen.getByText('총액 $45.50')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '저장' }));
 
   await waitFor(() => expect(api.createExpense).toHaveBeenCalledTimes(1));
@@ -64,7 +65,8 @@ test('엔 여행의 지출 목록은 엔으로 보인다', async () => {
 
   fireEvent.press(await screen.findByRole('tab', { name: '지출 내역' }));
 
-  expect(await screen.findByText('¥3,200')).toBeOnTheScreen();
+  // 영수증 줄과 아래 합계에 둘 다 보인다.
+  await waitFor(() => expect(screen.getAllByText('¥3,200')).toHaveLength(2));
 });
 
 test('여행 설정에서 통화를 바꿔 저장한다', async () => {

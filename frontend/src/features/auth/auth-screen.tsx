@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/auth-context';
 import { AuthError } from '@/auth/auth-service';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import SocialLoginButtons from './social-login-buttons';
 import { validateAuth, type AuthErrors } from './validation';
@@ -72,7 +72,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
         {signup && <Pressable accessibilityRole="button" accessibilityLabel="로그인 화면으로 돌아가기" onPress={() => router.replace('/login')} style={s.back}><Text style={s.backText}>‹ 로그인</Text></Pressable>}
         <View style={[s.hero, signup && s.signupHero]}>
           <View style={s.icon}><SymbolView name={{ ios: 'suitcase.rolling', android: 'luggage', web: 'luggage' }} tintColor={C.primary} size={30} /></View>
-          <Text style={s.brand}>TRAVEL TOGETHER</Text>
+          <Text style={s.brand}>Travel Together</Text>
           <Text style={s.title}>{signup ? '회원가입' : '로그인'}</Text>
           <Text style={s.subtitle}>{signup ? '함께 떠날 여행을 준비해요.' : '함께 계획하고, 함께 기록하는 여행.'}</Text>
         </View>
@@ -121,15 +121,15 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 20, paddingBottom: 24, width: '100%', maxWidth: 480, alignSelf: 'center' },
   hero: { paddingTop: 40, marginBottom: 28 }, signupHero: { paddingTop: 10, marginBottom: 18 },
   icon: { width: 60, height: 60, borderRadius: 20, backgroundColor: C.banner, alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
-  brand: { fontSize: 10, fontWeight: '600', letterSpacing: 2.3, color: C.textMuted, marginBottom: 12 },
-  title: { fontSize: 34, fontWeight: '800', letterSpacing: -1, color: C.primary }, subtitle: { fontSize: 14, lineHeight: 22, color: C.textSecondary, marginTop: 12 },
+  brand: { fontFamily: Type.heading, fontSize: 15, color: C.accent, marginTop: 18 },
+  title: { fontSize: 34, fontFamily: Type.display, letterSpacing: -0.5, color: C.primary }, subtitle: { fontSize: 14, lineHeight: 22, color: C.textSecondary, marginTop: 12 },
   form: { gap: 0 }, label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 18 },
-  input: { minHeight: 54, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
-  passwordField: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 12, minHeight: 54, borderWidth: 1, borderColor: 'transparent' },
+  input: { minHeight: 54, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
+  passwordField: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 14, minHeight: 54, borderWidth: 1, borderColor: 'transparent' },
   passwordInput: { flex: 1, minWidth: 0, paddingLeft: 16, paddingVertical: 14, minHeight: 52, fontSize: 16, color: C.text }, eye: { minHeight: 48, minWidth: 48, justifyContent: 'center', alignItems: 'center' },
   invalid: { borderColor: C.error }, error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 7 },
   forgot: { alignSelf: 'flex-end', justifyContent: 'center', minHeight: 44 }, smallLink: { fontSize: 12, color: C.textSecondary },
-  primaryButton: { minHeight: 54, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 }, primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
+  primaryButton: { minHeight: 54, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 }, primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
   switchRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }, switchText: { fontSize: 13, color: C.textSecondary }, linkButton: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 13, fontWeight: '600', color: C.accent },
   noticeText: { fontSize: 13, lineHeight: 20, color: C.textSecondary, marginTop: 7 },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },

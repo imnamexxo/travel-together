@@ -9,7 +9,7 @@ import { useHandOverOrganizer, useMembers, useUpdateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
 import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
@@ -125,20 +125,20 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
   eyebrow: { fontSize: 12, color: C.textMuted, marginTop: 8 },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary, marginTop: 6 },
+  title: { fontSize: 30, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 6 },
   section: { marginTop: 32, paddingTop: 24, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider },
   heading: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 18 },
-  input: { minHeight: 54, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
+  input: { minHeight: 54, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
   invalid: { borderColor: C.error }, error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 8 },
   notice: { fontSize: 12, lineHeight: 19, color: C.textSecondary, marginTop: 8 },
 
   hint: { fontSize: 12, color: C.textMuted, marginTop: 10, lineHeight: 18 },
-  primaryButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  primaryButton: { minHeight: 52, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
-  dangerButton: { minHeight: 52, borderRadius: 13, borderWidth: 1, borderColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
+  dangerButton: { minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
   dangerText: { fontSize: 15, fontWeight: '600', color: C.error },
-  rowButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 50, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.surface, marginTop: 10 },
+  rowButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 50, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.surface, marginTop: 10 },
   rowText: { fontSize: 15, color: C.text }, rowAction: { fontSize: 13, color: C.accent },
   pressed: { opacity: 0.6 },
 });

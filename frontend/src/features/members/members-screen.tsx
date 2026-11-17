@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Member } from '@/api/client';
 import { useAnswerFriend, useInviteCode, useMembers, useReissueInviteCode, useRemoveMember, useRequestFriend } from '@/api/queries';
 import { inviteLink } from '@/features/trip/pending-invite';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from '@/features/trip/current-trip';
@@ -136,12 +136,12 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
   eyebrow: { fontSize: 12, color: C.textMuted, marginTop: 8 },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary, marginTop: 6, marginBottom: 24 },
-  card: { padding: 20, borderRadius: 16, backgroundColor: C.banner, marginBottom: 32, gap: 12 },
+  title: { fontSize: 30, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 6, marginBottom: 24 },
+  card: { padding: 20, borderRadius: 14, backgroundColor: C.banner, marginBottom: 32, gap: 12 },
   cardLabel: { fontSize: 12, fontWeight: '600', color: C.textSecondary },
-  code: { fontSize: 32, fontWeight: '700', letterSpacing: 4, color: C.primary, fontVariant: ['tabular-nums'] },
+  code: { fontSize: 32, fontFamily: Type.display, letterSpacing: 4, color: C.primary, fontVariant: ['tabular-nums'] },
   cardActions: { flexDirection: 'row', gap: 8 },
-  cardButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' },
+  cardButton: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' },
   cardButtonText: { fontSize: 14, fontWeight: '600', color: C.primary },
   notice: { fontSize: 12, color: C.textSecondary, lineHeight: 18 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },

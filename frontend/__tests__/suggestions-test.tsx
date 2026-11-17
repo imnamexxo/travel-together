@@ -51,8 +51,8 @@ test('추천을 받는 동안 진행 표시가 보이고, 날짜별 카드와 �
   expect(api.askSuggestions).toHaveBeenCalledWith('trip-jeju', { destination: '제주', preferences: '맛집 위주' });
   finish(suggestion);
 
-  expect(await screen.findByText('1일 차 · 11월 12일 목요일')).toBeOnTheScreen();
-  expect(screen.getByText('2일 차 · 11월 13일 금요일')).toBeOnTheScreen();
+  expect(await screen.findByText('1일 차  11월 12일 목요일')).toBeOnTheScreen();
+  expect(screen.getByText('2일 차  11월 13일 금요일')).toBeOnTheScreen();
   expect(screen.getAllByText('확인 필요')).toHaveLength(1);
   expect(screen.queryByText('추천 일정을 만드는 중이에요. 30초쯤 걸릴 수 있어요.')).toBeNull();
 });

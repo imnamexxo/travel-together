@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import { useFriends, useMe, useTripInvites, useUpdateMe } from '@/api/queries';
 import { useAuth } from '@/auth/auth-context';
-import type { TravelPalette } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors, useTravelTheme, type ThemeMode } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 
@@ -154,22 +154,22 @@ export const accountStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary, marginTop: 12 },
+  title: { fontSize: 30, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 12 },
   section: { marginTop: 28, paddingTop: 22, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider },
   heading: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   hint: { fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 18 },
-  input: { minHeight: 52, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 16, color: C.text, marginTop: 14 },
+  input: { minHeight: 52, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 16, color: C.text, marginTop: 14 },
   stacked: { marginTop: 10 },
   error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 8 }, notice: { fontSize: 12, lineHeight: 19, color: C.textSecondary, marginTop: 8 },
-  primaryButton: { minHeight: 50, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
+  primaryButton: { minHeight: 50, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
-  outlineButton: { minHeight: 50, borderRadius: 13, borderWidth: 1, borderColor: C.divider, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
+  outlineButton: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: C.divider, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
   outlineText: { fontSize: 15, color: C.text },
-  dangerButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  dangerButton: { minHeight: 52, borderRadius: 14, backgroundColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
   dangerText: { fontSize: 15, fontWeight: '700', color: C.onPrimary },
   textButton: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: 18 }, mutedLink: { fontSize: 13, color: C.textMuted, textDecorationLine: 'underline' },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }, infoLabel: { fontSize: 13, color: C.textSecondary }, infoValue: { fontSize: 14, color: C.text, flexShrink: 1, textAlign: 'right' },
-  tripRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.surface, marginTop: 10 },
+  tripRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.surface, marginTop: 10 },
   tripCopy: { flex: 1, paddingVertical: 10 }, tripName: { fontSize: 15, fontWeight: '600', color: C.text }, tripMeta: { fontSize: 12, color: C.textMuted, marginTop: 3 },
   deleteChip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: C.error, justifyContent: 'center' }, deleteText: { fontSize: 13, color: C.error, fontWeight: '600' },
   listItem: { fontSize: 14, color: C.text, lineHeight: 22, marginTop: 4 },

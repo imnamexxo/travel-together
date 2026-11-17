@@ -48,7 +48,7 @@ function NativeMap({ pins, selectedId, onSelect }: PlaceMapProps) {
       initialRegion={{ latitude: 33.523, longitude: 126.581, latitudeDelta: 0.12, longitudeDelta: 0.25 }}
       showsUserLocation={false} showsMyLocationButton={false} showsCompass={false} showsPointsOfInterests={false} toolbarEnabled={false}>
       {pins.map((pin, index) => <Marker key={`${pin.id}-${pin.visited}-${pin.id === selectedId}`} coordinate={pin}
-        title={pin.name} description={pin.visited ? '들른 곳 · 사진 연결됨' : '계획만 한 곳'} onPress={() => onSelect(pin.id)} tracksViewChanges={redrawing}>
+        title={pin.name} description={pin.visited ? '들른 곳' : '계획만 한 곳'} onPress={() => onSelect(pin.id)} tracksViewChanges={redrawing}>
         <View collapsable={false} style={[s.pin, pin.visited && s.visited, pin.id === selectedId && s.selected]}>
           <Text style={[s.pinText, pin.visited && s.visitedText]}>{index + 1}</Text>
         </View>
@@ -64,5 +64,5 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   visited: { backgroundColor: C.primary }, selected: { borderColor: C.accent, borderWidth: 4 },
   pinText: { fontSize: 13, fontWeight: '700', color: C.primary }, visitedText: { color: C.onPrimary },
   fit: { position: 'absolute', right: 16, top: 16, width: 44, height: 44, borderRadius: 14, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center' }, fitText: { fontSize: 27, color: C.primary },
-  empty: { position: 'absolute', left: 20, right: 20, top: 76, padding: 16, borderRadius: 12, backgroundColor: C.background }, emptyText: { fontSize: 13, color: C.textSecondary, textAlign: 'center' },
+  empty: { position: 'absolute', left: 20, right: 20, top: 76, padding: 16, borderRadius: 14, backgroundColor: C.background }, emptyText: { fontSize: 13, color: C.textSecondary, textAlign: 'center' },
 });
