@@ -51,7 +51,8 @@ test('고른 사진을 줄여서 촬영 시각과 함께 한 장씩 올린다', 
     ['trip-jeju', { uri: 'file:///resized/b.jpg', takenAt: null, placeId: null }],
   ]);
   expect(mockPick).toHaveBeenCalledWith(200);
-  expect(await screen.findByText(/^2장의 사진 · 200장까지 담을 수 있어요/)).toBeOnTheScreen();
+  expect(await screen.findByText('사진 2장')).toBeOnTheScreen();
+  expect(screen.getByText('200장까지 올릴 수 있어요')).toBeOnTheScreen();
 });
 
 test('일부가 실패하면 장별 결과가 보이고, 실패한 사진만 다시 올린다', async () => {
@@ -66,7 +67,7 @@ test('일부가 실패하면 장별 결과가 보이고, 실패한 사진만 다
   mockPick.mockResolvedValueOnce([picked('a'), picked('b'), picked('c')]);
 
   fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
-  expect(await screen.findByText('3장 중 2장 올렸어요 · 1장 실패')).toBeOnTheScreen();
+  expect(await screen.findByText('3장 중 2장 올렸어요, 1장은 실패했어요')).toBeOnTheScreen();
   expect(screen.getByText('사진 2: 서버에 연결하지 못했습니다.')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '실패한 사진 다시 올리기' }));
 
@@ -83,8 +84,8 @@ test('날짜별·올린 사람별로 모아 본다', async () => {
   ] } });
 
   fireEvent.press(await screen.findByRole('tab', { name: '날짜별' }));
-  expect(screen.getByText('1일 차 · 11월 12일 목요일')).toBeOnTheScreen();
-  expect(screen.getByText('2일 차 · 11월 13일 금요일')).toBeOnTheScreen();
+  expect(screen.getByText('1일 차  11월 12일 목요일')).toBeOnTheScreen();
+  expect(screen.getByText('2일 차  11월 13일 금요일')).toBeOnTheScreen();
   expect(screen.getByText('날짜 미지정')).toBeOnTheScreen();
 
   fireEvent.press(screen.getByRole('tab', { name: '올린 사람' }));
@@ -96,7 +97,7 @@ test('200장에 가까워지면 남은 장수가 보이고, 가득 차면 고르
   const alert = spyOnAlerts();
   render({ photoLimit: 2, photos: { 'trip-jeju': [photo({ id: 'p1' }), photo({ id: 'p2' })] } });
 
-  expect(await screen.findByText(/^2장의 사진 · 남은 장수 0장/)).toBeOnTheScreen();
+  expect(await screen.findByText('0장 더 올릴 수 있어요')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '사진 추가' }));
 
   expect(alert).toHaveBeenCalledWith('사진이 가득 찼어요', '이 여행에는 사진을 최대 2장까지 담을 수 있어요.');

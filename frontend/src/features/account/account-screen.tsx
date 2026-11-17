@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import { useFriends, useMe, useTripInvites, useUpdateMe } from '@/api/queries';
 import { useAuth } from '@/auth/auth-context';
-import { TravelColors as C } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors, useTravelTheme, type ThemeMode } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
 
 const PROVIDER_LABEL: Record<string, string> = { email: '이메일', kakao: '카카오', google: 'Google' };
@@ -18,6 +19,7 @@ function errorText(e: unknown, fallback: string) {
 
 /** 계정 관리: 표시 이름, 로그인 정보·비밀번호, 친구, 로그아웃·회원 탈퇴. 여행 삭제·나가기는 여행 목록에서 밀어서 한다. */
 export default function AccountScreen() {
+  const s = useThemedStyles(accountStyles);
   // 받은 친구 요청과 여행 초대 수. 친구 관리 버튼에 빨간 숫자로 보인다.
   const waiting = (useFriends().data?.incoming.length ?? 0) + (useTripInvites().data?.length ?? 0);
   const { signOut } = useAuth();
@@ -28,6 +30,7 @@ export default function AccountScreen() {
         <Text style={s.title}>계정 관리</Text>
         <DisplayName />
         <LoginInfo />
+        <AppearanceSettings />
         <View style={s.section}>
           <Text style={s.heading}>친구</Text>
           <Text style={s.hint}>친구를 맺어 두면 여행에 버튼 한 번으로 초대할 수 있어요.</Text>
@@ -45,7 +48,33 @@ export default function AccountScreen() {
   </SafeAreaView>;
 }
 
+function AppearanceSettings() {
+  const s = useThemedStyles(accountStyles);
+  const { mode, setMode } = useTravelTheme();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const choices: { value: ThemeMode; label: string }[] = [
+    { value: 'system', label: '시스템 설정 따르기' },
+    { value: 'light', label: '라이트 모드' },
+    { value: 'dark', label: '다크 모드' },
+  ];
+  return <View style={s.section}>
+    <Text style={s.heading}>화면 모드</Text>
+    <Text style={s.hint}>이 기기에서 사용할 화면 모드를 선택해요.</Text>
+    <View accessibilityRole="radiogroup">
+      {choices.map((choice) => <Pressable key={choice.value} accessibilityRole="radio" accessibilityState={{ checked: mode === choice.value, disabled: busy }} disabled={busy}
+        onPress={async () => { setBusy(true); setError(''); try { await setMode(choice.value); } catch { setError('설정을 저장하지 못했어요. 다시 선택해주세요.'); } finally { setBusy(false); } }}
+        style={[s.infoRow, { minHeight: 44, alignItems: 'center' }]}>
+        <Text style={s.infoValue}>{choice.label}</Text><Text style={s.backText}>{mode === choice.value ? '✓' : ''}</Text>
+      </Pressable>)}
+    </View>
+    {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
+  </View>;
+}
+
 function DisplayName() {
+  const C = useTravelColors();
+  const s = useThemedStyles(accountStyles);
   const me = useMe();
   const update = useUpdateMe();
   const [name, setName] = useState<string | null>(null);
@@ -74,6 +103,8 @@ function DisplayName() {
 }
 
 function LoginInfo() {
+  const C = useTravelColors();
+  const s = useThemedStyles(accountStyles);
   const { session, changePassword } = useAuth();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState('');
@@ -119,26 +150,26 @@ function LoginInfo() {
   </View>;
 }
 
-export const accountStyles = StyleSheet.create({
+export const accountStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary, marginTop: 12 },
+  title: { fontSize: 30, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 12 },
   section: { marginTop: 28, paddingTop: 22, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider },
   heading: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   hint: { fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 18 },
-  input: { minHeight: 52, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 16, color: C.text, marginTop: 14 },
+  input: { minHeight: 52, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 16, color: C.text, marginTop: 14 },
   stacked: { marginTop: 10 },
   error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 8 }, notice: { fontSize: 12, lineHeight: 19, color: C.textSecondary, marginTop: 8 },
-  primaryButton: { minHeight: 50, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
+  primaryButton: { minHeight: 50, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
-  outlineButton: { minHeight: 50, borderRadius: 13, borderWidth: 1, borderColor: C.divider, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
+  outlineButton: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: C.divider, justifyContent: 'center', alignItems: 'center', marginTop: 14 },
   outlineText: { fontSize: 15, color: C.text },
-  dangerButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
-  dangerText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  dangerButton: { minHeight: 52, borderRadius: 14, backgroundColor: C.error, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  dangerText: { fontSize: 15, fontWeight: '700', color: C.onPrimary },
   textButton: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: 18 }, mutedLink: { fontSize: 13, color: C.textMuted, textDecorationLine: 'underline' },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }, infoLabel: { fontSize: 13, color: C.textSecondary }, infoValue: { fontSize: 14, color: C.text, flexShrink: 1, textAlign: 'right' },
-  tripRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.surface, marginTop: 10 },
+  tripRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.surface, marginTop: 10 },
   tripCopy: { flex: 1, paddingVertical: 10 }, tripName: { fontSize: 15, fontWeight: '600', color: C.text }, tripMeta: { fontSize: 12, color: C.textMuted, marginTop: 3 },
   deleteChip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: C.error, justifyContent: 'center' }, deleteText: { fontSize: 13, color: C.error, fontWeight: '600' },
   listItem: { fontSize: 14, color: C.text, lineHeight: 22, marginTop: 4 },
@@ -148,4 +179,3 @@ export const accountStyles = StyleSheet.create({
   countText: { fontSize: 11, fontWeight: '700', color: '#fff' },
   pressed: { opacity: 0.6 },
 });
-const s = accountStyles;

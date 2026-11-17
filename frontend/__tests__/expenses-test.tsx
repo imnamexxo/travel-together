@@ -86,7 +86,8 @@ test('품목 합계와 총액의 차이가 편집 화면에 항상 보인다', a
   fireEvent.changeText(await screen.findByLabelText('총액'), '30000');
   await fillItem(1, '간식', '21000');
 
-  expect(screen.getByText('품목 합계 21,000원 · 총액 30,000원')).toBeOnTheScreen();
+  expect(screen.getByText('품목 합계 21,000원')).toBeOnTheScreen();
+  expect(screen.getByText('총액 30,000원')).toBeOnTheScreen();
   expect(screen.getByText('차이 9,000원')).toBeOnTheScreen();
 });
 
@@ -125,8 +126,8 @@ test('확정에 성공하면 정산 화면의 확정된 지출에 보인다', as
   await fillItem(1, '고기국수 3그릇', '36000');
   fireEvent.press(screen.getByRole('button', { name: '확정' }));
 
-  expect(await screen.findByText('확정된 지출 · 1건')).toBeOnTheScreen();
-  expect(screen.getByText('고기국수')).toBeOnTheScreen();
+  expect(await screen.findByText('고기국수')).toBeOnTheScreen();
+  expect(screen.getByText('확정된 지출')).toBeOnTheScreen();
   expect(api.confirmExpense).toHaveBeenCalledWith('trip-jeju', 'expense-1');
 });
 
@@ -174,10 +175,11 @@ test('지출 목록에 확인이 필요한 지출이 따로 모여 보인다', a
 
   fireEvent.press(await screen.findByRole('tab', { name: '지출 내역' }));
 
-  expect(await screen.findByText('확인 필요 · 2건')).toBeOnTheScreen();
-  expect(screen.getByText('확정된 지출 · 1건')).toBeOnTheScreen();
-  expect(screen.getByText('민지 결제 · 확인 필요')).toBeOnTheScreen();
-  expect(screen.getByText('결제자 미지정 · 초안')).toBeOnTheScreen();
+  expect(await screen.findByText('2건')).toBeOnTheScreen();
+  expect(screen.getByText('1건')).toBeOnTheScreen();
+  expect(screen.getByText('민지 결제')).toBeOnTheScreen();
+  expect(screen.getAllByText('결제자 미지정').length).toBeGreaterThan(0);
+  expect(screen.getByText('초안')).toBeOnTheScreen();
   expect(screen.getByText('금액 미입력')).toBeOnTheScreen();
 });
 

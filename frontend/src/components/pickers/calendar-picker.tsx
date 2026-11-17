@@ -3,7 +3,8 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 import { WEEKDAY_HEADERS, dayLabel, formatDay, inRange, isIso, monthGrid, monthOf, nights, pickRange, shiftMonth, todayIso, type Range } from './calendar-logic';
 
 type Props = {
@@ -23,6 +24,7 @@ export default function CalendarPicker(props: Props) {
 }
 
 function Sheet(props: Props) {
+  const s = useThemedStyles(sStyles);
   const today = todayIso();
   const initial: Range = props.mode === 'range'
     ? { start: isIso(props.start) ? props.start : null, end: isIso(props.end) ? props.end : null }
@@ -38,8 +40,8 @@ function Sheet(props: Props) {
     if (props.mode === 'range') { if (range.end) props.onConfirm(range.start, range.end); } else props.onConfirm(range.start);
   };
   const summary = props.mode === 'range'
-    ? range.start && range.end ? `${formatDay(range.start, today)} – ${formatDay(range.end, today)} · ${nights({ start: range.start, end: range.end })}일`
-      : range.start ? `${formatDay(range.start, today)}부터 · 끝나는 날을 눌러 주세요` : '시작하는 날을 눌러 주세요'
+    ? range.start && range.end ? `${formatDay(range.start, today)} – ${formatDay(range.end, today)} (${nights({ start: range.start, end: range.end })}일)`
+      : range.start ? `${formatDay(range.start, today)}부터, 끝나는 날을 눌러 주세요` : '시작하는 날을 눌러 주세요'
     : range.start ? formatDay(range.start, today) : '날짜를 눌러 주세요';
 
   return <View style={s.backdrop}>
@@ -73,7 +75,7 @@ function Sheet(props: Props) {
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' }, dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { backgroundColor: C.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12, width: '100%', maxWidth: 520, alignSelf: 'center' },
   title: { fontSize: 17, fontWeight: '700', color: C.text, marginBottom: 6 },
@@ -88,7 +90,7 @@ const s = StyleSheet.create({
   sunday: { color: '#C2410C' }, saturday: { color: C.accent },
   summary: { fontSize: 13, color: C.textSecondary, textAlign: 'center', marginTop: 10 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  button: { flex: 1, minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cancel: { backgroundColor: C.surface }, cancelText: { fontSize: 15, color: C.text },
   ok: { backgroundColor: C.primary }, okText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, disabled: { opacity: 0.4 },
 });

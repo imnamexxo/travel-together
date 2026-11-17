@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
 
 import Pressable from '@/components/pressable';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 
 /** react-native Alert의 버튼과 같은 모양. */
 export type DialogButton = { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void | Promise<void> };
@@ -28,6 +29,7 @@ export function showAlert(title: string, message?: string, buttons?: DialogButto
 
 /** 앱 맨 바깥에 하나 둔다. 떠 있는 확인창을 그린다. */
 export function DialogHost() {
+  const s = useThemedStyles(sStyles);
   const [dialog, setDialog] = useState<Dialog | null>(current);
   const [anim] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -65,13 +67,13 @@ export function DialogHost() {
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   card: { width: '100%', maxWidth: 380, backgroundColor: C.background, borderRadius: 22, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 18, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
   title: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.4 },
   message: { fontSize: 14, lineHeight: 21, color: C.textSecondary, marginTop: 10 },
   buttons: { flexDirection: 'row', gap: 8, marginTop: 22 }, stacked: { flexDirection: 'column' },
-  button: { minHeight: 48, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, flex: { flex: 1 },
+  button: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, flex: { flex: 1 },
   primary: { backgroundColor: C.primary }, destructive: { backgroundColor: C.error }, cancel: { backgroundColor: C.surface },
-  buttonText: { fontSize: 15, fontWeight: '600' }, primaryText: { color: '#fff' }, cancelText: { color: C.text },
+  buttonText: { fontSize: 15, fontWeight: '600' }, primaryText: { color: C.onPrimary }, cancelText: { color: C.text },
 });

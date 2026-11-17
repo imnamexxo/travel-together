@@ -7,7 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Photo, PhotoPlaceLink, Place } from '@/api/client';
 import { useDeletePhoto, useLinkPhotoPlace, usePhotos, usePlaceSearch, usePlanItems } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
+import MetaLine from '@/components/meta-line';
+import { Dashes } from '@/components/ticket-parts';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
@@ -32,7 +35,7 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
   }) : photos;
   for (const photo of ordered) {
     const index = photoDayIndex(photo, days);
-    const key = mode === 'date' ? (index < 0 ? '날짜 미지정' : `${index + 1}일 차 · ${days[index].title}`)
+    const key = mode === 'date' ? (index < 0 ? '날짜 미지정' : `${index + 1}일 차  ${days[index].title}`)
       : mode === 'place' ? (photo.place?.name ?? '장소 미연결')
       : mode === 'uploader' ? `${photo.uploader_name}님이 올린 사진` : '모든 사진';
     groups.set(key, [...(groups.get(key) ?? []), photo]);
@@ -45,6 +48,8 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
 }
 
 export default function AlbumScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, days, isOrganizer } = useCurrentTrip();
   const photoList = usePhotos(trip.id);
   const planItems = usePlanItems(trip.id);
@@ -107,9 +112,9 @@ export default function AlbumScreen() {
         {busy ? <ActivityIndicator color={C.onPrimary} /> : <Text style={s.plusText}>＋</Text>}
       </Pressable>
     </View>
-    <Text style={s.subtitle}>{photos.length}장의 사진 · {remaining <= 20 ? `남은 장수 ${remaining}장` : `${limit}장까지 담을 수 있어요`}{unlinked > 0 ? ` · 장소 미연결 ${unlinked}장` : ''}</Text>
+    <MetaLine style={s.metaGap} textStyle={s.subtitleText} parts={[`사진 ${photos.length}장`, remaining <= 20 ? `${remaining}장 더 올릴 수 있어요` : `${limit}장까지 올릴 수 있어요`, unlinked > 0 && `장소 미연결 ${unlinked}장`]} />
     {uploader.uploads.length > 0 && <View style={s.uploadBox}>
-      <Text style={s.uploadTitle}>{uploader.busy ? `사진 올리는 중 · ${doneCount + failed.length + 1}/${uploader.uploads.length}` : `${uploader.uploads.length}장 중 ${doneCount}장 올렸어요${failed.length ? ` · ${failed.length}장 실패` : ''}`}</Text>
+      <Text style={s.uploadTitle}>{uploader.busy ? `사진 올리는 중 (${doneCount + failed.length + 1}/${uploader.uploads.length})` : `${uploader.uploads.length}장 중 ${doneCount}장 올렸어요${failed.length ? `, ${failed.length}장은 실패했어요` : ''}`}</Text>
       {failed.map((u) => <Text key={u.key} style={s.uploadError}>사진 {uploader.uploads.indexOf(u) + 1}: {u.error}</Text>)}
       <View style={s.uploadActions}>
         {!uploader.busy && failed.length > 0 && <Pressable accessibilityRole="button" onPress={uploader.retryFailed} style={s.uploadButton}><Text style={s.uploadButtonText}>실패한 사진 다시 올리기</Text></Pressable>}
@@ -123,7 +128,7 @@ export default function AlbumScreen() {
     ))}</View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
       <Pressable accessibilityRole="button" accessibilityState={{ selected: day === null }} onPress={() => setDay(null)} style={[s.chip, day === null && s.chipSelected]}><Text style={[s.chipText, day === null && s.chipTextSelected]}>모든 날짜</Text></Pressable>
-      {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => setDay(index)} style={[s.chip, day === index && s.chipSelected]}><Text style={[s.chipText, day === index && s.chipTextSelected]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
+      {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => setDay(index)} style={[s.chip, day === index && s.chipSelected]}><Text style={[s.chipText, day === index && s.chipTextSelected]}>{index + 1}일 차  {entry.date}</Text></Pressable>)}
     </ScrollView>
   </>;
 
@@ -139,8 +144,8 @@ export default function AlbumScreen() {
           <Text style={s.emptyText}>바다도, 함께 먹은 한 끼도.{ '\n' }여행의 순간을 차곡차곡 모아보세요.</Text>
           <Pressable accessibilityRole="button" disabled={busy} onPress={addPhotos} style={s.emptyButton}><Text style={s.emptyButtonText}>{busy ? '사진 올리는 중…' : '사진 추가'}</Text></Pressable>
         </View>}
-      ListFooterComponent={<Text style={s.footer}>{photos.length}/{limit}장 · 사진은 줄여서 올리고 위치 정보는 지워서 보내요.{ '\n' }촬영 위치는 서버에 저장되지 않아요.</Text>}
-      renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}><Text style={s.groupTitle}>{row.title}</Text><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
+      ListFooterComponent={<Text style={s.footer}>사진은 줄여서 올리고 위치 정보는 지워서 보내요.{ '\n' }촬영 위치는 서버에 저장되지 않아요.</Text>}
+      renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}><Text style={s.groupTitle}>{row.title}</Text><View style={s.groupRule}><Dashes color={C.border} /></View><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
         {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`${photo.uploader_name}님 사진 크게 보기`} onPress={() => setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }]}>
           <Image source={{ uri: photo.url }} style={s.thumbnail} resizeMode="cover" onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
           {failedImages.includes(photo.id) && <View style={s.imageError}><Text style={s.imageErrorText}>사진 확인 필요</Text></View>}
@@ -166,7 +171,7 @@ export default function AlbumScreen() {
             </View>
             <Text style={s.fieldTitle}>올린 사람</Text><Text style={s.helper}>{selected.uploader_name}</Text>
             <Text style={s.fieldTitle}>촬영 시각</Text>
-            <Text style={s.helper}>{selected.taken_at ? (() => { const t = toKstParts(selected.taken_at); const index = photoDayIndex(selected, days); return `${index >= 0 ? `${index + 1}일 차 · ` : ''}${t.date} ${t.time}`; })() : '촬영 시각 정보가 없는 사진이에요.'}</Text>
+            <Text style={s.helper}>{selected.taken_at ? (() => { const t = toKstParts(selected.taken_at); const index = photoDayIndex(selected, days); return `${index >= 0 ? `${index + 1}일 차, ` : ''}${t.date} ${t.time}`; })() : '촬영 시각 정보가 없는 사진이에요.'}</Text>
             <PlaceSection photo={selected} />
             {!canDelete(selected) && <Text style={s.helper}>사진은 올린 사람과 총무만 지울 수 있어요.</Text>}
           </View>
@@ -178,6 +183,8 @@ export default function AlbumScreen() {
 
 /** 사진 상세의 장소: 연결된 장소와 그날 그 장소의 일정, 연결 바꾸기·해제, 일정에 없던 곳 검색해 연결. */
 function PlaceSection({ photo }: { photo: Photo }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, days } = useCurrentTrip();
   const planItems = usePlanItems(trip.id);
   const link = useLinkPhotoPlace(trip.id);
@@ -200,7 +207,7 @@ function PlaceSection({ photo }: { photo: Photo }) {
 
   return <>
     <Text style={s.fieldTitle}>연결된 장소</Text>
-    <Text style={s.helper}>{photo.place ? `${photo.place.name}${photo.link_type === 'auto' ? ' · 촬영 위치로 자동 연결' : ' · 직접 연결'}` : '장소에 연결되지 않은 사진이에요. 촬영 날짜로만 분류돼요.'}</Text>
+    <Text style={s.helper}>{photo.place ? `${photo.place.name} (${photo.link_type === 'auto' ? '촬영 위치로 자동 연결' : '직접 연결'})` : '장소에 연결되지 않은 사진이에요. 촬영 날짜로만 분류돼요.'}</Text>
     {plansHere.map((i) => <Text key={i.id} style={s.helper}>📅 {dayNumber(i.date)}일 차 {i.time?.slice(0, 5) ?? ''} {i.title}</Text>)}
     <View style={s.detailChips}>
       {tripPlaces.map((p) => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${p.name}에 연결`} accessibilityState={{ selected: photo.place?.id === p.id, disabled: link.isPending }} disabled={link.isPending} onPress={() => change({ place_id: p.id })} style={[s.chip, photo.place?.id === p.id && s.chipSelected]}><Text style={[s.chipText, photo.place?.id === p.id && s.chipTextSelected]}>{p.name}</Text></Pressable>)}
@@ -220,28 +227,28 @@ function PlaceSection({ photo }: { photo: Photo }) {
   </>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 28, maxWidth: 600, width: '100%', alignSelf: 'center', flexGrow: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   titleCopy: { flex: 1 }, eyebrow: { fontSize: 12, color: C.textMuted, marginBottom: 8 },
-  title: { fontSize: 30, fontWeight: '700', color: C.primary, letterSpacing: -1 },
+  title: { fontSize: 32, fontFamily: Type.display, color: C.primary, letterSpacing: -1 },
   plus: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
   plusText: { fontSize: 26, lineHeight: 30, color: C.onPrimary }, pressed: { opacity: 0.6 },
-  subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 13 },
-  uploadBox: { marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: C.banner, gap: 6 },
+  subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 13 }, subtitleText: { fontSize: 13, color: C.textSecondary }, metaGap: { marginTop: 13 },
+  uploadBox: { marginTop: 16, padding: 14, borderRadius: 14, backgroundColor: C.banner, gap: 6 },
   uploadTitle: { fontSize: 13, fontWeight: '600', color: C.primary }, uploadError: { fontSize: 12, color: C.error, lineHeight: 18 },
   uploadActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  uploadButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 10, backgroundColor: C.background }, uploadButtonText: { fontSize: 13, fontWeight: '600', color: C.accent },
+  uploadButton: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8, backgroundColor: C.background }, uploadButtonText: { fontSize: 13, fontWeight: '600', color: C.accent },
   modes: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border, marginTop: 24 },
   mode: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 46, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   modeSelected: { borderBottomColor: C.primary }, modeText: { fontSize: 14, color: C.textMuted }, modeTextSelected: { color: C.primary, fontWeight: '600' },
   chips: { flexDirection: 'row', gap: 8, paddingTop: 18, paddingBottom: 6 },
-  chip: { borderRadius: 18, paddingHorizontal: 13, minHeight: 36, justifyContent: 'center', backgroundColor: C.surface },
+  chip: { borderRadius: 22, paddingHorizontal: 16, minHeight: 40, justifyContent: 'center', backgroundColor: C.surface },
   chipSelected: { backgroundColor: C.banner }, chipText: { fontSize: 12, color: C.textSecondary }, chipTextSelected: { color: C.primary, fontWeight: '600' },
-  groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 24, paddingBottom: 12 },
-  groupTitle: { fontSize: 14, fontWeight: '600', color: C.text }, count: { fontSize: 12, color: C.textMuted },
-  photoRow: { flexDirection: 'row', gap: 4, marginBottom: 4 }, tile: { backgroundColor: C.surface, borderRadius: 4, overflow: 'hidden' }, thumbnail: { width: '100%', height: '100%' },
+  groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 26, paddingBottom: 14, paddingLeft: 2 },
+  groupTitle: { fontSize: 14, fontFamily: Type.heading, color: C.text }, groupRule: { flex: 1, flexDirection: 'row' }, count: { fontSize: 12, color: C.textMuted },
+  photoRow: { flexDirection: 'row', gap: 4, marginBottom: 4 }, tile: { backgroundColor: C.background, borderRadius: 4, overflow: 'hidden', padding: 3, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border }, thumbnail: { width: '100%', height: '100%', borderRadius: 2, backgroundColor: C.surface },
   imageError: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface }, imageErrorText: { fontSize: 11, color: C.textMuted },
   empty: { paddingVertical: 60, alignItems: 'center' }, emptyIcon: { width: 76, height: 76, borderRadius: 24, backgroundColor: C.banner, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: C.text, textAlign: 'center' }, emptyText: { fontSize: 13, lineHeight: 22, color: C.textMuted, textAlign: 'center', marginTop: 12 },
@@ -253,8 +260,8 @@ const s = StyleSheet.create({
   detailsBody: { paddingHorizontal: 24 }, disabled: { color: C.inactive }, fieldTitle: { fontSize: 14, fontWeight: '600', color: C.text, marginTop: 24 },
   helper: { fontSize: 12, color: C.textMuted, lineHeight: 20, marginTop: 8 },
   detailChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  searchRow: { flexDirection: 'row', gap: 8, marginTop: 10 }, searchInput: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 14, fontSize: 15, color: C.text },
-  searchButton: { minHeight: 46, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.primary, justifyContent: 'center' }, searchButtonText: { color: C.onPrimary, fontWeight: '600' },
+  searchRow: { flexDirection: 'row', gap: 8, marginTop: 10 }, searchInput: { flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 14, fontSize: 15, color: C.text },
+  searchButton: { minHeight: 46, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center' }, searchButtonText: { color: C.onPrimary, fontWeight: '600' },
   result: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, resultName: { fontSize: 14, fontWeight: '600', color: C.text },
   errorText: { fontSize: 12, color: C.error, marginTop: 8 },
 });

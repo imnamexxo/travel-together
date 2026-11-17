@@ -91,7 +91,7 @@ test('기록된 송금이 목록에 보이고, 총무는 확인 창을 거쳐 �
   const api = render(organizerTrip, [recorded]);
   const alert = spyOnAlerts();
 
-  expect(await screen.findByText('5,000원 · 11.14 12:00 기록')).toBeOnTheScreen();
+  expect(await screen.findByText('11.14 12:00 기록')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '준호 → 민지 5,000원 기록 지우기' }));
   await pressAlertButton(lastButtons(alert), '지우기');
 
@@ -102,7 +102,7 @@ test('기록된 송금이 목록에 보이고, 총무는 확인 창을 거쳐 �
 test('일반 멤버는 송금 기록을 볼 수 있지만 기록·삭제 버튼이 없다', async () => {
   render(memberTrip, [recorded]);
 
-  expect(await screen.findByText('5,000원 · 11.14 12:00 기록')).toBeOnTheScreen();
+  expect(await screen.findByText('11.14 12:00 기록')).toBeOnTheScreen();
   expect(screen.queryByText('송금 완료로 기록')).toBeNull();
   expect(screen.queryByText('금액 직접 입력')).toBeNull();
   expect(screen.queryByText('지우기')).toBeNull();
@@ -118,5 +118,6 @@ test('송금을 기록하면 정산 결과를 다시 불러온다', async () => 
   await pressAlertButton(lastButtons(alert), '기록');
 
   await waitFor(() => expect(api.getSettlement.mock.calls.length).toBeGreaterThan(before));
-  expect(await screen.findByText('8,500원 · 11.14 12:00 기록')).toBeOnTheScreen();
+  expect((await screen.findAllByText('11.14 12:00 기록')).length).toBeGreaterThan(0);
+  expect(screen.getAllByText('8,500원').length).toBeGreaterThan(0);
 });

@@ -9,11 +9,14 @@ import { useCreateTrip } from '@/api/queries';
 import CurrencyField from '@/components/pickers/currency-field';
 import OverseasField from '@/components/pickers/overseas-field';
 import TripPeriodField from '@/components/pickers/trip-period-field';
-import { TravelColors as C } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/lib/money';
 import { validateNewTrip, type NewTripErrors } from './new-trip-validation';
 
 export default function NewTripScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const createTrip = useCreateTrip();
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -67,16 +70,16 @@ export default function NewTripScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
-  title: { fontSize: 30, letterSpacing: -1.1, fontWeight: '700', color: C.primary, marginTop: 12 },
+  title: { fontSize: 30, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 12 },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 10, lineHeight: 20 },
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 22 },
-  input: { minHeight: 54, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
+  input: { minHeight: 54, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: C.text, borderWidth: 1, borderColor: 'transparent' },
   invalid: { borderColor: C.error }, error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 7 },
 
-  primaryButton: { minHeight: 54, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 28 },
+  primaryButton: { minHeight: 54, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 28 },
   primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
 });

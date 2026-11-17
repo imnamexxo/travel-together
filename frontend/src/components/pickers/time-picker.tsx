@@ -3,7 +3,8 @@ import { Modal, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pressable from '@/components/pressable';
-import { TravelColors as C } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const MINUTES = Array.from({ length: 60 }, (_, m) => m);
@@ -32,6 +33,7 @@ export default function TimePicker(props: Props) {
 }
 
 function Sheet({ title, value, onConfirm, onClear, onClose }: Props) {
+  const s = useThemedStyles(sStyles);
   const match = /^(\d{1,2}):(\d{2})$/.exec(value);
   const [hour, setHour] = useState(match ? Number(match[1]) : DEFAULT.hour);
   const [minute, setMinute] = useState(match ? Number(match[2]) : DEFAULT.minute);
@@ -58,6 +60,7 @@ function Sheet({ title, value, onConfirm, onClear, onClose }: Props) {
 
 /** 굴려서 고르는 숫자 휠. 멈추면 가장 가까운 칸에 맞춘다. 숫자를 누르면 그 칸으로 간다. */
 function Wheel({ values, selected, onChange, unit }: { values: number[]; selected: number; onChange: (v: number) => void; unit: string }) {
+  const s = useThemedStyles(sStyles);
   const ref = useRef<ScrollView>(null);
   const index = Math.max(0, values.indexOf(selected));
   // 처음 열 때 고른 값을 가운데에 둔다.
@@ -87,7 +90,7 @@ function Wheel({ values, selected, onChange, unit }: { values: number[]; selecte
   </ScrollView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' }, dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.45)' },
   sheet: { backgroundColor: C.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12, width: '100%', maxWidth: 520, alignSelf: 'center' },
   title: { fontSize: 17, fontWeight: '700', color: C.text },
@@ -95,12 +98,12 @@ const s = StyleSheet.create({
   band: { position: 'absolute', left: 0, right: 0, top: ITEM * Math.floor(VISIBLE / 2), height: ITEM, borderRadius: 14, backgroundColor: C.surface },
   wheel: { width: 96, height: ITEM * VISIBLE, flexGrow: 0 },
   item: { height: ITEM, alignItems: 'center', justifyContent: 'center' },
-  itemText: { fontVariant: ['tabular-nums'], fontWeight: '700' },
+  itemText: { fontVariant: ['tabular-nums'], fontFamily: Type.heading },
   itemOn: { fontSize: 34, color: C.text }, itemNear: { fontSize: 26, color: C.textMuted }, itemFar: { fontSize: 22, color: C.divider },
-  colon: { fontSize: 32, fontWeight: '700', color: C.text, marginHorizontal: 18, marginBottom: 4 },
+  colon: { fontSize: 32, fontFamily: Type.display, color: C.text, marginHorizontal: 18, marginBottom: 4 },
   preview: { fontSize: 13, color: C.textSecondary, textAlign: 'center', marginTop: 6 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  button: { flex: 1, minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cancel: { backgroundColor: C.surface }, cancelText: { fontSize: 15, color: C.text },
   ok: { backgroundColor: C.primary }, okText: { fontSize: 15, fontWeight: '600', color: C.onPrimary },
 });

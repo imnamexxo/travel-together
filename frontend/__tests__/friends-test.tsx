@@ -57,10 +57,11 @@ test('받은 여행 초대는 친구 화면에 있고, 수락하면 그 여행�
 
   // 여행 목록에는 초대 카드가 없고, 계정 아이콘에 빨간 표시만 있다.
   expect(await screen.findByRole('button', { name: '계정 관리, 받은 친구 요청·초대 1개' })).toBeOnTheScreen();
-  expect(screen.queryByText('준호님이 초대했어요 · 2026. 12. 1 – 12. 3')).toBeNull();
+  expect(screen.queryByText('준호님이 초대했어요')).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: '계정 관리, 받은 친구 요청·초대 1개' }));
   fireEvent.press(await screen.findByRole('button', { name: /^친구 관리/ }));
-  expect(await screen.findByText('준호님이 초대했어요 · 2026. 12. 1 – 12. 3')).toBeOnTheScreen();
+  expect(await screen.findByText('준호님이 초대했어요')).toBeOnTheScreen();
+  expect(screen.getByText('2026. 12. 1 – 12. 3')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '오사카 여행 초대 수락' }));
 
   await waitFor(() => expect(api.acceptTripInvite).toHaveBeenCalledWith('inv1'));

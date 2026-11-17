@@ -10,7 +10,8 @@ import { ApiError, type PlaceCandidate, type PlanItem } from '@/api/client';
 import { useDeletePlanItem, usePlaceSearch, useSavePlanItem } from '@/api/queries';
 import PickerField from '@/components/pickers/picker-field';
 import TimePicker from '@/components/pickers/time-picker';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useCurrentTrip } from './current-trip';
 import type { TripDay } from './trip-dates';
 
@@ -30,6 +31,8 @@ function errorText(e: unknown, fallback: string) {
 }
 
 export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, isOrganizer, money } = useCurrentTrip();
   const save = useSavePlanItem(trip.id);
   const remove = useDeletePlanItem(trip.id);
@@ -102,7 +105,7 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
         <View style={s.action} />
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
-        <Text style={s.caption}>{dayNumber}일 차 · {day.title}</Text>
+        <Text style={s.caption}>{dayNumber}일 차  {day.title}</Text>
 
         <Text style={s.label}>장소</Text>
         {place ? <View style={s.placeChip}>
@@ -146,24 +149,24 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background }, content: { padding: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, width: '100%', maxWidth: 600, alignSelf: 'center' },
   saveBar: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider, backgroundColor: C.background },
-  saveButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 552, alignSelf: 'center' },
+  saveButton: { minHeight: 52, borderRadius: 14, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 552, alignSelf: 'center' },
   saveText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressedSave: { opacity: 0.6 },
   action: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
   title: { color: C.text, fontSize: 16, fontWeight: '600' },
   muted: { fontSize: 13, color: C.textSecondary }, link: { fontSize: 14, color: C.accent, fontWeight: '500' },
   caption: { fontSize: 12, color: C.textMuted, marginTop: 7, lineHeight: 19 },
   label: { fontSize: 13, color: C.textSecondary, marginTop: 25, marginBottom: 10 },
-  input: { backgroundColor: C.surface, borderRadius: 12, padding: 16, fontSize: 16, color: C.text, minHeight: 52 },
+  input: { backgroundColor: C.surface, borderRadius: 14, padding: 16, fontSize: 16, color: C.text, minHeight: 52 },
   memo: { minHeight: 100, textAlignVertical: 'top' },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  searchButton: { minHeight: 52, paddingHorizontal: 18, borderRadius: 12, backgroundColor: C.primary, justifyContent: 'center' }, searchText: { color: C.onPrimary, fontWeight: '600' },
+  searchButton: { minHeight: 52, paddingHorizontal: 18, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center' }, searchText: { color: C.onPrimary, fontWeight: '600' },
   result: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider },
-  placeChip: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 12, backgroundColor: C.banner },
+  placeChip: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, backgroundColor: C.banner },
   placeName: { fontSize: 15, fontWeight: '600', color: C.text },
   loading: { marginTop: 12 },
   error: { fontSize: 13, color: C.error, marginTop: 16, lineHeight: 19 },

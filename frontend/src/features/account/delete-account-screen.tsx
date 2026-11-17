@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import { useDeleteMe, useDeletionPreview } from '@/api/queries';
 import { useAuth } from '@/auth/auth-context';
-import { TravelColors as C } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
-import { accountStyles as s } from './account-screen';
+import { accountStyles } from './account-screen';
 
 /** 회원 탈퇴(ADR 0005). 탈퇴하면 내 여행들이 어떻게 되는지 먼저 보여 준다. */
 export default function DeleteAccountScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(accountStyles);
   const preview = useDeletionPreview({ enabled: true });
   const remove = useDeleteMe();
   const { signOut } = useAuth();

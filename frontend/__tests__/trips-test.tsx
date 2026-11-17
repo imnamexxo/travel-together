@@ -30,7 +30,9 @@ test('여행이 없으면 안내가 보이고, 여행을 만들면 그 여행 �
   await fillNewTrip({ name: ' 부산 여행 ', start: '2026-12-01', end: '2026-12-03' });
 
   expect(await screen.findByText('부산 여행')).toBeOnTheScreen();
-  expect(screen.getByText('2026. 12. 1 – 12. 3  ·  1명')).toBeOnTheScreen();
+  expect(screen.getAllByText('12.01 (화)').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('12.03 (목)').length).toBeGreaterThan(0);
+  expect(screen.getByText('1명')).toBeOnTheScreen();
   expect(api.createTrip).toHaveBeenCalledWith({ name: '부산 여행', start_date: '2026-12-01', end_date: '2026-12-03', currency: 'KRW', is_overseas: false });
   for (const tab of ['플래너', '앨범', '지도', '정산']) {
     expect(screen.getAllByText(tab).length).toBeGreaterThan(0);
@@ -47,10 +49,10 @@ test('여행 기간은 달력에서 시작일과 종료일을 차례로 누르�
   // 시작일보다 앞을 누르면 그 날이 새 시작일이 된다
   fireEvent.press(screen.getByRole('button', { name: '11월 18일' }));
   fireEvent.press(screen.getByRole('button', { name: '11월 21일' }));
-  expect(screen.getByText('11월 18일 (수) – 11월 21일 (토) · 4일')).toBeOnTheScreen();
+  expect(screen.getByText('11월 18일 (수) – 11월 21일 (토) (4일)')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '확인' }));
 
-  expect(await screen.findByText('11월 18일 (수) – 11월 21일 (토) · 4일')).toBeOnTheScreen();
+  expect(await screen.findByText('11월 18일 (수) – 11월 21일 (토) (4일)')).toBeOnTheScreen();
 });
 
 test('기간을 고르지 않으면 서버에 보내지 않고 이유를 보여준다', async () => {
@@ -86,11 +88,13 @@ test('여행 목록에서 여행을 열면 그 여행 홈으로 간다', async (
   ];
   renderApp({ auth: signedIn(), api: fakeApi({}, { trips }) });
 
-  expect(await screen.findByText('2026. 8. 1 – 8. 2  ·  멤버 4명')).toBeOnTheScreen();
+  expect(await screen.findByText('2026. 8. 1 – 8. 2  ·  4명')).toBeOnTheScreen();
   expect(screen.getAllByText('총무')).toHaveLength(1);
   fireEvent.press(screen.getByRole('button', { name: '강릉 여행 열기' }));
 
-  expect(await screen.findByText('2026. 8. 1 – 8. 2  ·  4명')).toBeOnTheScreen();
+  expect((await screen.findAllByText('08.01 (토)')).length).toBeGreaterThan(0);
+  expect(screen.getAllByText('08.02 (일)').length).toBeGreaterThan(0);
+  expect(screen.getByText('4명')).toBeOnTheScreen();
   expect(screen.getByRole('tab', { name: '1일 차 08.01' })).toBeOnTheScreen();
   expect(screen.getByRole('tab', { name: '2일 차 08.02' })).toBeOnTheScreen();
 });

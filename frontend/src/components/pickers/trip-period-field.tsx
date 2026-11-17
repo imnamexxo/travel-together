@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 import CalendarPicker from './calendar-picker';
 import { formatDay, isIso, nights } from './calendar-logic';
 import PickerField from './picker-field';
@@ -13,8 +14,9 @@ export default function TripPeriodField({ start, end, onChange, error }: {
   onChange: (start: string, end: string) => void;
   error?: string;
 }) {
+  const s = useThemedStyles(sStyles);
   const [open, setOpen] = useState(false);
-  const value = isIso(start) && isIso(end) ? `${formatDay(start)} – ${formatDay(end)} · ${nights({ start, end })}일` : null;
+  const value = isIso(start) && isIso(end) ? `${formatDay(start)} – ${formatDay(end)} (${nights({ start, end })}일)` : null;
   return <>
     <Text style={s.label}>여행 기간</Text>
     <PickerField label="여행 기간" value={value} placeholder="날짜를 골라 주세요" onPress={() => setOpen(true)} invalid={!!error} />
@@ -24,7 +26,7 @@ export default function TripPeriodField({ start, end, onChange, error }: {
   </>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginBottom: 10, marginTop: 18 },
   error: { fontSize: 12, lineHeight: 19, color: C.error, marginTop: 7 },
 });

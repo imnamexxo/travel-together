@@ -4,7 +4,9 @@ import { Animated, Image, PanResponder, ScrollView, StyleSheet, Text, useWindowD
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
+import MetaLine from '@/components/meta-line';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import { useMapData, useMembers } from '@/api/queries';
 import type { MapPlace } from '@/api/client';
@@ -33,6 +35,7 @@ function createSheetDrag(bodyHeight: Animated.Value, onStart: () => void) {
 }
 
 export default function MapScreen() {
+  const s = useThemedStyles(sStyles);
   const { trip, days, money } = useCurrentTrip();
   const [day, setDay] = useState<number | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
@@ -79,7 +82,7 @@ export default function MapScreen() {
       <Text style={s.title}>여행 지도</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.dates}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected: day === null }} onPress={() => pick(() => setDay(null))} style={[s.chip, day === null && s.chipActive]}><Text style={[s.chipText, day === null && s.chipActiveText]}>전체 일정</Text></Pressable>
-        {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => pick(() => setDay(index))} style={[s.chip, day === index && s.chipActive]}><Text style={[s.chipText, day === index && s.chipActiveText]}>{index + 1}일 차 · {entry.date}</Text></Pressable>)}
+        {days.map((entry, index) => <Pressable key={entry.iso} accessibilityRole="button" accessibilityState={{ selected: day === index }} onPress={() => pick(() => setDay(index))} style={[s.chip, day === index && s.chipActive]}><Text style={[s.chipText, day === index && s.chipActiveText]}>{index + 1}일 차  {entry.date}</Text></Pressable>)}
       </ScrollView>
       {members.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.memberScroll} contentContainerStyle={s.members}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected: memberId === null }} onPress={() => pick(() => setMemberId(null))} style={[s.memberChip, memberId === null && s.memberActive]}><Text style={[s.memberText, memberId === null && s.memberActiveText]}>모든 멤버</Text></Pressable>
@@ -92,10 +95,10 @@ export default function MapScreen() {
       {selected ? <View>
         <View {...drag.panHandlers} style={s.sheetHeader}>
         <Pressable accessibilityRole="button" accessibilityLabel={expanded ? '장소 정보 접기' : '장소 정보 펼치기'} onPress={() => settle(!expanded)} style={s.handleArea}><View style={s.handle} /></Pressable>
-        <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selected.place.name}</Text><Text style={s.area}>{selected.place.road_address ?? selected.place.address}</Text></View><Text style={s.badge}>{selected.visited ? '들른 곳' : '계획'}</Text></View>
+        <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selected.place.name}</Text><Text style={s.area}>{selected.place.road_address ?? selected.place.address}</Text></View><View style={s.kind}><View style={[s.kindDot, !selected.visited && s.kindDotOpen]} /><Text style={s.kindText}>{selected.visited ? '들른 곳' : '계획만 한 곳'}</Text></View></View>
         </View>
         {(expanded || moving) && <Animated.View style={{ height: bodyHeight, overflow: 'hidden' }}><ScrollView style={{ maxHeight: maxBody }} contentContainerStyle={s.sheetContent} onContentSizeChange={(_, h) => setFull(Math.min(maxBody, Math.ceil(h)))}>
-        <Text style={s.counts}>일정 {selected.plan_items.length}개 · 사진 {selected.photos.length}장{selected.expense_count ? ` · 지출 ${money.format(selected.expense_total)}` : ''}</Text>
+        <MetaLine textStyle={s.counts} parts={[`일정 ${selected.plan_items.length}개`, `사진 ${selected.photos.length}장`, !!selected.expense_count && `지출 ${money.format(selected.expense_total)}`]} />
         {!!selected.visited_dates.length && <Text style={s.visitedOn}>들른 날 {selected.visited_dates.map(dayLabel).filter(Boolean).join(', ')}</Text>}
         {selected.plan_items.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{dayLabel(item.date)} {item.time?.slice(0, 5) ?? ''}</Text><Text style={s.memo}>{item.memo || item.title}</Text></View>)}
         {!!selected.photos.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.thumbnails}>{selected.photos.map((photo, i) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`사진 ${i + 1} 크게 보기`} onPress={() => setViewing(i)}><Image source={{ uri: photo.url }} style={s.thumbnail} /></Pressable>)}</ScrollView>}
@@ -109,16 +112,17 @@ export default function MapScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
+  kind: { flexDirection: 'row', alignItems: 'center', gap: 6 }, kindDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: C.primary, borderWidth: 1.5, borderColor: C.primary }, kindDotOpen: { backgroundColor: 'transparent', borderColor: C.textMuted }, kindText: { fontSize: 12, color: C.textSecondary },
   screen: { flex: 1, backgroundColor: C.background }, heading: { paddingHorizontal: 24, paddingTop: 20 },
-  title: { fontSize: 30, fontWeight: '800', color: C.primary, letterSpacing: -1 },
-  dates: { paddingTop: 20, gap: 8, paddingBottom: 5 }, chip: { minHeight: 36, borderRadius: 18, paddingHorizontal: 13, justifyContent: 'center', backgroundColor: C.surface }, chipActive: { backgroundColor: C.primary }, chipText: { fontSize: 12, color: C.textSecondary }, chipActiveText: { color: C.onPrimary, fontWeight: '500' },
+  title: { fontSize: 30, fontFamily: Type.display, color: C.primary, letterSpacing: -0.5 },
+  dates: { paddingTop: 20, gap: 8, paddingBottom: 5 }, chip: { minHeight: 40, borderRadius: 22, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: C.surface }, chipActive: { backgroundColor: C.primary }, chipText: { fontSize: 12, color: C.textSecondary }, chipActiveText: { color: C.onPrimary, fontWeight: '500' },
   memberScroll: { flexGrow: 0 }, members: { paddingTop: 8, paddingBottom: 6, gap: 6, alignItems: 'center' }, memberChip: { minHeight: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: C.border }, memberActive: { borderColor: C.primary, backgroundColor: C.banner }, memberText: { fontSize: 12, color: C.textSecondary }, memberActiveText: { color: C.primary, fontWeight: '600' },
   visitedOn: { fontSize: 12, color: C.accent, marginTop: 6 },
   filters: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 }, filterButton: { minHeight: 44, justifyContent: 'center' }, filterText: { fontSize: 12, color: C.textMuted }, activeText: { color: C.primary, fontWeight: '600' }, placeCount: { fontSize: 11, color: C.textMuted, marginLeft: 'auto' },
   mapArea: { flex: 1, minHeight: 160 }, bottom: { backgroundColor: C.background }, sheetContent: { paddingHorizontal: 24, paddingBottom: 12, width: '100%', maxWidth: 600, alignSelf: 'center' },
   sheetHeader: { paddingHorizontal: 24, paddingBottom: 6, width: '100%', maxWidth: 600, alignSelf: 'center' }, handleArea: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', minHeight: 30 }, handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: C.border },
-  placeHeading: { flexDirection: 'row', alignItems: 'center', gap: 12 }, placeTitleGroup: { flex: 1 }, placeName: { fontSize: 19, fontWeight: '600', color: C.text, letterSpacing: -0.4 }, area: { fontSize: 12, color: C.textMuted, marginTop: 5 }, badge: { fontSize: 11, color: C.primary, backgroundColor: C.banner, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 }, counts: { fontSize: 12, color: C.textSecondary, marginTop: 4 },
+  placeHeading: { flexDirection: 'row', alignItems: 'center', gap: 12 }, placeTitleGroup: { flex: 1 }, placeName: { fontSize: 19, fontFamily: Type.heading, color: C.text }, area: { fontSize: 12, color: C.textMuted, marginTop: 5 }, badge: { fontSize: 11, color: C.primary, backgroundColor: C.banner, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9 }, counts: { fontSize: 12, color: C.textSecondary, marginTop: 4 },
   planRow: { flexDirection: 'row', gap: 12, paddingTop: 12 }, time: { fontSize: 12, color: C.accent, fontVariant: ['tabular-nums'] }, memo: { flex: 1, fontSize: 12, lineHeight: 18, color: C.textSecondary }, thumbnails: { gap: 6, paddingTop: 14 }, thumbnail: { width: 62, height: 62, borderRadius: 6, backgroundColor: C.surface },
   actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 4 }, action: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 12, color: C.accent, fontWeight: '500' }, hint: { fontSize: 11, lineHeight: 18, color: C.textMuted },
   noSelection: { paddingHorizontal: 24, paddingVertical: 22, gap: 8 }, emptyTitle: { fontSize: 15, fontWeight: '600', color: C.text },

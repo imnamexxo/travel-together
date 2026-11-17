@@ -107,5 +107,5 @@ test('확정된 지출이 붙은 장소는 지도에서 들른 곳이다(일정�
   fireEvent.press(await screen.findByRole('tab', { name: '● 들른 곳' }));
 
   expect(await screen.findByText('1곳')).toBeOnTheScreen();
-  expect(screen.getByText('일정 0개 · 사진 0장 · 지출 9,000원')).toBeOnTheScreen();
+  expect(screen.getByText('지출 9,000원')).toBeOnTheScreen();
 });

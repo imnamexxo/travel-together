@@ -3,7 +3,8 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-nati
 import Pressable from '@/components/pressable';
 
 import { useExpensePlaceCandidates } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
 type Chosen = { source_place_id: string; name: string } | null;
 
@@ -18,6 +19,8 @@ type Props = {
 
 /** 지출의 장소: 상호(또는 고친 검색어)로 후보를 받아 고르거나 비워 둔다. 자동으로 붙이지 않는다. */
 export default function ExpensePlacePicker({ tripId, merchant, value, onChange, editable }: Props) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -65,14 +68,14 @@ export default function ExpensePlacePicker({ tripId, merchant, value, onChange, 
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   value: { fontSize: 15, color: C.text, marginTop: 6 },
-  chosen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: 12, borderRadius: 12, backgroundColor: C.banner },
+  chosen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, padding: 12, borderRadius: 14, backgroundColor: C.banner },
   chosenName: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: C.text },
   openButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }, link: { fontSize: 14, fontWeight: '600', color: C.accent },
   searchRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  input: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 14, fontSize: 15, color: C.text },
-  searchButton: { minHeight: 46, paddingHorizontal: 16, borderRadius: 12, backgroundColor: C.primary, justifyContent: 'center' }, searchText: { color: C.onPrimary, fontWeight: '600' },
+  input: { flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 14, fontSize: 15, color: C.text },
+  searchButton: { minHeight: 46, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center' }, searchText: { color: C.onPrimary, fontWeight: '600' },
   candidate: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider },
   candidateHead: { flexDirection: 'row', alignItems: 'center', gap: 8 }, candidateName: { fontSize: 14, fontWeight: '600', color: C.text },
   badge: { fontSize: 10, fontWeight: '600', color: C.primary, backgroundColor: C.banner, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },

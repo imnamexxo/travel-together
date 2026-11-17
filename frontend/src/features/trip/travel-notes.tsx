@@ -4,7 +4,8 @@ import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-nati
 import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 
 type CheckItem = { id: string; text: string; done: boolean };
@@ -12,6 +13,8 @@ type Section = { id: string; title: string; kind: 'memo' | 'checklist'; body: st
 
 // Local preview state only; all sections belong to the trip, not the selected day.
 export default function TravelNotes() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const [sections, setSections] = useState<Section[]>([]);
   const [expanded, setExpanded] = useState<string[]>([]);
   const [draft, setDraft] = useState<Section | null>(null);
@@ -132,21 +135,21 @@ export default function TravelNotes() {
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   // 편집 화면은 일정 편집(plan-item-editor)과 같은 모양
   editorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, width: '100%', maxWidth: 600, alignSelf: 'center' },
   editor: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40, width: '100%', maxWidth: 600, alignSelf: 'center' },
   editorTitle: { color: C.text, fontSize: 16, fontWeight: '600' },
   label: { fontSize: 13, color: C.textSecondary, marginTop: 25, marginBottom: 10 },
-  input: { backgroundColor: C.surface, borderRadius: 12, padding: 16, fontSize: 16, color: C.text, minHeight: 52 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderRadius: 12, paddingLeft: 16, paddingRight: 8, minHeight: 52, marginBottom: 8 },
+  input: { backgroundColor: C.surface, borderRadius: 14, padding: 16, fontSize: 16, color: C.text, minHeight: 52 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface, borderRadius: 14, paddingLeft: 16, paddingRight: 8, minHeight: 52, marginBottom: 8 },
   itemMark: { width: 16, height: 16, borderRadius: 4, borderWidth: 1.5, borderColor: C.inactive },
   itemInput: { flex: 1, fontSize: 16, color: C.text, paddingVertical: 14 },
   removeAction: { minWidth: 36, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
-  addItem: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 4 },
+  addItem: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, padding: 15, borderRadius: 14, alignItems: 'center', marginTop: 4 },
   deleteButton: { minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
   saveBar: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.divider, backgroundColor: C.background },
-  saveButton: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 552, alignSelf: 'center' },
+  saveButton: { minHeight: 52, borderRadius: 14, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 552, alignSelf: 'center' },
   saveText: { fontSize: 16, fontWeight: '600', color: C.onPrimary },
   section: { marginTop: 16, marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
@@ -172,8 +175,8 @@ const s = StyleSheet.create({
   editText: { fontSize: 12, color: C.accent },
   screen: { flex: 1, backgroundColor: C.background },
   cancel: { fontSize: 15, color: C.textSecondary },
-  types: { flexDirection: 'row', gap: 6, backgroundColor: C.surface, padding: 4, borderRadius: 12, marginTop: 20 },
-  type: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: 9 },
+  types: { flexDirection: 'row', gap: 6, backgroundColor: C.surface, padding: 4, borderRadius: 14, marginTop: 20 },
+  type: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: 8 },
   typeSelected: { backgroundColor: C.primary },
   typeText: { fontSize: 14, color: C.textSecondary },
   typeTextSelected: { color: C.onPrimary, fontWeight: '600' },

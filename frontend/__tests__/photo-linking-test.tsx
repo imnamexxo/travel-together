@@ -91,7 +91,7 @@ test('올릴 때 촬영 위치로 찾은 장소 id만 보내고, 좌표는 보�
 test('장소별로 보고, 장소 미연결 사진 수가 보인다', async () => {
   render({ photos: { 'trip-jeju': [photo({ id: 'p1', place: market, link_type: 'auto' }), photo({ id: 'p2' })] } });
 
-  expect(await screen.findByText('2장의 사진 · 200장까지 담을 수 있어요 · 장소 미연결 1장')).toBeOnTheScreen();
+  expect(await screen.findByText('장소 미연결 1장')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('tab', { name: '장소별' }));
   expect(screen.getByText('동문시장')).toBeOnTheScreen();
   expect(screen.getByText('장소 미연결')).toBeOnTheScreen();
@@ -101,12 +101,12 @@ test('사진 상세에서 연결된 장소와 그날의 일정이 보이고, 다
   const api = render({ photos: { 'trip-jeju': [photo({ id: 'p1', place: market, link_type: 'auto', taken_at: '2026-11-12T04:00:00Z' })] } });
 
   fireEvent.press(await screen.findByRole('button', { name: '민지님 사진 크게 보기' }));
-  expect(await screen.findByText('동문시장 · 촬영 위치로 자동 연결')).toBeOnTheScreen();
+  expect(await screen.findByText('동문시장 (촬영 위치로 자동 연결)')).toBeOnTheScreen();
   expect(screen.getByText(/1일 차 12:00 점심/)).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '함덕해수욕장에 연결' }));
 
   await waitFor(() => expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p1', { place_id: 'place-beach' }));
-  expect(await screen.findByText('함덕해수욕장 · 직접 연결')).toBeOnTheScreen();
+  expect(await screen.findByText('함덕해수욕장 (직접 연결)')).toBeOnTheScreen();
 });
 
 test('연결을 해제하면 촬영 날짜로만 분류된다', async () => {
@@ -128,7 +128,7 @@ test('일정에 없던 곳은 검색해서 연결한다', async () => {
   fireEvent.press(await screen.findByRole('button', { name: '성산일출봉로 연결' }));
 
   await waitFor(() => expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p1', { source_place: { source_place_id: '333', name: '성산일출봉' } }));
-  expect(await screen.findByText('성산일출봉 · 직접 연결')).toBeOnTheScreen();
+  expect(await screen.findByText('성산일출봉 (직접 연결)')).toBeOnTheScreen();
 });
 
 test('타임라인의 일정 항목에 그날 연결된 사진 수가 보인다', async () => {

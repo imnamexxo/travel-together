@@ -4,7 +4,8 @@ import Pressable from '@/components/pressable';
 
 import { useAuth } from '@/auth/auth-context';
 import { AuthError, type SocialProvider } from '@/auth/auth-service';
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
 const LABELS: Record<SocialProvider, string> = { kakao: '카카오로 계속하기', google: 'Google로 계속하기' };
 
@@ -13,6 +14,8 @@ const LABELS: Record<SocialProvider, string> = { kakao: '카카오로 계속하�
  * 사용자가 페이지를 닫으면 아무 말 없이 그대로 두고 다시 누를 수 있다.
  */
 export default function SocialLoginButtons() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { signInWithProvider } = useAuth();
   const [busy, setBusy] = useState<SocialProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +44,10 @@ export default function SocialLoginButtons() {
   </View>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   container: { gap: 10, marginTop: 18 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }, line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border }, dividerText: { fontSize: 12, color: C.textMuted },
-  button: { minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  button: { minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   google: { backgroundColor: C.background, borderWidth: 1, borderColor: C.border },
   googleText: { fontSize: 14, fontWeight: '500', color: C.text },
   kakao: { backgroundColor: '#FEE500' },

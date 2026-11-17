@@ -5,13 +5,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, type Suggestion } from '@/api/client';
 import { useAdoptSuggestions, useAskSuggestions } from '@/api/queries';
-import { TravelColors as C } from '@/constants/theme';
+import { Type, type TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
+import MetaLine from '@/components/meta-line';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
 
 const PRESETS = ['맛집 위주', '여유로운 일정', '자연·풍경', '실내 위주', '아이와 함께'];
 
 export default function SuggestionsScreen() {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   const { trip, days } = useCurrentTrip();
   const ask = useAskSuggestions(trip.id);
   const adopt = useAdoptSuggestions(trip.id);
@@ -95,7 +99,7 @@ export default function SuggestionsScreen() {
           {Object.entries(byDate).map(([date, items]) => {
             const dayNumber = days.findIndex((d) => d.iso === date) + 1;
             return <View key={date} style={s.day}>
-              <Text style={s.dayTitle}>{dayNumber > 0 ? `${dayNumber}일 차 · ` : ''}{days[dayNumber - 1]?.title ?? date}</Text>
+              <Text style={s.dayTitle}>{dayNumber > 0 ? `${dayNumber}일 차  ` : ''}{days[dayNumber - 1]?.title ?? date}</Text>
               {items.map((item) => {
                 const on = selected.includes(item.id);
                 return <Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={`${item.place_name} 선택`} accessibilityState={{ checked: on || item.adopted, disabled: item.adopted }} disabled={item.adopted}
@@ -104,7 +108,7 @@ export default function SuggestionsScreen() {
                     <Text style={s.cardTitle}>{on ? '✓ ' : ''}{item.order}. {item.place_name}</Text>
                     {item.adopted ? <Text style={s.badgeDone}>추가됨</Text> : item.status === 'needs_check' && <Text style={s.badgeWarn}>확인 필요</Text>}
                   </View>
-                  <Text style={s.caption}>{item.place ? (item.place.road_address ?? item.place.address) : `${item.region} · 지도에서 찾지 못했어요`} · 약 {item.stay_minutes}분</Text>
+                  <MetaLine textStyle={s.caption} parts={[item.place ? (item.place.road_address ?? item.place.address) : `${item.region}, 지도에서 찾지 못했어요`, `약 ${item.stay_minutes}분`]} />
                   {!!item.description && <Text style={s.desc}>{item.description}</Text>}
                 </Pressable>;
               })}
@@ -120,20 +124,20 @@ export default function SuggestionsScreen() {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, paddingTop: 12, paddingBottom: 48, width: '100%', maxWidth: 600, alignSelf: 'center' },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
-  title: { fontSize: 28, letterSpacing: -1, fontWeight: '700', color: C.primary, marginTop: 8 },
+  title: { fontSize: 28, letterSpacing: -0.5, fontFamily: Type.display, color: C.primary, marginTop: 8 },
   caption: { fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 19 },
   label: { fontSize: 13, fontWeight: '500', color: C.text, marginTop: 22, marginBottom: 10 },
-  input: { minHeight: 52, borderRadius: 12, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 16, color: C.text },
+  input: { minHeight: 52, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 16, fontSize: 16, color: C.text },
   spaced: { marginTop: 10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: C.surface, justifyContent: 'center' }, chipOn: { backgroundColor: C.primary },
   chipText: { fontSize: 13, color: C.textSecondary }, chipTextOn: { color: C.onPrimary, fontWeight: '600' },
   error: { fontSize: 13, color: C.error, marginTop: 12, lineHeight: 19 },
-  primary: { minHeight: 52, borderRadius: 13, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 22 },
+  primary: { minHeight: 52, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 22 },
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.5 },
   progress: { alignItems: 'center', paddingVertical: 28 },
   failure: { marginTop: 8 }, textButton: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 14, fontWeight: '600', color: C.accent },

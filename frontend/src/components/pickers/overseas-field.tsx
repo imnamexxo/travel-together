@@ -1,10 +1,13 @@
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
 /** 국내/해외 여행(ADR 0004). 해외 여행이면 장소를 Google 지도에서 찾는다. */
 /** warning: 원이 아닌 통화인데 국내 여행이면 켜 둔다(해외 장소가 검색되지 않는다는 안내). */
 export default function OverseasField({ value, onChange, hint, warning }: { value: boolean; onChange: (overseas: boolean) => void; hint?: string; warning?: boolean }) {
+  const C = useTravelColors();
+  const s = useThemedStyles(sStyles);
   return <>
     <View style={s.row}>
       <View style={s.copy}>
@@ -18,7 +21,7 @@ export default function OverseasField({ value, onChange, hint, warning }: { valu
   </>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18, minHeight: 52 },
   copy: { flex: 1 }, label: { fontSize: 13, fontWeight: '500', color: C.text }, sub: { fontSize: 12, color: C.textMuted, marginTop: 4 },
   hint: { fontSize: 12, lineHeight: 18, color: C.textMuted, marginTop: 4 },

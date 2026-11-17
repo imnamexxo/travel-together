@@ -2,7 +2,8 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TravelColors as C } from '@/constants/theme';
+import type { TravelPalette } from '@/constants/theme';
+import { useThemedStyles } from '@/theme/theme-context';
 
 export type SheetAction = { label: string; onPress: () => void; destructive?: boolean; hint?: string };
 
@@ -15,6 +16,7 @@ export default function ActionSheet({ visible, title, info, actions, onClose }: 
   actions: SheetAction[];
   onClose: () => void;
 }) {
+  const s = useThemedStyles(sStyles);
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <View style={s.backdrop}>
       <Pressable accessibilityLabel="닫기" style={s.dim} onPress={onClose} />
@@ -34,7 +36,7 @@ export default function ActionSheet({ visible, title, info, actions, onClose }: 
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const sStyles = (C: TravelPalette) => StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' }, dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { backgroundColor: C.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingBottom: 12, width: '100%', maxWidth: 560, alignSelf: 'center' },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: C.divider, marginTop: 10, marginBottom: 14 },
