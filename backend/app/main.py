@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import AuthVerifier, SupabaseJwtVerifier
 from app.auth_admin import AuthAdmin, SupabaseAuthAdmin
@@ -45,6 +46,14 @@ def create_app(
     app.state.storage = storage or SupabaseStorage(settings.supabase_url, settings.supabase_service_role_key, settings.storage_bucket)
     app.state.receipt_reader = receipt_reader or GeminiReceiptReader(settings.gemini_api_key, settings.gemini_model)
     app.state.auth_admin = auth_admin or SupabaseAuthAdmin(settings.supabase_url, settings.supabase_service_role_key)
+    # 웹 버전(EAS Hosting의 *.expo.app, PC에서 띄운 localhost)이 브라우저에서 API를 부를 수 있게 한다.
+    # 로그인은 쿠키가 아니라 Authorization 헤더라 credentials는 허용하지 않는다.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"https://[a-z0-9-]+\.expo\.app|http://localhost(:\d+)?",
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     install_error_handlers(app)
     install_request_log(app)
     app.include_router(health.router)
