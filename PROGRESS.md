@@ -1,6 +1,6 @@
 # 진행 상황
 
-마지막 갱신: 2026-11-17
+마지막 갱신: 2026-11-18
 
 ## 2026-11-17 화면 모드 설정
 
@@ -81,6 +81,11 @@
 
 ## 기록
 
+### 2026-11-18
+
+- 앱 아이콘(#97): 안드로이드 적응형 아이콘을 `icon.png`와 같은 그림으로 바꾸고, 핀의 둥근 머리와 끝이 꺾여 보이던 부분을 매끄럽게 고침(스플래시·파비콘·테마 아이콘도 다시 만듦). 반영하려면 새 빌드 필요.
+- EAS 빌드 업로드 실패(심볼릭 링크 EPERM) 해결: 루트 `.easignore` + `EAS_NO_VCS=1`.
+
 ### 2026-11-17 (디자인 합치기)
 
 - 다크 모드 PR(#92) 위에 디자인 손질을 얹음. 팀원 색·티켓 카드·플래너 티켓·정산 카드는 그대로 두고, 제목·숫자에 IBM Plex Sans KR 글꼴, 모서리 둥글기 단계, 지출 내역을 정산 카드와 같은 둥근 카드(합계 줄 포함)로, 앨범 날짜 점선 제목, 지도 장소 점 표시, 정보 문구의 가운뎃점(·) 대신 띄어 쓰기를 더함. 노란 도장색(ticket)을 라이트·다크 팔레트 둘 다에 추가.
@@ -115,7 +120,7 @@
 - 영수증 크게 보기가 화면의 2배로 열려 너무 컸던 것 → 화면에 맞춰 열고, 두 손가락 확대(최대 5배)·끌어서 이동·두 번 탭 확대/원래대로(react-native-gesture-handler + reanimated, `zoomable-image.tsx`). ScrollView 확대는 iOS에서만 됐다.
 - 화면 로딩 줄이기: 서버가 요청마다 `GET /trips/{trip_id}/expenses 200 0.35초 DB 4번` 같은 로그를 남긴다(경로는 라우트 모양, /health 제외). 예시 여행으로 재 보니 항목마다 관계를 따로 묻고 있었다(N+1) → `app/loading.py`의 옵션으로 필요한 관계만 한 번에 읽음: 정산 DB 20→8번, 지출 목록 15→3번, 일정 11→2번, 멤버 7→3번, 송금 6→2번. 모델 전체에 `lazy="selectin"`을 거는 건 오히려 늘어서 쓰지 않음. 앱은 30초 안에 받은 데이터를 다시 쓰고(staleTime), 멤버를 내보내면 사진 목록도 새로 받음.
 - 화면 전환이 느린 주원인: 서버(오리건)와 DB(서울)가 멀어 DB 질의마다 태평양 왕복. Render 서버를 싱가포르에 새로 만듦(travel-together-api-sg, 환경 변수 그대로). expo.dev preview 환경의 `EXPO_PUBLIC_API_URL`을 새 주소로, `render.yaml`에 `region: singapore`.
-- 시연용 설치 APK: `eas.json`에 `preview` 프로필(내부 배포 APK, 개발 서버 없이 실행). 앱 JS를 EAS 서버에서 묶으므로 `EXPO_PUBLIC_API_URL`·`EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`(plaintext)와 `GOOGLE_MAPS_ANDROID_KEY`를 expo.dev의 preview 환경에도 넣음. 빌드: `npx eas-cli build --profile preview --platform android`.
+- 시연용 설치 APK: `eas.json`에 `preview` 프로필(내부 배포 APK, 개발 서버 없이 실행). 앱 JS를 EAS 서버에서 묶으므로 `EXPO_PUBLIC_API_URL`·`EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`(plaintext)와 `GOOGLE_MAPS_ANDROID_KEY`를 expo.dev의 preview 환경에도 넣음. 빌드: `cd frontend && EAS_NO_VCS=1 npx eas-cli build --profile preview --platform android` (Windows에서 `.claude/skills` 심볼릭 링크 때문에 git 복사 방식은 EPERM으로 실패해서 git 없이 올리고, 루트 `.easignore`로 `.claude/`·`.agents/`를 뺌. `.easignore`가 있으면 `.gitignore`를 안 읽으므로 무시 목록을 바꾸면 둘 다 고칠 것).
 - 지도 시트가 손가락을 따라 움직이고 놓으면 부드럽게 펼침/접힘(Animated + PanResponder, 끌기 처리는 한 번만 만든다: 다시 만들면 끄는 도중 거리를 0부터 세어 튀었음). 내용이 짧으면 그만큼만 펼침. Android 핀 숫자가 빠지던 것 → 핀이 바뀌면 0.8초 동안 다시 그리게(`tracksViewChanges`) 했다가 멈춤.
 - 추천이 느린 원인 확인(Render 로그): `gemini-flash-latest`가 시간 초과(504)될 때까지 기다린 뒤 `gemini-flash-lite-latest`가 1.6초에 답함. Gemini 답변 시간 제한 120초 → 30초, 생각 끄기를 거절한 모델은 기억해 다음부터 설정 없이 묻는다. Render에 `GEMINI_MODEL=gemini-flash-lite-latest`를 넣으면 처음부터 가벼운 모델을 쓴다(지우면 원래대로).
 - 실기기 피드백 반영: 입력칸 예시 글자가 흰색이라 안 보이던 것(추천 일정·일정 편집·앨범·지출 장소) → 회색. 지도 아래 장소 정보를 손잡이로 끌어 올리고 내리기(누르면 접기/펼치기). 지도 멤버 칩 아래가 잘리던 것.
