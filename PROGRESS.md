@@ -93,7 +93,7 @@
 - 무료 한도로 감당 가능한 규모(가격 페이지 원문): Supabase 파일 1GB(누적)·전송 월 5GB(+캐시 5GB)·DB 500MB·MAU 5만, Render 월 750시간·15분 미사용 시 꺼짐(첫 요청 약 1분), Gemini 무료 등급은 입력을 학습·사람 검토에 쓰고 개인정보 금지·18세 이상만(추가 약관 2026-03-23). 여행 하나(4명·사진 100장)를 50MB로 보면 누적 20개 안팎, 전송량은 월 활발한 여행 10개 안팎에서 막힘. 정식 출시엔 Gemini 유료가 약관상 필요.
 - 사진 썸네일(#103): 업로드 때 긴 변 400px 썸네일을 함께 저장(마이그레이션 0017), 목록·지도는 썸네일, 크게 볼 때만 원본. expo-image cacheKey(사진 id)로 기기 캐시해 서명 URL이 바뀌어도 다시 받지 않음.
 - 위치정보법 검토(`docs/research/location-info-act.md`, 법률 2025.10.1·시행령 2026.2.10·고시·해설서 원문): 기기 안에서만 쓰는 GPS와 사용자가 고른 장소는 신고 대상 아님. 확인 없이 GPS로 고른 장소 id를 서버로 보내는 것만 애매. B1 채택: 올리기 전에 추천 장소 확인 시트, 확인한 것만 manual로 전송(ADR-0003 덧붙임).
-- Play 등록 준비: 패키지 `com.traveltogether.app`(#107), 시연 APK 새로 빌드, 출시용 AAB(versionCode 2) 빌드. 개인정보 처리방침·계정 삭제 안내를 `frontend/public/privacy.html`·`delete-account.html`로 만들어 EAS Hosting(https://kang1031-frontend.expo.app/privacy, /delete-account)에 웹 앱과 함께 배포. 앱 계정 화면·회원가입 화면에 처리방침 링크. 웹 배포: `cd frontend && npx expo export --platform web && npx eas-cli deploy --prod`.
+- Play 등록 준비: 패키지 `com.traveltogether.app`(#107), 시연 APK 새로 빌드, 출시용 AAB(versionCode 2) 빌드. 개인정보 처리방침·계정 삭제 안내를 `frontend/public/privacy.html`·`delete-account.html`로 만들어 EAS Hosting(https://kang1031-frontend.expo.app/privacy, /delete-account)에 배포. 앱 계정 화면·회원가입 화면에 처리방침 링크. 웹 앱은 내리고(2026-11-21) 공개 페이지만 둠. 페이지를 고치면: `cd frontend && npm run legal:build && npx eas-cli deploy --prod --export-dir dist-legal`.
 
 ### 2026-11-18
 

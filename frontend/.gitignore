@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# 웹 공개 페이지 빌드 결과(scripts/build-legal-site.mjs)
+dist-legal/
