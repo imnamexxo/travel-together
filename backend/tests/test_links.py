@@ -14,7 +14,7 @@ def test_join_link_page_opens_app_with_code(client):
 def test_android_uses_intent_url_for_the_app_package(client):
     response = client.get("/join/ABCD2345", headers={"user-agent": "Mozilla/5.0 (Linux; Android 14) KAKAOTALK"})
 
-    assert "intent://join?code=ABCD2345#Intent;scheme=traveltogether;package=com.kang1031.frontend;end" in response.text
+    assert "intent://join?code=ABCD2345#Intent;scheme=traveltogether;package=com.traveltogether.app;end" in response.text
 
 
 def test_bad_code_shows_an_explanation_without_app_link(client):

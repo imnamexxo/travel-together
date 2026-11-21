@@ -16,7 +16,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.kang1031.frontend"
+      "package": "com.traveltogether.app"
     },
     "web": {
       "output": "static",
