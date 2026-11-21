@@ -43,6 +43,7 @@ class PhotoOut(BaseModel):
     # 연결된 장소. 없으면 촬영 날짜로만 분류한다.
     place: PlaceOut | None
     # auto: 앱이 촬영 위치로 찾아 줌 / manual: 멤버가 직접 고름
+    # 새로 올리는 사진은 manual뿐이다. auto는 2026-11-21 전에 휴대폰이 확인 없이 자동 연결한 사진이다.
     link_type: Literal["auto", "manual"] | None
 
 
@@ -141,7 +142,7 @@ def upload_photo(
     trip_id: uuid.UUID,
     file: Annotated[UploadFile, File(description="JPEG. 앱이 긴 변 1600px로 줄이고 EXIF를 지운 파일")],
     taken_at: Annotated[str | None, Form(description="촬영 시각(시간대 포함 ISO). 모르면 비운다")] = None,
-    place_id: Annotated[uuid.UUID | None, Form(description="앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다")] = None,
+    place_id: Annotated[uuid.UUID | None, Form(description="사용자가 올리기 전에 확인한 이 여행의 장소. 앱은 촬영 위치로 휴대폰 안에서 추천만 하고 좌표는 보내지 않는다")] = None,
     thumbnail: Annotated[UploadFile | None, File(description="목록용 작은 JPEG(긴 변 400px). 없으면 목록에서도 원본을 쓴다")] = None,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -178,7 +179,8 @@ def upload_photo(
     photo = Photo(
         trip_id=trip_id, uploader_member_id=me.id, storage_key=f"trips/{trip_id}/photos/{name}.jpg",
         thumbnail_key=f"trips/{trip_id}/photos/{name}_thumb.jpg" if small else None,
-        taken_at=when, size_bytes=len(clean) + len(small or b""), place=place, link_type="auto" if place else None,
+        taken_at=when, size_bytes=len(clean) + len(small or b""), # 사용자가 확인한 장소라 직접 연결과 같다(위치정보법 검토, docs/research/location-info-act.md).
+        place=place, link_type="manual" if place else None,
     )
     uploaded: list[str] = []
     try:
