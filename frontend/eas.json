@@ -18,6 +18,14 @@
         "buildType": "apk"
       },
       "channel": "preview"
+    },
+    "production": {
+      "environment": "production",
+      "channel": "production",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   }
 }

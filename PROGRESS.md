@@ -32,7 +32,7 @@
 |---|---|---|
 | Supabase 프로젝트 생성 | #3 | 완료 (`nttoauhqqsqhulbtgixn`, 서울 리전) |
 | Render 배포 | #3 | 완료. 2026-11-13 싱가포르로 옮김: https://travel-together-api-sg.onrender.com (DB가 서울이라). 이전 오리건 서버 travel-together-api-d4zr는 확인 후 Suspend |
-| Expo 계정, EAS 개발 빌드, Android 실기기 | #3 | 완료 (EAS 계정 kang1031, 패키지 `com.kang1031.frontend`) |
+| Expo 계정, EAS 개발 빌드, Android 실기기 | #3 | 완료 (EAS 계정 kang1031. 패키지는 2026-11-21 `com.kang1031.frontend` → `com.traveltogether.app`) |
 | 테스트용 PostgreSQL 준비 | #3 | 완료 (강동헌 PC: PostgreSQL 17.11 직접 설치, DB `divided_dev`·`divided_test`, 연결 정보는 `backend/.env`). 팀원 PC는 `backend/.env.example` 참고해 각자 준비 |
 | 카카오 디벨로퍼스 앱: REST API 키(#7), 같은 앱으로 카카오 로그인 설정(#23) | #7, #23 | REST 키 완료(Render·backend/.env에 `KAKAO_REST_API_KEY`). 카카오 로그인은 #23 때 |
 | Google Cloud OAuth 클라이언트(웹) ID·Secret → Supabase Google 로그인 | #23 | 대기 |
@@ -51,7 +51,7 @@
 
 - 결제 시각은 한국 시간(+09:00)으로 해석한다. 시차 큰 나라는 어긋나지만 신경 쓰지 않기로 함(2026-11-14).
 - 자체 학습 모델 없이 Gemini 활용만으로 과목 요건이 충족되는가? 충족되지 않으면 모델 학습 티켓을 추가해야 한다. (기획서 7-1절 댓글)
-- 앱 이름은 Travel Together로 정함(2026-11-13). Android 패키지 이름(`com.kang1031.frontend`)과 EAS slug(`frontend`)는 그대로 둠(바꾸면 지도 키 제한·카카오·EAS 프로젝트 설정을 다시 해야 함).
+- 앱 이름은 Travel Together로 정함(2026-11-13). Play에 올리면 패키지 이름을 못 바꾸므로 첫 업로드 전에 `com.traveltogether.app`으로 바꿈(2026-11-21). EAS slug(`frontend`)는 그대로(스토어에 안 보임).
 - Render 리전을 싱가포르로 옮길지. 지금은 oregon이라 서울 DB와 왕복이 길다. 옮기려면 `render.yaml`에 `region: singapore`를 넣고 서비스를 다시 만든다.
 
 ## 주요 문서
