@@ -2787,7 +2787,7 @@
           "planner"
         ],
         "summary": "Search",
-        "description": "키워드로 실제 장소를 찾는다(카카오 로컬).",
+        "description": "키워드로 실제 장소를 찾는다(국내 카카오, 해외 Google). 해외 결과는 저장하지 말고 보여 주기만 한다.",
         "operationId": "search_trips__trip_id__places_search_get",
         "security": [
           {
@@ -2901,7 +2901,96 @@
             }
           },
           "502": {
-            "description": "카카오 장소 검색 실패",
+            "description": "장소 검색(카카오·Google) 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{trip_id}/places/{place_id}/details": {
+      "get": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Place Details",
+        "description": "장소 이름·주소. 카카오 장소는 저장된 값, Google 장소는 그때 Google에서 받는다(저장하지 않음, ADR 0006).\n\nGoogle 하루 상한에 걸리면 502다. 앱은 이름 대신 일정 제목을 보여 준다.",
+        "operationId": "place_details_trips__trip_id__places__place_id__details_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "place_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Place Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceDetailsOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·장소 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "장소 검색(카카오·Google) 실패",
             "content": {
               "application/json": {
                 "schema": {
@@ -3061,7 +3150,7 @@
             }
           },
           "502": {
-            "description": "카카오 장소 검색 실패",
+            "description": "장소 검색(카카오·Google) 실패",
             "content": {
               "application/json": {
                 "schema": {
@@ -3243,7 +3332,7 @@
             }
           },
           "502": {
-            "description": "카카오 장소 검색 실패",
+            "description": "장소 검색(카카오·Google) 실패",
             "content": {
               "application/json": {
                 "schema": {
@@ -5492,6 +5581,25 @@
         ],
         "title": "PlaceCandidateOut"
       },
+      "PlaceDetailsOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "address"
+        ],
+        "title": "PlaceDetailsOut",
+        "description": "볼 때만 받는 장소 이름·주소. 앱은 저장하지 않고 메모리에만 둔다."
+      },
       "PlaceOut": {
         "properties": {
           "id": {
@@ -5503,12 +5611,34 @@
             "type": "string",
             "title": "Source Place Id"
           },
-          "name": {
+          "source": {
             "type": "string",
+            "enum": [
+              "kakao",
+              "google"
+            ],
+            "title": "Source"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
           },
           "address": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Address"
           },
           "road_address": {
@@ -5523,11 +5653,25 @@
             "title": "Road Address"
           },
           "latitude": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Latitude"
           },
           "longitude": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Longitude"
           },
           "category": {
@@ -5546,6 +5690,7 @@
         "required": [
           "id",
           "source_place_id",
+          "source",
           "name",
           "address",
           "road_address",

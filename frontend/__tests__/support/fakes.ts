@@ -117,6 +117,8 @@ export function member(overrides: Partial<Member> = {}): Member {
 }
 
 type FakeApiOptions = {
+  /** 장소 이름 받기(getPlaceDetails)가 실패하게 한다(Google 하루 상한). */
+  placeDetailsFail?: boolean;
   /** 내가 멤버인 여행 */
   trips?: TripDetail[];
   /** 여행 id → 멤버 목록. 없으면 나 혼자다. */
@@ -160,7 +162,7 @@ export function photo(overrides: Partial<Photo> = {}): Photo {
 }
 
 export function place(overrides: Partial<NonNullable<PlanItem['place']>> = {}): NonNullable<PlanItem['place']> {
-  return { id: 'place-1', source_place_id: '111', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null, ...overrides };
+  return { id: 'place-1', source_place_id: '111', source: 'kakao', name: '동문시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.511, longitude: 126.526, category: null, ...overrides };
 }
 
 export function planItem(overrides: Partial<PlanItem> = {}): PlanItem {
@@ -180,7 +182,7 @@ export function expense(overrides: Partial<Expense> = {}): Expense {
 /** 메모리 안의 여행 목록으로 동작하는 API 클라이언트. */
 export function fakeApi(
   overrides: Partial<ApiClient> = {},
-  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] }, friends: initialFriends = { friends: [], incoming: [], outgoing: [] }, tripInvites = [], friendSuggestions = [] }: FakeApiOptions = {},
+  { trips = [], members = {}, joinable = {}, expenses = {}, settlements = {}, transfers = {}, planItems = {}, placeCandidates = [], suggestion, photos = {}, photoLimit = 200, receipt, expensePlaceCandidates = [], deletionPreview = { deleted_trips: [], handed_over: [], kept_records: [] }, friends: initialFriends = { friends: [], incoming: [], outgoing: [] }, tripInvites = [], friendSuggestions = [], placeDetailsFail = false }: FakeApiOptions = {},
 ): jest.Mocked<ApiClient> {
   let profile: Profile = { id: '00000000-0000-0000-0000-000000000001', display_name: '민지' };
   let friendState: Friends = { friends: [...initialFriends.friends], incoming: [...initialFriends.incoming], outgoing: [...initialFriends.outgoing] };
@@ -207,23 +209,27 @@ export function fakeApi(
   const photosOf = (tripId: string) => (photoStore[tripId] ??= []);
   const planStore: Record<string, PlanItem[]> = Object.fromEntries(Object.entries(planItems).map(([id, list]) => [id, [...list]]));
   const plansOf = (tripId: string) => (planStore[tripId] ??= []);
+  // 서버처럼: 해외 여행의 장소(Google)는 이름·주소 없이 id와 좌표만 돌려준다(ADR 0006).
+  const tripPlace = (tripId: string, sourcePlaceId: string, name: string) => store.find((t) => t.id === tripId)?.is_overseas
+    ? place({ id: `place-${sourcePlaceId}`, source_place_id: sourcePlaceId, source: 'google', name: null, address: null, road_address: null })
+    : place({ id: `place-${sourcePlaceId}`, source_place_id: sourcePlaceId, name });
   const planFrom = (tripId: string, id: string, input: Parameters<ApiClient['createPlanItem']>[1], base?: PlanItem): PlanItem => {
     const candidate = input.place ? placeCandidates.find((c) => c.source_place_id === input.place!.source_place_id) : undefined;
     return {
       ...(base ?? planItem({ id, created_by_member_id: trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1' })),
       id, date: input.date, time: input.time ? `${input.time}:00` : null, title: input.title, memo: input.memo ?? '', estimated_cost: input.estimated_cost ?? null,
-      place: input.place ? place({ id: `place-${input.place.source_place_id}`, source_place_id: input.place.source_place_id, name: candidate?.name ?? input.place.name }) : null,
+      place: input.place ? tripPlace(tripId, input.place.source_place_id, candidate?.name ?? input.place.name) : null,
       position: base?.position ?? plansOf(tripId).filter((i) => i.date === input.date).length,
     };
   };
   const transferStore: Record<string, Transfer[]> = Object.fromEntries(Object.entries(transfers).map(([id, list]) => [id, [...list]]));
   const transfersOf = (tripId: string) => (transferStore[tripId] ??= []);
-  const fromInput = (id: string, input: Parameters<ApiClient['updateExpense']>[2]): Expense => ({
+  const fromInput = (tripId: string, id: string, input: Parameters<ApiClient['updateExpense']>[2]): Expense => ({
     id, status: 'draft', payer_member_id: input.payer_member_id ?? null, paid_at: input.paid_at ?? null,
     merchant_name: input.merchant_name ?? null, total_amount: input.total_amount ?? null, default_sharer_ids: input.default_sharer_ids ?? [],
     items: (input.items ?? []).map((item, i) => ({ id: `${id}-item-${i}`, name: item.name, quantity: item.quantity ?? null, amount: item.amount ?? null, sharer_ids: item.sharer_ids ?? [] })),
     receipt_url: null, has_receipt: false,
-    place: input.place ? place({ id: `place-${input.place.source_place_id}`, source_place_id: input.place.source_place_id, name: input.place.name }) : null,
+    place: input.place ? tripPlace(tripId, input.place.source_place_id, input.place.name) : null,
   });
   const dropTrip = (tripId: string) => {
     const index = store.findIndex((t) => t.id === tripId);
@@ -330,7 +336,7 @@ export function fakeApi(
     createExpense: jest.fn(async (tripId, input, idempotencyKey) => {
       const existing = keys.get(idempotencyKey);
       if (existing) return findExpense(tripId, existing);
-      const created = fromInput(`expense-${expensesOf(tripId).length + 1}`, input);
+      const created = fromInput(tripId, `expense-${expensesOf(tripId).length + 1}`, input);
       expensesOf(tripId).unshift(created);
       keys.set(idempotencyKey, created.id);
       return created;
@@ -339,7 +345,7 @@ export function fakeApi(
       const list = expensesOf(tripId);
       const index = list.findIndex((e) => e.id === expenseId);
       // 영수증은 지출을 고쳐도 그대로 남는다.
-      const updated = { ...fromInput(expenseId, input), has_receipt: list[index].has_receipt, receipt_url: list[index].receipt_url };
+      const updated = { ...fromInput(tripId, expenseId, input), has_receipt: list[index].has_receipt, receipt_url: list[index].receipt_url };
       list[index] = updated;
       return updated;
     }),
@@ -393,7 +399,7 @@ export function fakeApi(
       const created = chosen.map((item, n) => planItem({
         id: `adopted-${n + 1}`, date: item.date, title: item.place_name, memo: item.description,
         position: plansOf(tripId).filter((i) => i.date === item.date).length + n,
-        place: item.place ? place({ id: `place-${item.place.source_place_id}`, source_place_id: item.place.source_place_id, name: item.place.name }) : null,
+        place: item.place ? tripPlace(tripId, item.place.source_place_id, item.place.name) : null,
       }));
       plansOf(tripId).push(...created);
       return created;
@@ -408,6 +414,12 @@ export function fakeApi(
     }),
     deletePhoto: jest.fn(async (tripId, photoId) => {
       photoStore[tripId] = photosOf(tripId).filter((p) => p.id !== photoId);
+    }),
+    getPlaceDetails: jest.fn(async (_tripId, placeId) => {
+      if (placeDetailsFail) throw new ApiError(502, 'place_search_unavailable', '장소 정보를 받지 못했습니다.');
+      const found = [...placeCandidates, ...expensePlaceCandidates].find((c) => `place-${c.source_place_id}` === placeId);
+      if (!found) throw new ApiError(404, 'place_not_found', '장소를 찾을 수 없습니다.');
+      return { name: found.name, address: found.road_address ?? found.address };
     }),
     getExpensePlaceCandidates: jest.fn(async (_tripId, query) => expensePlaceCandidates.filter((c) => c.name.includes(query))),
     // 서버의 지도 데이터와 같은 규칙(사진·확정 지출이 있으면 들른 곳, 날짜·멤버 필터).
@@ -446,7 +458,7 @@ export function fakeApi(
       const known = plansOf(tripId).map((i) => i.place).filter((p) => p !== null);
       const candidate = link.source_place ? placeCandidates.find((c) => c.source_place_id === link.source_place!.source_place_id) : undefined;
       target.place = link.place_id ? known.find((p) => p.id === link.place_id) ?? null
-        : candidate ? place({ id: `place-${candidate.source_place_id}`, source_place_id: candidate.source_place_id, name: candidate.name }) : null;
+        : candidate ? tripPlace(tripId, candidate.source_place_id, candidate.name) : null;
       target.link_type = target.place ? 'manual' : null;
       return { ...target };
     }),

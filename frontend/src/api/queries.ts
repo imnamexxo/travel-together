@@ -17,6 +17,7 @@ export const queryKeys = {
   placeSearch: (tripId: string, query: string) => ['trips', tripId, 'place-search', query] as const,
   photos: (tripId: string) => ['trips', tripId, 'photos'] as const,
   expensePlaceCandidates: (tripId: string, query: string) => ['trips', tripId, 'expense-place-candidates', query] as const,
+  placeDetails: (tripId: string, placeId: string) => ['trips', tripId, 'place-details', placeId] as const,
   map: (tripId: string, { date, memberId }: MapFilter = {}) => ['trips', tripId, 'map', date ?? '', memberId ?? ''] as const,
 };
 
@@ -316,6 +317,22 @@ export function useExpensePlaceCandidates(tripId: string, query: string) {
     queryKey: queryKeys.expensePlaceCandidates(tripId, query),
     queryFn: () => api.getExpensePlaceCandidates(tripId, query),
     enabled: query.length > 0,
+    retry: false,
+  });
+}
+
+/**
+ * 장소 이름·주소를 볼 때만 받는다(Google 장소, ADR 0006). 앱을 켜 둔 동안 메모리에만 두고 다시 받지 않는다.
+ * 실패하면(하루 상한 등) 다시 시도하지 않는다. 부르는 쪽은 일정 제목 같은 대신할 이름을 보여 준다.
+ */
+export function usePlaceDetails(tripId: string, placeId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.placeDetails(tripId, placeId ?? ''),
+    queryFn: () => api.getPlaceDetails(tripId, placeId!),
+    enabled: placeId !== null,
+    staleTime: Infinity,
+    gcTime: Infinity,
     retry: false,
   });
 }

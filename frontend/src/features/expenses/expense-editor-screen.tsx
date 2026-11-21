@@ -172,7 +172,7 @@ function Editor({ members, expense, analysis, receiptCurrency }: { members: Memb
         <View style={s.labelRow}><Text style={s.label}>상호</Text>{missing(form.merchant)}</View>
         {input('상호', form.merchant, (v) => update({ merchant: v }), { placeholder: '예: 제주 편의점', maxLength: 50 })}
         <Text style={s.label}>장소 (선택)</Text>
-        <ExpensePlacePicker tripId={trip.id} merchant={form.merchant} value={form.place} onChange={(place) => update({ place })} editable={editable} />
+        <ExpensePlacePicker tripId={trip.id} merchant={form.merchant} value={form.place} onChange={(place) => update({ place })} editable={editable} overseas={trip.is_overseas} />
         {fieldError('place')}
         <View style={s.row}>
           <View style={s.flex}><View style={s.labelRow}><Text style={s.label}>결제 날짜</Text>{missing(form.date)}</View><PickerField label="결제 날짜" value={form.date ? formatDay(form.date) : null} placeholder="날짜 고르기" onPress={() => setPicking('date')} invalid={!!errors.date} />{fieldError('date')}</View>

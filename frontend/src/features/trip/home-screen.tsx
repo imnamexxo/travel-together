@@ -110,7 +110,8 @@ export default function HomeScreen() {
               <View style={s.between}><Text style={s.itemTitle}>{item.title}</Text><Text style={s.chevron}>›</Text></View>
               {!!item.memo && <Text style={s.memo}>{item.memo}</Text>}
               <View style={s.meta}>
-                {!!item.place && item.place.name !== item.title && <Text style={s.metaText}>📍 {item.place.name}</Text>}
+                {/* Google 장소는 이름이 저장되지 않아 일정 목록에서는 받아 오지 않는다(ADR 0006). */}
+                {!!item.place?.name && item.place.name !== item.title && <Text style={s.metaText}>📍 {item.place.name}</Text>}
                 {item.estimated_cost != null && item.estimated_cost > 0 && <Text style={s.metaText}>예상 {money.format(item.estimated_cost)}</Text>}
                 {photosHere > 0 && <Text style={s.photoText}>사진 {photosHere}장</Text>}
                 {spent > 0 && <Text style={s.photoText}>지출 {money.format(spent)}</Text>}

@@ -13,6 +13,7 @@ jest.mock('@/features/album/photo-prep', () => ({
 const mockPick = pickPhotos as jest.MockedFunction<typeof pickPhotos>;
 
 const market = place({ id: 'place-market', name: '동문시장', latitude: 33.5116, longitude: 126.5258 });
+const marketGps = { latitude: 33.5116, longitude: 126.5258 };
 const beach = place({ id: 'place-beach', source_place_id: '222', name: '함덕해수욕장', latitude: 33.5431, longitude: 126.6697 });
 const plans = [
   planItem({ id: 'lunch', date: '2026-11-12', title: '점심', time: '12:00:00', place: market }),
@@ -25,12 +26,12 @@ describe('자동 연결 계산(휴대폰 안)', () => {
   const far = { latitude: 33.5161, longitude: 126.5258 };
 
   test('같은 날 일정 장소 중 300m 안의 가장 가까운 곳에 연결한다', () => {
-    expect(distanceMeters(near, market)).toBeLessThan(120);
+    expect(distanceMeters(near, marketGps)).toBeLessThan(120);
     expect(autoPlaceId(near, '2026-11-12T13:00:00+09:00', plans)).toBe('place-market');
   });
 
   test('300m 밖이거나, 다른 날의 장소이거나, 위치·시각이 없으면 연결하지 않는다', () => {
-    expect(distanceMeters(far, market)).toBeGreaterThan(300);
+    expect(distanceMeters(far, marketGps)).toBeGreaterThan(300);
     expect(autoPlaceId(far, '2026-11-12T13:00:00+09:00', plans)).toBeNull();
     expect(autoPlaceId(near, '2026-11-13T13:00:00+09:00', plans)).toBeNull();
     expect(autoPlaceId(null, '2026-11-12T13:00:00+09:00', plans)).toBeNull();

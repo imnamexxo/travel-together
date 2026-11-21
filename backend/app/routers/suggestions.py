@@ -21,7 +21,7 @@ from app.gemini import PlanRequest, PlanSuggester, SuggestedStop, SuggestionForm
 from app.models import PlanItem, SuggestedItem, SuggestionRequest, Trip
 from app.permissions import require_member
 from app.place_search import PlaceCandidate, PlaceSearcher, PlaceSearchUnavailable
-from app.places import get_place_searcher, place_from_candidate
+from app.places import get_place_searcher, place_for, place_from_candidate
 from app.routers.planner import PlaceCandidateOut, PlanItemOut, check_in_period, plan_item_out, slot_into_day
 
 router = APIRouter(prefix="/trips/{trip_id}/suggestions", tags=["suggestions"], responses=ERROR_RESPONSES)
@@ -46,7 +46,8 @@ class SuggestedItemOut(BaseModel):
     region: str
     stay_minutes: int
     description: str
-    # verified: 카카오에서 확인한 장소가 있다 / needs_check: "확인 필요", 장소가 비어 있다
+    # verified: 검색기에서 확인한 장소가 있다 / needs_check: "확인 필요", 장소가 비어 있다
+    # 해외 여행(Google)은 verified여도 place가 비어 있다(장소 정보 저장 금지, ADR 0006). 채택할 때 확인한다.
     status: Literal["verified", "needs_check"]
     place: PlaceCandidateOut | None
     adopted: bool
@@ -208,12 +209,13 @@ def ask_for_suggestions(
 
     stops = _ask_gemini(suggester, PlanRequest(body.destination, trip.start_date, trip.end_date, body.preferences, overseas=trip.is_overseas))
     request = SuggestionRequest(trip_id=trip_id, input_hash=input_hash, destination=body.destination, preferences=body.preferences)
-    # 장소마다 카카오 검색이 필요하다. 한 곳씩 하면 12곳이면 12번을 기다리므로 동시에 묻는다(순서는 그대로).
+    # 장소마다 검색(카카오·Google)이 필요하다. 한 곳씩 하면 12곳이면 12번을 기다리므로 동시에 묻는다(순서는 그대로).
     started = time.monotonic()
     with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
         verified = list(pool.map(lambda stop: _verify(searcher, stop, overseas=trip.is_overseas), stops))
     logger.info("장소 확인(%s) %d곳 %.1f초", "Google" if trip.is_overseas else "카카오", len(stops), time.monotonic() - started)
     for stop, found in zip(stops, verified):
+        keep = found is not None and searcher.stores_details
         request.items.append(
             SuggestedItem(
                 date=stop.date,
@@ -224,12 +226,13 @@ def ask_for_suggestions(
                 description=stop.description,
                 status="verified" if found else "needs_check",
                 source_place_id=found.source_place_id if found else None,
-                found_name=found.name if found else None,
-                found_address=found.address if found else None,
-                found_road_address=found.road_address if found else None,
-                latitude=found.latitude if found else None,
-                longitude=found.longitude if found else None,
-                found_category=found.category if found else None,
+                # Google 장소는 id만 둔다(ADR 0006). 화면에는 AI가 쓴 이름(place_name)을 보여 준다.
+                found_name=found.name if keep else None,
+                found_address=found.address if keep else None,
+                found_road_address=found.road_address if keep else None,
+                latitude=found.latitude if keep else None,
+                longitude=found.longitude if keep else None,
+                found_category=found.category if keep else None,
             )
         )
     session.add(request)
@@ -247,6 +250,7 @@ def adopt_suggestions(
     body: AdoptRequest,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
+    searcher: PlaceSearcher = Depends(get_place_searcher),
 ) -> list[PlanItemOut]:
     """고른 추천 일정만 일정 항목으로 만든다. 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다."""
     me = require_member(session, trip_id, user)
@@ -262,15 +266,23 @@ def adopt_suggestions(
             continue
         check_in_period(me.trip, item.date)
         place = None
-        if item.status == "verified" and item.source_place_id and item.latitude is not None and item.longitude is not None:
-            place = place_from_candidate(
-                session,
-                trip_id,
-                PlaceCandidate(
-                    item.source_place_id, item.found_name or item.place_name, item.found_address or "",
-                    item.found_road_address, item.latitude, item.longitude, item.found_category,
-                ),
-            )
+        if item.status == "verified" and item.source_place_id:
+            if item.latitude is not None and item.longitude is not None:
+                place = place_from_candidate(
+                    session,
+                    searcher,
+                    trip_id,
+                    PlaceCandidate(
+                        item.source_place_id, item.found_name or item.place_name, item.found_address or "",
+                        item.found_road_address, item.latitude, item.longitude, item.found_category,
+                    ),
+                )
+            else:
+                # Google 장소는 id만 있으니 채택할 때 Google에서 확인하고 좌표를 받는다. 안 되면 장소 없이 넣는다.
+                try:
+                    place = place_for(session, searcher, trip_id, item.source_place_id, item.place_name)
+                except ApiError:
+                    place = None
         plan = PlanItem(
             trip_id=trip_id, date=item.date, position=0, title=item.place_name[:80],
             memo=item.description[:300], place=place, created_by=me,

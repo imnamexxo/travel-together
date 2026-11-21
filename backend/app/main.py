@@ -1,6 +1,9 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import AuthVerifier, SupabaseJwtVerifier
@@ -10,6 +13,7 @@ from app.db import make_sessionmaker
 from app.errors import install_error_handlers
 from app.request_log import install_request_log
 from app.gemini import GeminiPlanSuggester, PlanSuggester
+from app.places import purge_expired_google_coords, refresh_google_coords
 from app.place_search import GooglePlaceSearcher, KakaoPlaceSearcher, PlaceSearcher
 from app.receipt_reader import GeminiReceiptReader, ReceiptReader
 from app.storage import ObjectStorage, SupabaseStorage
@@ -19,6 +23,30 @@ from app.routers import expense_places, expenses, friends, health, links, map, m
 # 서버 로그(Render Logs)에 app.* 의 INFO(예: Gemini 응답 시간)를 남긴다. httpx의 요청마다 찍히는 줄은 끈다.
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s - %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
+logger = logging.getLogger(__name__)
+
+# Google 좌표를 다시 받는 간격(ADR 0006). 무료 Render는 쉬다가 깨어나므로, 시작할 때도 한 번 돈다.
+COORDS_JOB_INTERVAL_S = 3600
+
+
+def _refresh_coords_once(app: FastAPI) -> None:
+    session = app.state.sessionmaker()
+    try:
+        refresh_google_coords(session, app.state.overseas_place_searcher)
+        purge_expired_google_coords(session)
+    finally:
+        session.close()
+
+
+async def _coords_job(app: FastAPI) -> None:
+    while True:
+        try:
+            await run_in_threadpool(_refresh_coords_once, app)
+        except Exception:
+            logger.exception("Google 좌표 갱신 실패")
+        await asyncio.sleep(COORDS_JOB_INTERVAL_S)
 
 
 def create_app(
@@ -31,9 +59,18 @@ def create_app(
     storage: ObjectStorage | None = None,
     receipt_reader: ReceiptReader | None = None,
     auth_admin: AuthAdmin | None = None,
+    background_jobs: bool = True,
 ) -> FastAPI:
     settings = settings or load_settings()
-    app = FastAPI(title="Travel Together API", version="0.1.0")
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        task = asyncio.create_task(_coords_job(app)) if background_jobs and app.state.sessionmaker else None
+        yield
+        if task:
+            task.cancel()
+
+    app = FastAPI(title="Travel Together API", version="0.1.0", lifespan=lifespan)
     app.state.sessionmaker = (
         make_sessionmaker(settings.database_url) if settings.database_url else None
     )

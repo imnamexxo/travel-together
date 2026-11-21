@@ -213,19 +213,26 @@ class Place(Base):
     """여행 안의 실제 장소. 장소 검색기(국내 카카오, 해외 Google) 검증을 통과한 것만 만든다. 한 여행에서 같은 장소는 하나다."""
 
     __tablename__ = "places"
-    __table_args__ = (UniqueConstraint("trip_id", "source_place_id", name="places_one_per_source_place"),)
+    __table_args__ = (
+        UniqueConstraint("trip_id", "source_place_id", name="places_one_per_source_place"),
+        CheckConstraint("source IN ('kakao', 'google')", name="places_source_valid"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
     # 검색기의 장소 id: 국내 여행은 카카오, 해외 여행은 Google Places(ADR 0004).
     source_place_id: Mapped[str] = mapped_column(String(300))
-    name: Mapped[str] = mapped_column(String(100))
-    address: Mapped[str] = mapped_column(String(200))
+    # 'kakao' 또는 'google'. Google 장소는 이름·주소·종류를 두지 않고, 좌표는 30일까지만 둔다(ADR 0006).
+    source: Mapped[str] = mapped_column(String(10), server_default="kakao", default="kakao")
+    name: Mapped[str | None] = mapped_column(String(100))
+    address: Mapped[str | None] = mapped_column(String(200))
     road_address: Mapped[str | None] = mapped_column(String(200))
-    # 장소의 좌표다. 사람의 위치가 아니다(ADR-0003).
-    latitude: Mapped[float] = mapped_column(Float)
-    longitude: Mapped[float] = mapped_column(Float)
+    # 장소의 좌표다. 사람의 위치가 아니다(ADR-0003). Google 좌표를 30일 안에 다시 받지 못하면 비운다.
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
     category: Mapped[str | None] = mapped_column(String(100))
+    # Google 좌표를 받은 시각. 카카오 장소는 비어 있다.
+    coords_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class PlanItem(Base):
@@ -274,7 +281,9 @@ class SuggestionRequest(Base):
 
 
 class SuggestedItem(Base):
-    """AI가 제안했지만 아직 채택되지 않은 일정 후보. 카카오로 확인된 장소 정보를 함께 둔다.
+    """AI가 제안했지만 아직 채택되지 않은 일정 후보. 검색기로 확인된 장소 정보를 함께 둔다.
+
+    해외 여행(Google)은 장소 id만 두고 found_*·좌표는 비운다(ADR 0006).
 
     확인된 장소도 채택할 때까지는 places에 넣지 않는다(지도에 계획한 곳으로 보이지 않게).
     """

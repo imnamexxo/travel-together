@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Photo, PhotoPlaceLink, Place } from '@/api/client';
 import { useDeletePhoto, useLinkPhotoPlace, usePhotos, usePlaceSearch, usePlanItems } from '@/api/queries';
+import { GoogleAttribution, PlaceName, placeLabel } from '@/features/places/google-places';
 import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import MetaLine from '@/components/meta-line';
@@ -19,7 +20,8 @@ import { pickPhotos } from './photo-prep';
 import { usePhotoUploads } from './use-photo-uploads';
 
 type Mode = 'all' | 'date' | 'place' | 'uploader';
-type AlbumRow = { kind: 'heading'; id: string; title: string; count: number } | { kind: 'photos'; id: string; photos: Photo[] };
+// 장소별 묶음의 제목은 place로 그린다(Google 장소는 이름을 받아 와야 한다, ADR 0006).
+type AlbumRow = { kind: 'heading'; id: string; title: string; place?: Place; count: number } | { kind: 'photos'; id: string; photos: Photo[] };
 const DEFAULT_LIMIT = 200;
 
 /** 사진의 여행 날짜(촬영 시각 기준, 한국 시간). 촬영 시각이 없거나 여행 기간 밖이면 -1. */
@@ -29,6 +31,7 @@ export function photoDayIndex(photo: Photo, days: TripDay[]): number {
 
 function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
   const groups = new Map<string, Photo[]>();
+  const placeOf = new Map<string, Place>();
   const ordered = mode === 'date' ? [...photos].sort((a, b) => {
     const [da, db] = [photoDayIndex(a, days), photoDayIndex(b, days)];
     return (da < 0 ? 99 : da) - (db < 0 ? 99 : db);
@@ -36,12 +39,13 @@ function makeRows(photos: Photo[], mode: Mode, days: TripDay[]): AlbumRow[] {
   for (const photo of ordered) {
     const index = photoDayIndex(photo, days);
     const key = mode === 'date' ? (index < 0 ? '날짜 미지정' : `${index + 1}일 차  ${days[index].title}`)
-      : mode === 'place' ? (photo.place?.name ?? '장소 미연결')
+      : mode === 'place' ? (photo.place?.id ?? '장소 미연결')
       : mode === 'uploader' ? `${photo.uploader_name}님이 올린 사진` : '모든 사진';
     groups.set(key, [...(groups.get(key) ?? []), photo]);
+    if (mode === 'place' && photo.place) placeOf.set(key, photo.place);
   }
   return [...groups.entries()].flatMap(([title, group]) => {
-    const rows: AlbumRow[] = [{ kind: 'heading', id: `heading-${title}`, title, count: group.length }];
+    const rows: AlbumRow[] = [{ kind: 'heading', id: `heading-${title}`, title, place: placeOf.get(title), count: group.length }];
     for (let index = 0; index < group.length; index += 3) rows.push({ kind: 'photos', id: `${title}-${index}`, photos: group.slice(index, index + 3) });
     return rows;
   });
@@ -145,7 +149,7 @@ export default function AlbumScreen() {
           <Pressable accessibilityRole="button" disabled={busy} onPress={addPhotos} style={s.emptyButton}><Text style={s.emptyButtonText}>{busy ? '사진 올리는 중…' : '사진 추가'}</Text></Pressable>
         </View>}
       ListFooterComponent={<Text style={s.footer}>사진은 줄여서 올리고 위치 정보는 지워서 보내요.{ '\n' }촬영 위치는 서버에 저장되지 않아요.</Text>}
-      renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}><Text style={s.groupTitle}>{row.title}</Text><View style={s.groupRule}><Dashes color={C.border} /></View><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
+      renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}>{row.place ? <PlaceName tripId={trip.id} place={row.place} style={s.groupTitle} /> : <Text style={s.groupTitle}>{row.title}</Text>}<View style={s.groupRule}><Dashes color={C.border} /></View><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
         {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`${photo.uploader_name}님 사진 크게 보기`} onPress={() => setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }]}>
           <Image source={{ uri: photo.url }} style={s.thumbnail} resizeMode="cover" onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
           {failedImages.includes(photo.id) && <View style={s.imageError}><Text style={s.imageErrorText}>사진 확인 필요</Text></View>}
@@ -192,7 +196,8 @@ function PlaceSection({ photo }: { photo: Photo }) {
   const [submitted, setSubmitted] = useState('');
   const search = usePlaceSearch(trip.id, submitted);
   const [error, setError] = useState<string | null>(null);
-  const tripPlaces = [...new Map((planItems.data ?? []).filter((i) => i.place).map((i) => [i.place!.id, i.place as Place])).values()];
+  // 연결할 장소 버튼에는 받아 오지 않는 이름을 쓴다: 카카오는 저장된 이름, Google 장소는 일정 제목(ADR 0006).
+  const tripPlaces = [...new Map((planItems.data ?? []).filter((i) => i.place).map((i) => [i.place!.id, { ...(i.place as Place), label: placeLabel(i.place!, i.title) }])).values()];
   const dayIso = photo.taken_at ? toKstParts(photo.taken_at).date : null;
   const plansHere = (planItems.data ?? []).filter((i) => photo.place && i.place?.id === photo.place.id && (!dayIso || i.date === dayIso));
   const dayNumber = (iso: string) => days.findIndex((d) => d.iso === iso) + 1;
@@ -207,10 +212,12 @@ function PlaceSection({ photo }: { photo: Photo }) {
 
   return <>
     <Text style={s.fieldTitle}>연결된 장소</Text>
-    <Text style={s.helper}>{photo.place ? `${photo.place.name} (${photo.link_type === 'auto' ? '촬영 위치로 자동 연결' : '직접 연결'})` : '장소에 연결되지 않은 사진이에요. 촬영 날짜로만 분류돼요.'}</Text>
+    {photo.place
+      ? <Text style={s.helper}><PlaceName tripId={trip.id} place={photo.place} fallback={plansHere[0]?.title} /> ({photo.link_type === 'auto' ? '촬영 위치로 자동 연결' : '직접 연결'})</Text>
+      : <Text style={s.helper}>장소에 연결되지 않은 사진이에요. 촬영 날짜로만 분류돼요.</Text>}
     {plansHere.map((i) => <Text key={i.id} style={s.helper}>📅 {dayNumber(i.date)}일 차 {i.time?.slice(0, 5) ?? ''} {i.title}</Text>)}
     <View style={s.detailChips}>
-      {tripPlaces.map((p) => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${p.name}에 연결`} accessibilityState={{ selected: photo.place?.id === p.id, disabled: link.isPending }} disabled={link.isPending} onPress={() => change({ place_id: p.id })} style={[s.chip, photo.place?.id === p.id && s.chipSelected]}><Text style={[s.chipText, photo.place?.id === p.id && s.chipTextSelected]}>{p.name}</Text></Pressable>)}
+      {tripPlaces.map((p) => <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${p.label}에 연결`} accessibilityState={{ selected: photo.place?.id === p.id, disabled: link.isPending }} disabled={link.isPending} onPress={() => change({ place_id: p.id })} style={[s.chip, photo.place?.id === p.id && s.chipSelected]}><Text style={[s.chipText, photo.place?.id === p.id && s.chipTextSelected]}>{p.label}</Text></Pressable>)}
       {!!photo.place && <Pressable accessibilityRole="button" accessibilityLabel="장소 연결 해제" disabled={link.isPending} onPress={() => change({})} style={s.chip}><Text style={s.chipText}>연결 해제</Text></Pressable>}
     </View>
     <Text style={s.helper}>일정에 없던 곳이면 검색해서 연결하세요. 지도에 들른 곳으로 남아요.</Text>
@@ -223,6 +230,7 @@ function PlaceSection({ photo }: { photo: Photo }) {
       : search.data.map((c) => <Pressable key={c.source_place_id} accessibilityRole="button" accessibilityLabel={`${c.name}로 연결`} disabled={link.isPending} onPress={() => change({ source_place: { source_place_id: c.source_place_id, name: c.name } })} style={s.result}>
         <Text style={s.resultName}>{c.name}</Text><Text style={s.helper}>{c.road_address ?? c.address}</Text>
       </Pressable>))}
+    {!!submitted && trip.is_overseas && !!search.data?.length && <GoogleAttribution />}
     {!!error && <Text accessibilityRole="alert" style={s.errorText}>{error}</Text>}
   </>;
 }

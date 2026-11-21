@@ -6,7 +6,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useKeyboardHeight } from '@/lib/use-keyboard-height';
 
-import { ApiError, type PlaceCandidate, type PlanItem } from '@/api/client';
+import { ApiError, type Place, type PlaceCandidate, type PlanItem } from '@/api/client';
+import { GoogleAttribution, PlaceName } from '@/features/places/google-places';
 import { useDeletePlanItem, usePlaceSearch, useSavePlanItem } from '@/api/queries';
 import PickerField from '@/components/pickers/picker-field';
 import TimePicker from '@/components/pickers/time-picker';
@@ -15,7 +16,8 @@ import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 import { useCurrentTrip } from './current-trip';
 import type { TripDay } from './trip-dates';
 
-type ChosenPlace = { source_place_id: string; name: string; address: string };
+// saved는 이미 저장된 장소다. Google 장소는 이름이 저장되지 않아 saved로 받아 보여 준다(ADR 0006).
+type ChosenPlace = { source_place_id: string; name: string; address: string; saved?: Place };
 
 type Props = {
   /** 고칠 일정 항목. 없으면 새로 만든다. */
@@ -43,7 +45,12 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
   const [timeOpen, setTimeOpen] = useState(false);
   const [memo, setMemo] = useState(item?.memo ?? '');
   const [cost, setCost] = useState(item?.estimated_cost == null ? '' : money.toText(item.estimated_cost));
-  const [place, setPlace] = useState<ChosenPlace | null>(item?.place ? { source_place_id: item.place.source_place_id, name: item.place.name, address: item.place.address } : null);
+  const [place, setPlace] = useState<ChosenPlace | null>(item?.place
+    // 서버는 이미 이 여행에 있는 장소면 이름을 보지 않는다. Google 장소는 이름이 없으니 일정 제목으로 채워 보낸다.
+    ? { source_place_id: item.place.source_place_id, name: item.place.name ?? item.title, address: item.place.address ?? '', saved: item.place }
+    : null);
+  // 장소를 고를 때 자동으로 채운 제목. 이용자가 고치지 않았으면 다른 장소를 고를 때 다시 채운다.
+  const [autoTitle, setAutoTitle] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -58,8 +65,10 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
   }
 
   function choose(candidate: PlaceCandidate) {
-    // 이름을 비워 뒀거나 이전에 고른 장소 이름 그대로면 새 장소 이름으로 채운다.
-    if (!title.trim() || title === place?.name) setTitle(candidate.name);
+    // 이름을 비워 뒀거나 자동으로 채운 그대로면 새로 채운다. 해외 여행은 Google 장소 이름을 저장하면 안 되므로
+    // 장소 이름 대신 이용자가 입력한 검색어를 넣는다(ADR 0006).
+    const fill = trip.is_overseas ? submittedQuery : candidate.name;
+    if (!title.trim() || title === autoTitle || title === place?.name) { setTitle(fill); setAutoTitle(fill); }
     setPlace({ source_place_id: candidate.source_place_id, name: candidate.name, address: candidate.road_address ?? candidate.address });
     setSubmittedQuery('');
     setQuery('');
@@ -109,7 +118,9 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
 
         <Text style={s.label}>장소</Text>
         {place ? <View style={s.placeChip}>
-          <View style={s.flex}><Text style={s.placeName}>{place.name}</Text><Text style={s.caption}>{place.address}</Text></View>
+          <View style={s.flex}>{place.saved
+            ? <><PlaceName tripId={trip.id} place={place.saved} fallback={place.name} style={s.placeName} />{!!place.saved.address && <Text style={s.caption}>{place.saved.road_address ?? place.saved.address}</Text>}</>
+            : <><Text style={s.placeName}>{place.name}</Text><Text style={s.caption}>{place.address}{trip.is_overseas && <GoogleAttribution inline />}</Text></>}</View>
           <Pressable accessibilityRole="button" accessibilityLabel="장소 빼기" onPress={() => setPlace(null)} style={s.action}><Text style={s.muted}>빼기</Text></Pressable>
         </View> : <>
           <View style={s.searchRow}>
@@ -122,6 +133,7 @@ export default function PlanItemEditor({ item, day, dayNumber, onClose }: Props)
             : search.data.map((c) => <Pressable key={c.source_place_id} accessibilityRole="button" accessibilityLabel={`${c.name} 선택`} onPress={() => choose(c)} style={s.result}>
               <Text style={s.placeName}>{c.name}</Text><Text style={s.caption}>{c.road_address ?? c.address}</Text>
             </Pressable>))}
+          {!!submittedQuery && trip.is_overseas && !!search.data?.length && <GoogleAttribution />}
           <Text style={s.caption}>장소 없이 &quot;자유시간&quot; 같은 일정도 만들 수 있어요.</Text>
         </>}
 

@@ -32,6 +32,7 @@ export type Transfer = components['schemas']['TransferOut'];
 export type TransferCreate = components['schemas']['TransferCreate'];
 export type Place = components['schemas']['PlaceOut'];
 export type PlaceCandidate = components['schemas']['PlaceCandidateOut'];
+export type PlaceDetails = components['schemas']['PlaceDetailsOut'];
 export type PlanItem = components['schemas']['PlanItemOut'];
 export type PlanItemInput = components['schemas']['PlanItemIn'];
 export type Suggestion = components['schemas']['SuggestionOut'];
@@ -147,6 +148,8 @@ export interface ApiClient {
   getExpensePlaceCandidates(tripId: string, query: string): Promise<ExpensePlaceCandidate[]>;
   /** 지도: 장소별 들른 곳 여부·일정·사진·지출 요약. 날짜·멤버로 거른다. */
   getMapData(tripId: string, filter?: MapFilter): Promise<MapData>;
+  /** 장소 이름·주소. Google 장소는 그때 Google에서 받는다. 저장하지 말 것(ADR 0006). */
+  getPlaceDetails(tripId: string, placeId: string): Promise<PlaceDetails>;
 }
 
 type ApiClientOptions = {
@@ -256,6 +259,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
     linkPhotoPlace: (tripId, photoId, link) => request<Photo>('PUT', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}/place`, link),
     getExpensePlaceCandidates: (tripId, query) => request<ExpensePlaceCandidate[]>('GET', `${trip(tripId)}/expenses/place-candidates?query=${encodeURIComponent(query)}`),
+    getPlaceDetails: (tripId, placeId) => request<PlaceDetails>('GET', `${trip(tripId)}/places/${encodeURIComponent(placeId)}/details`),
     getMapData: (tripId, { date, memberId } = {}) => {
       const params = [date && `date=${encodeURIComponent(date)}`, memberId && `member_id=${encodeURIComponent(memberId)}`].filter(Boolean).join('&');
       return request<MapData>('GET', `${trip(tripId)}/map${params ? `?${params}` : ''}`);

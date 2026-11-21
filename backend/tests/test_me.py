@@ -74,7 +74,7 @@ def test_first_profile_uses_kakao_nickname_and_user_without_email(engine, databa
     from app.main import create_app
 
     secret = "test-secret-that-is-long-enough-for-hs256"
-    app = create_app(settings=Settings(database_url=database_url, supabase_url="", supabase_jwt_secret=secret), auth_verifier=SupabaseJwtVerifier("", jwt_secret=secret))
+    app = create_app(settings=Settings(database_url=database_url, supabase_url="", supabase_jwt_secret=secret), auth_verifier=SupabaseJwtVerifier("", jwt_secret=secret), background_jobs=False)
     claims = {"sub": str(uuid.uuid4()), "aud": "authenticated", "exp": int(time.time()) + 3600, "email": "", "user_metadata": {"name": "제주러버", "provider_id": "123"}}
     with TestClient(app) as client:
         response = client.get("/me", headers={"Authorization": f"Bearer {jwt.encode(claims, secret, algorithm='HS256')}"})

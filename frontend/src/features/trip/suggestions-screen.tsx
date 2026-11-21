@@ -108,7 +108,7 @@ export default function SuggestionsScreen() {
                     <Text style={s.cardTitle}>{on ? '✓ ' : ''}{item.order}. {item.place_name}</Text>
                     {item.adopted ? <Text style={s.badgeDone}>추가됨</Text> : item.status === 'needs_check' && <Text style={s.badgeWarn}>확인 필요</Text>}
                   </View>
-                  <MetaLine textStyle={s.caption} parts={[item.place ? (item.place.road_address ?? item.place.address) : `${item.region}, 지도에서 찾지 못했어요`, `약 ${item.stay_minutes}분`]} />
+                  <MetaLine textStyle={s.caption} parts={[item.place ? (item.place.road_address ?? item.place.address) : item.status === 'verified' ? item.region : `${item.region}, 지도에서 찾지 못했어요`, `약 ${item.stay_minutes}분`]} />
                   {!!item.description && <Text style={s.desc}>{item.description}</Text>}
                 </Pressable>;
               })}

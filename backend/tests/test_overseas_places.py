@@ -83,7 +83,18 @@ def test_overseas_suggestions_use_google_and_fall_back_to_first_result(client, a
 
     assert suggester.requests[0].overseas is True
     assert body["items"][0]["status"] == "verified"
-    assert body["items"][0]["place"]["source_place_id"] == "ChIJ-kuromon"
+    # Google 장소 정보는 저장하지 않으므로 후보에는 장소가 비어 있고 AI가 쓴 이름을 보여 준다(ADR 0006).
+    assert body["items"][0]["place"] is None
+    assert body["items"][0]["place_name"] == "Kuromon Market"
+
+    adopted = client.post(
+        f"/trips/{osaka['id']}/suggestions/{body['id']}/adopt", json={"item_ids": [body["items"][0]["id"]]}, headers=bearer(minji)
+    ).json()
+
+    # 채택할 때 id로 확인하고 좌표만 받는다.
+    assert overseas_places.lookups == ["ChIJ-kuromon"]
+    place = adopted[0]["place"]
+    assert (place["source_place_id"], place["source"], place["name"], place["address"]) == ("ChIJ-kuromon", "google", None, None)
 
 
 def test_overseas_prompt_asks_for_google_names():
