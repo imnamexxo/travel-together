@@ -169,7 +169,7 @@ def _remove(session: Session, storage: ObjectStorage, member: Member, verb: str)
             409, "member_has_expenses", f"지출의 결제자·분담 대상이거나 송금 기록이 있어 {verb} 수 없습니다."
         )
     photos = list(session.scalars(select(Photo).where(Photo.uploader_member_id == member.id)))
-    keys = [p.storage_key for p in photos]
+    keys = [k for p in photos for k in p.file_keys]
     for photo in photos:
         session.delete(photo)
     session.delete(member)

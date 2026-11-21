@@ -24,6 +24,8 @@ router = APIRouter(prefix="/trips/{trip_id}/photos", tags=["photos"], responses=
 MAX_PHOTOS = 200
 # 앱이 긴 변 1600px JPEG로 줄여 보내므로 보통 1MB 아래다.
 MAX_BYTES = 5 * 1024 * 1024
+# 썸네일은 긴 변 400px라 보통 50KB 아래다.
+MAX_THUMBNAIL_BYTES = 512 * 1024
 STORAGE_DOWN = {502: {"model": ErrorResponse, "description": "저장소 실패"}}
 _aware = TypeAdapter(AwareDatetime)
 
@@ -32,6 +34,8 @@ class PhotoOut(BaseModel):
     id: uuid.UUID
     # 짧게 열리는 서명 URL. 만료되면 목록을 다시 불러와 새 URL을 받는다.
     url: str
+    # 목록·지도용 작은 사진의 서명 URL. 썸네일이 없던 때 올린 사진은 url과 같다.
+    thumbnail_url: str
     taken_at: datetime | None
     uploaded_at: datetime
     uploader_member_id: uuid.UUID
@@ -61,16 +65,23 @@ def _utc(value: datetime | None) -> datetime | None:
 
 
 def _signed(storage: ObjectStorage, photos: list[Photo]) -> dict[str, str]:
+    """원본과 썸네일의 서명 URL(파일 키 → URL)."""
     try:
-        return storage.signed_urls([p.storage_key for p in photos], SIGNED_URL_SECONDS)
+        return storage.signed_urls([k for p in photos for k in p.file_keys], SIGNED_URL_SECONDS)
     except StorageUnavailable:
         raise ApiError(502, "storage_unavailable", "사진 저장소에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.")
 
 
-def _out(photo: Photo, url: str) -> PhotoOut:
+def thumbnail_url(photo: Photo, urls: dict[str, str]) -> str:
+    url = urls.get(photo.storage_key, "")
+    return urls.get(photo.thumbnail_key, url) if photo.thumbnail_key else url
+
+
+def _out(photo: Photo, urls: dict[str, str]) -> PhotoOut:
     return PhotoOut(
         id=photo.id,
-        url=url,
+        url=urls.get(photo.storage_key, ""),
+        thumbnail_url=thumbnail_url(photo, urls),
         taken_at=_utc(photo.taken_at),
         uploaded_at=_utc(photo.created_at),  # type: ignore[arg-type]
         uploader_member_id=photo.uploader_member_id,
@@ -112,7 +123,7 @@ def list_photos(
         )
     )
     urls = _signed(storage, photos)
-    return PhotoList(photos=[_out(p, urls.get(p.storage_key, "")) for p in photos], count=len(photos), limit=MAX_PHOTOS)
+    return PhotoList(photos=[_out(p, urls) for p in photos], count=len(photos), limit=MAX_PHOTOS)
 
 
 @router.post(
@@ -131,6 +142,7 @@ def upload_photo(
     file: Annotated[UploadFile, File(description="JPEG. 앱이 긴 변 1600px로 줄이고 EXIF를 지운 파일")],
     taken_at: Annotated[str | None, Form(description="촬영 시각(시간대 포함 ISO). 모르면 비운다")] = None,
     place_id: Annotated[uuid.UUID | None, Form(description="앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다")] = None,
+    thumbnail: Annotated[UploadFile | None, File(description="목록용 작은 JPEG(긴 변 400px). 없으면 목록에서도 원본을 쓴다")] = None,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
     storage: ObjectStorage = Depends(get_storage),
@@ -145,6 +157,15 @@ def upload_photo(
         clean = strip_metadata(data)
     except NotJpeg:
         raise ApiError(415, "not_jpeg", "JPEG 사진만 올릴 수 있습니다.")
+    small = None
+    if thumbnail is not None:
+        thumb_data = thumbnail.file.read(MAX_THUMBNAIL_BYTES + 1)
+        if len(thumb_data) > MAX_THUMBNAIL_BYTES:
+            raise ApiError(413, "photo_too_large", f"썸네일이 너무 큽니다({MAX_THUMBNAIL_BYTES // 1024}KB까지).")
+        try:
+            small = strip_metadata(thumb_data)
+        except NotJpeg:
+            raise ApiError(415, "not_jpeg", "JPEG 사진만 올릴 수 있습니다.")
 
     # 동시에 올려도 200장을 넘지 않도록 여행 행을 잠그고 센다.
     session.execute(select(Trip).where(Trip.id == trip_id).with_for_update())
@@ -153,23 +174,31 @@ def upload_photo(
         raise ApiError(409, "photo_limit", f"여행 사진은 {MAX_PHOTOS}장까지 올릴 수 있습니다.")
 
     place = _trip_place(session, trip_id, place_id, "place_id") if place_id else None
+    name = uuid.uuid4()
     photo = Photo(
-        trip_id=trip_id, uploader_member_id=me.id, storage_key=f"trips/{trip_id}/photos/{uuid.uuid4()}.jpg",
-        taken_at=when, size_bytes=len(clean), place=place, link_type="auto" if place else None,
+        trip_id=trip_id, uploader_member_id=me.id, storage_key=f"trips/{trip_id}/photos/{name}.jpg",
+        thumbnail_key=f"trips/{trip_id}/photos/{name}_thumb.jpg" if small else None,
+        taken_at=when, size_bytes=len(clean) + len(small or b""), place=place, link_type="auto" if place else None,
     )
+    uploaded: list[str] = []
     try:
         storage.upload(photo.storage_key, clean, "image/jpeg")
+        uploaded.append(photo.storage_key)
+        if small is not None and photo.thumbnail_key:
+            storage.upload(photo.thumbnail_key, small, "image/jpeg")
+            uploaded.append(photo.thumbnail_key)
     except StorageUnavailable:
+        delete_files(storage, uploaded)
         raise ApiError(502, "storage_unavailable", "사진 저장소에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.")
     session.add(photo)
     try:
         session.commit()
     except Exception:
         session.rollback()
-        delete_files(storage, [photo.storage_key])
+        delete_files(storage, uploaded)
         raise
     session.refresh(photo)
-    return _out(photo, _signed(storage, [photo]).get(photo.storage_key, ""))
+    return _out(photo, _signed(storage, [photo]))
 
 
 @router.delete(
@@ -191,10 +220,10 @@ def delete_photo(
         raise ApiError(404, "photo_not_found", "사진을 찾을 수 없습니다.")
     if not (me.is_organizer or photo.uploader_member_id == me.id):
         raise ApiError(403, "not_photo_owner", "내가 올린 사진만 지울 수 있습니다.")
-    key = photo.storage_key
+    keys = photo.file_keys
     session.delete(photo)
     session.commit()
-    delete_files(storage, [key])
+    delete_files(storage, keys)
 
 
 @router.put(
@@ -225,4 +254,4 @@ def link_photo_place(
         photo.place = None
     photo.link_type = "manual" if photo.place else None
     session.commit()
-    return _out(photo, _signed(storage, [photo]).get(photo.storage_key, ""))
+    return _out(photo, _signed(storage, [photo]))

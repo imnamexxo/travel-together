@@ -156,7 +156,7 @@ type FakeApiOptions = {
 
 export function photo(overrides: Partial<Photo> = {}): Photo {
   return {
-    id: 'photo-1', url: 'https://storage.test/photo-1.jpg', taken_at: '2026-11-12T06:30:00Z', uploaded_at: '2026-11-12T07:00:00Z',
+    id: 'photo-1', url: 'https://storage.test/photo-1.jpg', thumbnail_url: 'https://storage.test/photo-1_thumb.jpg', taken_at: '2026-11-12T06:30:00Z', uploaded_at: '2026-11-12T07:00:00Z',
     uploader_member_id: 'member-1', uploader_name: '민지', place: null, link_type: null, ...overrides,
   };
 }

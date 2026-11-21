@@ -41,7 +41,7 @@ export type SuggestionAsk = components['schemas']['SuggestionAsk'];
 export type Photo = components['schemas']['PhotoOut'];
 export type PhotoList = components['schemas']['PhotoList'];
 /** 올릴 사진: 기기 안의 JPEG 파일과 촬영 시각. 위치 좌표는 넣지 않는다(ADR-0003). */
-export type PhotoUpload = { uri: string; takenAt: string | null; placeId?: string | null };
+export type PhotoUpload = { uri: string; thumbnailUri?: string | null; takenAt: string | null; placeId?: string | null };
 export type PhotoPlaceLink = components['schemas']['PhotoPlaceLink'];
 export type ReceiptUpload = components['schemas']['ReceiptUploadOut'];
 export type ExpensePlaceCandidate = components['schemas']['ExpensePlaceCandidate'];
@@ -254,6 +254,7 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
       form.append('file', filePart(photo.uri, 'photo.jpg', 'image/jpeg') as unknown as Blob);
       if (photo.takenAt) form.append('taken_at', photo.takenAt);
       if (photo.placeId) form.append('place_id', photo.placeId);
+      if (photo.thumbnailUri) form.append('thumbnail', filePart(photo.thumbnailUri, 'thumbnail.jpg', 'image/jpeg') as unknown as Blob);
       return request<Photo>('POST', `${trip(tripId)}/photos`, form);
     },
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),

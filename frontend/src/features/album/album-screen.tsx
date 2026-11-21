@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import CachedPhoto from '@/components/cached-photo';
 import { showAlert } from '@/components/dialog';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -151,7 +152,7 @@ export default function AlbumScreen() {
       ListFooterComponent={<Text style={s.footer}>사진은 줄여서 올리고 위치 정보는 지워서 보내요.{ '\n' }촬영 위치는 서버에 저장되지 않아요.</Text>}
       renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}>{row.place ? <PlaceName tripId={trip.id} place={row.place} style={s.groupTitle} /> : <Text style={s.groupTitle}>{row.title}</Text>}<View style={s.groupRule}><Dashes color={C.border} /></View><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
         {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`${photo.uploader_name}님 사진 크게 보기`} onPress={() => setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }]}>
-          <Image source={{ uri: photo.url }} style={s.thumbnail} resizeMode="cover" onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
+          <CachedPhoto uri={photo.thumbnail_url} cacheKey={`${photo.id}-thumb`} style={s.thumbnail} onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
           {failedImages.includes(photo.id) && <View style={s.imageError}><Text style={s.imageErrorText}>사진 확인 필요</Text></View>}
         </Pressable>)}
       </View>}
@@ -165,7 +166,7 @@ export default function AlbumScreen() {
             {canDelete(selected) ? <Pressable accessibilityRole="button" accessibilityLabel="사진 지우기" disabled={remove.isPending} onPress={removeSelected} style={s.navButton}><Text style={s.deleteText}>지우기</Text></Pressable> : <View style={s.navButton} />}
           </View>
           <ScrollView maximumZoomScale={3} minimumZoomScale={1} centerContent style={{ height: Math.min(height * 0.45, 440), backgroundColor: C.surface }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-            <Image source={{ uri: selected.url }} style={{ width: contentWidth, height: Math.min(height * 0.45, 440) }} resizeMode="contain" />
+            <CachedPhoto uri={selected.url} cacheKey={selected.id} style={{ width: contentWidth, height: Math.min(height * 0.45, 440) }} contentFit="contain" />
           </ScrollView>
           <View style={s.detailsBody}>
             <View style={s.detailNav}>

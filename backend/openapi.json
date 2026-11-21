@@ -4279,6 +4279,19 @@
             ],
             "title": "Place Id",
             "description": "앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다"
+          },
+          "thumbnail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail",
+            "description": "목록용 작은 JPEG(긴 변 400px). 없으면 목록에서도 원본을 쓴다"
           }
         },
         "type": "object",
@@ -5145,6 +5158,10 @@
             "type": "string",
             "title": "Url"
           },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
           "taken_at": {
             "anyOf": [
               {
@@ -5167,6 +5184,7 @@
         "required": [
           "id",
           "url",
+          "thumbnail_url",
           "taken_at",
           "uploader_member_id"
         ],
@@ -5430,6 +5448,10 @@
             "type": "string",
             "title": "Url"
           },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
           "taken_at": {
             "anyOf": [
               {
@@ -5486,6 +5508,7 @@
         "required": [
           "id",
           "url",
+          "thumbnail_url",
           "taken_at",
           "uploaded_at",
           "uploader_member_id",

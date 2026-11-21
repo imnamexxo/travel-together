@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FlatList, Image, Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import CachedPhoto from '@/components/cached-photo';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,7 +27,7 @@ export default function PhotoViewer({ photos, start, title, onClose }: { photos:
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item }) => <View style={[s.page, { width }]}>
-          <Image accessibilityLabel="크게 본 사진" source={{ uri: item.url }} style={s.image} resizeMode="contain" />
+          <CachedPhoto accessibilityLabel="크게 본 사진" uri={item.url} cacheKey={item.id} style={s.image} contentFit="contain" />
           {!!item.caption && <Text style={s.caption}>{item.caption}</Text>}
         </View>}
       />

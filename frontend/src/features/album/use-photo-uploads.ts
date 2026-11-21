@@ -28,8 +28,8 @@ export function usePhotoUploads(tripId: string) {
       for (const upload of queue) {
         set(upload.key, { status: 'uploading', error: undefined });
         try {
-          const uri = await preparePhoto(upload.photo);
-          await api.uploadPhoto(tripId, { uri, takenAt: upload.photo.takenAt, placeId: upload.placeId });
+          const { uri, thumbnailUri } = await preparePhoto(upload.photo);
+          await api.uploadPhoto(tripId, { uri, thumbnailUri, takenAt: upload.photo.takenAt, placeId: upload.placeId });
           set(upload.key, { status: 'done' });
         } catch (e) {
           set(upload.key, { status: 'failed', error: e instanceof Error ? e.message : '올리지 못했어요.' });

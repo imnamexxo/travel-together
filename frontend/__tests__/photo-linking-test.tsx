@@ -8,7 +8,7 @@ import { renderApp } from './support/render-app';
 
 jest.mock('@/features/album/photo-prep', () => ({
   pickPhotos: jest.fn(),
-  preparePhoto: jest.fn(async (p: { key: string }) => `file:///resized/${p.key}.jpg`),
+  preparePhoto: jest.fn(async (p: { key: string }) => ({ uri: `file:///resized/${p.key}.jpg`, thumbnailUri: `file:///resized/${p.key}_thumb.jpg` })),
 }));
 const mockPick = pickPhotos as jest.MockedFunction<typeof pickPhotos>;
 
@@ -84,8 +84,8 @@ test('올릴 때 촬영 위치로 찾은 장소 id만 보내고, 좌표는 보�
   fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
 
   await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(2));
-  expect(api.uploadPhoto.mock.calls[0][1]).toEqual({ uri: 'file:///resized/a.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: 'place-market' });
-  expect(api.uploadPhoto.mock.calls[1][1]).toEqual({ uri: 'file:///resized/b.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: null });
+  expect(api.uploadPhoto.mock.calls[0][1]).toEqual({ uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: 'place-market' });
+  expect(api.uploadPhoto.mock.calls[1][1]).toEqual({ uri: 'file:///resized/b.jpg', thumbnailUri: 'file:///resized/b_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: null });
   expect(JSON.stringify(api.uploadPhoto.mock.calls)).not.toMatch(/33\.51|126\.52/);
 });
 

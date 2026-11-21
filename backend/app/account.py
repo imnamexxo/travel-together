@@ -71,7 +71,7 @@ def delete_account(session: Session, profile: UserProfile, remove_trip) -> list[
         if member.trip_id in deleted:
             continue
         photos = list(session.scalars(select(Photo).where(Photo.uploader_member_id == member.id)))
-        keys += [p.storage_key for p in photos]
+        keys += [k for p in photos for k in p.file_keys]
         for photo in photos:
             session.delete(photo)
         if member.trip_id not in kept:
