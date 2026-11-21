@@ -19,3 +19,17 @@ Thumbs.db
 # EAS upload: skill symlinks break on Windows
 .claude/
 .agents/
+
+# frontend/.gitignore와 같은 것(.easignore가 있으면 EAS는 .gitignore를 읽지 않는다)
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.kotlin/
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.tsbuildinfo
+.env*.local
