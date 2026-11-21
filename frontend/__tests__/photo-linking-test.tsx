@@ -75,18 +75,53 @@ function render(options: Parameters<typeof fakeApi>[1] = {}, initialUrl = '/trip
 
 afterEach(() => mockPick.mockReset());
 
-test('올릴 때 촬영 위치로 찾은 장소 id만 보내고, 좌표는 보내지 않는다', async () => {
+const nearMarket: PickedPhoto = { key: 'a', uri: 'file:///a.heic', width: 100, height: 100, takenAt: '2026-11-12T13:00:00+09:00', gps: { latitude: 33.5125, longitude: 126.5258 } };
+const noGps: PickedPhoto = { ...nearMarket, key: 'b', gps: null };
+
+test('촬영 위치로 찾은 장소는 추천만 하고, 사용자가 확인한 장소 id만 보낸다(좌표는 보내지 않는다)', async () => {
   const api = render();
-  const nearMarket: PickedPhoto = { key: 'a', uri: 'file:///a.heic', width: 100, height: 100, takenAt: '2026-11-12T13:00:00+09:00', gps: { latitude: 33.5125, longitude: 126.5258 } };
-  const noGps: PickedPhoto = { ...nearMarket, key: 'b', gps: null };
   mockPick.mockResolvedValueOnce([nearMarket, noGps]);
 
   fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
+
+  // 확인하기 전에는 아무것도 올리지 않는다.
+  expect(await screen.findByText('사진을 이 장소에 연결할까요?')).toBeOnTheScreen();
+  expect(screen.getByRole('checkbox', { name: '동문시장에 사진 1장 연결' })).toBeChecked();
+  expect(screen.getByText('근처 일정 장소가 없는 사진 1장은 장소 없이 올라가요. 나중에 앨범에서 연결할 수 있어요.')).toBeOnTheScreen();
+  expect(api.uploadPhoto).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: '사진 올리기' }));
 
   await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(2));
   expect(api.uploadPhoto.mock.calls[0][1]).toEqual({ uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: 'place-market' });
   expect(api.uploadPhoto.mock.calls[1][1]).toEqual({ uri: 'file:///resized/b.jpg', thumbnailUri: 'file:///resized/b_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: null });
   expect(JSON.stringify(api.uploadPhoto.mock.calls)).not.toMatch(/33\.51|126\.52/);
+});
+
+test('추천 장소를 체크 해제하면 장소 없이 올리고, 취소하면 올리지 않는다', async () => {
+  const api = render();
+  mockPick.mockResolvedValueOnce([nearMarket]).mockResolvedValueOnce([{ ...nearMarket, key: 'c' }]);
+
+  fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
+  fireEvent.press(await screen.findByRole('checkbox', { name: '동문시장에 사진 1장 연결' }));
+  fireEvent.press(screen.getByRole('button', { name: '사진 올리기' }));
+  await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(1));
+  expect(api.uploadPhoto.mock.calls[0][1].placeId).toBeNull();
+
+  await waitFor(() => expect(screen.getByRole('button', { name: '사진 추가' })).toBeEnabled());
+  fireEvent.press(screen.getByRole('button', { name: '사진 추가' }));
+  fireEvent.press(await screen.findByRole('button', { name: '사진 올리기 취소' }));
+  await waitFor(() => expect(screen.queryByText('사진을 이 장소에 연결할까요?')).toBeNull());
+  expect(api.uploadPhoto).toHaveBeenCalledTimes(1);
+});
+
+test('추천할 장소가 없으면 확인 없이 바로 올린다', async () => {
+  const api = render();
+  mockPick.mockResolvedValueOnce([noGps]);
+
+  fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
+
+  await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText('사진을 이 장소에 연결할까요?')).toBeNull();
 });
 
 test('장소별로 보고, 장소 미연결 사진 수가 보인다', async () => {

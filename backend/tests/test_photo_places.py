@@ -39,11 +39,12 @@ def link(client, trip, photo_id, who="준호", **body):
     return client.put(trip.url(f"/{photo_id}/place"), json=body, headers=bearer(trip.tokens[who]))
 
 
-def test_upload_with_trip_place_is_linked_automatically(client, trip):
+def test_upload_with_confirmed_place_is_a_manual_link(client, trip):
+    # 앱은 촬영 위치로 장소를 추천만 하고, 사용자가 확인한 장소만 보낸다. 서버는 직접 연결로 기록한다.
     body = upload(client, trip, place_id=trip.market_id).json()
 
     assert body["place"]["name"] == "동문시장"
-    assert body["link_type"] == "auto"
+    assert body["link_type"] == "manual"
 
 
 def test_upload_without_place_is_classified_by_date_only(client, trip):

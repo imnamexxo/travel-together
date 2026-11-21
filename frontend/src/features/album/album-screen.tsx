@@ -17,7 +17,8 @@ import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
 import { autoPlaceId } from './photo-location';
-import { pickPhotos } from './photo-prep';
+import { pickPhotos, type PickedPhoto } from './photo-prep';
+import PlaceConfirmSheet, { type SuggestedGroup } from './place-confirm-sheet';
 import { usePhotoUploads } from './use-photo-uploads';
 
 type Mode = 'all' | 'date' | 'place' | 'uploader';
@@ -66,6 +67,9 @@ export default function AlbumScreen() {
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
   const pickingRef = useRef(false);
+  // 올리기 전에 확인할 추천 장소(사진 key → 장소 id). 확인한 장소만 서버로 보낸다.
+  const [pending, setPending] = useState<{ picked: PickedPhoto[]; suggested: Map<string, string | null>; groups: SuggestedGroup[] } | null>(null);
+  const [accepted, setAccepted] = useState<Set<string>>(new Set());
   const { width, height } = useWindowDimensions();
   const contentWidth = Math.min(width, 600);
   const tile = (contentWidth - 48 - 8) / 3;
@@ -90,11 +94,40 @@ export default function AlbumScreen() {
       if (!picked?.length) return;
       // 일정을 아직 못 받았으면 받아 온 뒤 장소를 찾는다.
       const items = planItems.data ?? (await planItems.refetch()).data ?? [];
-      // 촬영 위치는 여기서 장소를 찾는 데만 쓰고 버린다. 서버에는 장소 id만 간다.
-      uploader.start(picked, (p) => autoPlaceId(p.gps, p.takenAt, items));
+      // 촬영 위치는 여기서 장소를 추천하는 데만 쓰고 버린다. 서버에는 사용자가 확인한 장소만 간다
+      // (위치정보법: 단말기 안에서만 활용, docs/research/location-info-act.md).
+      const suggested = new Map(picked.map((p) => [p.key, autoPlaceId(p.gps, p.takenAt, items)] as const));
+      const counts = new Map<string, number>();
+      for (const id of suggested.values()) if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+      if (!counts.size) { uploader.start(picked); return; }
+      const labelOf = (id: string) => {
+        const item = items.find((i) => i.place?.id === id);
+        return item?.place ? placeLabel(item.place, item.title) : '일정 장소';
+      };
+      const groups = [...counts].map(([placeId, count]) => ({ placeId, label: labelOf(placeId), count }));
+      setAccepted(new Set(counts.keys()));
+      setPending({ picked, suggested, groups });
     } catch {
       showAlert('사진을 불러오지 못했어요', '사진 선택 권한과 기기의 사진 상태를 확인하고 다시 시도해주세요.');
     } finally { pickingRef.current = false; setPicking(false); }
+  }
+
+  function confirmPlaces() {
+    if (!pending) return;
+    const { picked, suggested } = pending;
+    setPending(null);
+    uploader.start(picked, (p) => {
+      const id = suggested.get(p.key) ?? null;
+      return id && accepted.has(id) ? id : null;
+    });
+  }
+
+  function toggleAccepted(placeId: string) {
+    setAccepted((current) => {
+      const next = new Set(current);
+      if (next.has(placeId)) next.delete(placeId); else next.add(placeId);
+      return next;
+    });
   }
 
   function removeSelected() {
@@ -157,6 +190,8 @@ export default function AlbumScreen() {
         </Pressable>)}
       </View>}
     />
+    <PlaceConfirmSheet visible={!!pending} groups={pending?.groups ?? []} accepted={accepted} onToggle={toggleAccepted} onConfirm={confirmPlaces} onCancel={() => setPending(null)}
+      unmatched={pending ? [...pending.suggested.values()].filter((id) => !id).length : 0} />
     <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedId(null)}>
       <SafeAreaView style={s.screen}>
         {selected && <ScrollView contentContainerStyle={s.detail}>

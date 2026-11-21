@@ -6,7 +6,7 @@ import { queryKeys } from '@/api/queries';
 import { preparePhoto, type PickedPhoto } from './photo-prep';
 
 export type UploadStatus = 'waiting' | 'uploading' | 'done' | 'failed';
-/** placeId: 휴대폰 안에서 촬영 위치로 찾은 장소(자동 연결). 좌표 자체는 보내지 않는다. */
+/** placeId: 사용자가 올리기 전에 확인한 장소(촬영 위치로 휴대폰 안에서 추천). 좌표 자체는 보내지 않는다. */
 export type Upload = { key: string; photo: PickedPhoto; placeId: string | null; status: UploadStatus; error?: string };
 
 /**
