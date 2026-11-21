@@ -223,6 +223,7 @@ class Place(Base):
     # 검색기의 장소 id: 국내 여행은 카카오, 해외 여행은 Google Places(ADR 0004).
     source_place_id: Mapped[str] = mapped_column(String(300))
     # 'kakao' 또는 'google'. Google 장소는 이름·주소·종류를 두지 않고, 좌표는 30일까지만 둔다(ADR 0006).
+    # 카카오 장소는 저장해도 되지만 최신으로 유지해야 한다(카카오 운영정책 제5조).
     source: Mapped[str] = mapped_column(String(10), server_default="kakao", default="kakao")
     name: Mapped[str | None] = mapped_column(String(100))
     address: Mapped[str | None] = mapped_column(String(200))
@@ -231,8 +232,8 @@ class Place(Base):
     latitude: Mapped[float | None] = mapped_column(Float)
     longitude: Mapped[float | None] = mapped_column(Float)
     category: Mapped[str | None] = mapped_column(String(100))
-    # Google 좌표를 받은 시각. 카카오 장소는 비어 있다.
-    coords_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 검색기에서 마지막으로 받은 시각. 30일마다 다시 받는다(Google 좌표 기한, 카카오 최신 유지, ADR 0006).
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class PlanItem(Base):
