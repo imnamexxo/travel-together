@@ -16,7 +16,7 @@ from sqlalchemy import create_engine, text
 
 from app.auth import AuthenticatedUser, InvalidToken
 from app.gemini import PlanRequest, SuggestedStop
-from app.place_search import PlaceCandidate, PlaceSearchUnavailable
+from app.place_search import PlaceCandidate, PlaceDetails, PlaceSearchUnavailable
 from app.receipt_reader import ReceiptDraft
 from app.auth_admin import AuthAdminUnavailable
 from app.storage import StorageUnavailable
@@ -48,13 +48,20 @@ class FakeAuthVerifier:
 
 
 class FakePlaceSearcher:
-    """등록해 둔 장소 중 이름에 검색어가 들어간 것을 돌려준다. 받은 검색어를 기록한다."""
+    """등록해 둔 장소 중 이름에 검색어가 들어간 것을 돌려준다. 받은 검색어를 기록한다.
 
-    def __init__(self) -> None:
+    google=True면 Google처럼 동작한다: 이름·주소를 저장하지 않고(stores_details=False), id로 확인한다.
+    """
+
+    def __init__(self, *, google: bool = False) -> None:
         self.places: list[PlaceCandidate] = []
         self.queries: list[str] = []
         self.unavailable = False
         self.aliases: dict[str, tuple[str, ...]] = {}
+        self.stores_details = not google
+        # Google id 확인(Place Details Essentials)·이름 받기(Pro) 호출 기록
+        self.lookups: list[str] = []
+        self.detail_requests: list[str] = []
 
     def add(
         self, source_place_id: str, name: str, *, lat: float = 33.5, lng: float = 126.5, address: str = "제주시",
@@ -76,6 +83,25 @@ class FakePlaceSearcher:
             p for p in self.places
             if query in p.name or any(w in p.name for w in words) or any(a in query for a in self.aliases[p.source_place_id])
         ]
+
+    def _by_id(self, source_place_id: str) -> PlaceCandidate | None:
+        return next((p for p in self.places if p.source_place_id == source_place_id), None)
+
+    def lookup(self, source_place_id: str, name: str) -> PlaceCandidate | None:
+        if self.stores_details:
+            return next((c for c in self.search(name) if c.source_place_id == source_place_id), None)
+        self.lookups.append(source_place_id)
+        if self.unavailable:
+            raise PlaceSearchUnavailable("down")
+        found = self._by_id(source_place_id)
+        return PlaceCandidate(found.source_place_id, "", "", None, found.latitude, found.longitude, None) if found else None
+
+    def details(self, source_place_id: str) -> PlaceDetails | None:
+        self.detail_requests.append(source_place_id)
+        if self.unavailable:
+            raise PlaceSearchUnavailable("down")
+        found = self._by_id(source_place_id)
+        return PlaceDetails(found.name, found.address) if found else None
 
 
 class FakePlanSuggester:
@@ -205,7 +231,7 @@ def places() -> FakePlaceSearcher:
 @pytest.fixture
 def overseas_places() -> FakePlaceSearcher:
     """해외 여행용(Google 자리) 가짜 검색기. 국내용 places와 따로 둔다."""
-    return FakePlaceSearcher()
+    return FakePlaceSearcher(google=True)
 
 
 @pytest.fixture
@@ -238,6 +264,7 @@ def client(
     )
     app = create_app(
         settings=settings, auth_verifier=auth, place_searcher=places, overseas_place_searcher=overseas_places, plan_suggester=suggester, storage=storage, receipt_reader=receipts, auth_admin=auth_admin,
+        background_jobs=False,
     )
     with TestClient(app) as client:
         yield client

@@ -659,9 +659,31 @@ export interface paths {
         };
         /**
          * Search
-         * @description 키워드로 실제 장소를 찾는다(카카오 로컬).
+         * @description 키워드로 실제 장소를 찾는다(국내 카카오, 해외 Google). 해외 결과는 저장하지 말고 보여 주기만 한다.
          */
         get: operations["search_trips__trip_id__places_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/places/{place_id}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Place Details
+         * @description 장소 이름·주소. 카카오 장소는 저장된 값, Google 장소는 그때 Google에서 받는다(저장하지 않음, ADR 0006).
+         *
+         *     Google 하루 상한에 걸리면 502다. 앱은 이름 대신 일정 제목을 보여 준다.
+         */
+        get: operations["place_details_trips__trip_id__places__place_id__details_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1372,6 +1394,16 @@ export interface components {
             /** Category */
             category: string | null;
         };
+        /**
+         * PlaceDetailsOut
+         * @description 볼 때만 받는 장소 이름·주소. 앱은 저장하지 않고 메모리에만 둔다.
+         */
+        PlaceDetailsOut: {
+            /** Name */
+            name: string;
+            /** Address */
+            address: string;
+        };
         /** PlaceOut */
         PlaceOut: {
             /**
@@ -1381,16 +1413,21 @@ export interface components {
             id: string;
             /** Source Place Id */
             source_place_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "kakao" | "google";
             /** Name */
-            name: string;
+            name: string | null;
             /** Address */
-            address: string;
+            address: string | null;
             /** Road Address */
             road_address: string | null;
             /** Latitude */
-            latitude: number;
+            latitude: number | null;
             /** Longitude */
-            longitude: number;
+            longitude: number | null;
             /** Category */
             category: string | null;
         };
@@ -3869,7 +3906,66 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 카카오 장소 검색 실패 */
+            /** @description 장소 검색(카카오·Google) 실패 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    place_details_trips__trip_id__places__place_id__details_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+                place_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceDetailsOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·장소 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 장소 검색(카카오·Google) 실패 */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -3980,7 +4076,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 카카오 장소 검색 실패 */
+            /** @description 장소 검색(카카오·Google) 실패 */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -4096,7 +4192,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 카카오 장소 검색 실패 */
+            /** @description 장소 검색(카카오·Google) 실패 */
             502: {
                 headers: {
                     [name: string]: unknown;

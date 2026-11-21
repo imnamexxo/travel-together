@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { Animated, Image, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, PanResponder, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,12 +11,15 @@ import { useCurrentTrip } from '@/features/trip/current-trip';
 import { useMapData, useMembers } from '@/api/queries';
 import type { MapPlace } from '@/api/client';
 import PhotoViewer from '@/components/photo-viewer';
+import { GoogleAttribution, placeLabel, usePlaceName } from '@/features/places/google-places';
 import PlaceMap from './place-map';
 
 type Filter = 'all' | 'visited' | 'planned';
 // 펼쳤을 때 장소 정보(요약·일정·사진·버튼) 부분의 처음 높이. 실제로는 내용 높이만큼(화면의 절반까지) 펼친다.
 const SHEET_BODY = 230;
 const NO_PLACES: MapPlace[] = [];
+// 이 기기의 지도가 Google 지도인가(react-native-maps는 안드로이드에서 Google 지도, iOS에서 Apple 지도).
+const isGoogleMap = () => Platform.OS === 'android';
 
 type SheetState = { expanded: boolean; full: number; settle: (open: boolean) => void };
 
@@ -49,8 +52,18 @@ export default function MapScreen() {
   useFocusEffect(useCallback(() => { void refetch(); }, [refetch]));
   const all = mapData.data?.places ?? NO_PLACES;
   const places = useMemo(() => all.filter((p) => filter === 'all' || (filter === 'visited' ? p.visited : !p.visited)), [all, filter]);
-  const pins = useMemo(() => places.map(({ place, visited }) => ({ id: place.id, name: place.name, latitude: place.latitude, longitude: place.longitude, visited })), [places]);
+  // 핀 이름은 받아 오지 않는다: 카카오는 저장된 이름, Google 장소는 일정 제목(ADR 0006).
+  // Google 좌표를 30일 안에 다시 받지 못한 장소는 좌표가 없어 핀을 찍지 않는다.
+  const GOOGLE_MAP = isGoogleMap();
+  // Google 장소 정보는 Google 지도에만 함께 쓸 수 있다(약관 14.2). 안드로이드만 Google 지도이고,
+  // 웹(OpenStreetMap)과 iOS(Apple 지도)에서는 Google 장소의 핀을 찍지 않고 이름도 받지 않는다.
+  const pins = useMemo(() => places.flatMap(({ place, visited, plan_items }) =>
+    place.latitude === null || place.longitude === null || (place.source === 'google' && !GOOGLE_MAP) ? []
+      : [{ id: place.id, name: placeLabel(place, plan_items[0]?.title), latitude: place.latitude, longitude: place.longitude, visited, source: place.source }]), [places, GOOGLE_MAP]);
+  const hiddenGoogle = !GOOGLE_MAP && places.some((p) => p.place.source === 'google');
   const selected = places.find((p) => p.place.id === selectedId) ?? places[0];
+  // 고른 장소의 이름만 받아 온다.
+  const selectedName = usePlaceName(trip.id, selected?.place, selected?.plan_items[0]?.title, GOOGLE_MAP);
   const dayLabel = (iso: string) => { const index = days.findIndex((d) => d.iso === iso); return index < 0 ? '' : `${index + 1}일 차`; };
   const { height: screenHeight } = useWindowDimensions();
   const maxBody = Math.max(SHEET_BODY, Math.round(screenHeight * 0.5));
@@ -96,12 +109,12 @@ export default function MapScreen() {
       </ScrollView>}
       <View style={s.filters}>{([{ key: 'all', title: '전체' }, { key: 'visited', title: '● 들른 곳' }, { key: 'planned', title: '○ 계획만 한 곳' }] as const).map((entry) => <Pressable key={entry.key} accessibilityRole="tab" accessibilityState={{ selected: filter === entry.key }} onPress={() => pick(() => setFilter(entry.key))} style={s.filterButton}><Text style={[s.filterText, filter === entry.key && s.activeText]}>{entry.title}</Text></Pressable>)}<Text style={s.placeCount}>{places.length}곳</Text></View>
     </View>
-    <View style={s.mapArea}><PlaceMap pins={pins} selectedId={selected?.place.id ?? null} onSelect={setSelectedId} /></View>
+    <View style={s.mapArea}><PlaceMap pins={pins} selectedId={selected?.place.id ?? null} onSelect={setSelectedId} />{hiddenGoogle && <Text style={s.notice}>해외 장소는 Google 지도 약관 때문에 안드로이드 앱에서만 지도에 표시돼요.</Text>}</View>
     <View style={s.bottom}>
       {selected ? <View>
         <View {...drag.panHandlers} style={s.sheetHeader}>
         <Pressable accessibilityRole="button" accessibilityLabel={expanded ? '장소 정보 접기' : '장소 정보 펼치기'} onPress={() => settle(!expanded)} style={s.handleArea}><View style={s.handle} /></Pressable>
-        <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selected.place.name}</Text><Text style={s.area}>{selected.place.road_address ?? selected.place.address}</Text></View><View style={s.kind}><View style={[s.kindDot, !selected.visited && s.kindDotOpen]} /><Text style={s.kindText}>{selected.visited ? '들른 곳' : '계획만 한 곳'}</Text></View></View>
+        <View style={s.placeHeading}><View style={s.placeTitleGroup}><Text style={s.placeName}>{selectedName.name}</Text>{(!!selectedName.address || selectedName.fromGoogle) && <Text style={s.area}>{selectedName.address}{selectedName.fromGoogle && <GoogleAttribution inline />}</Text>}</View><View style={s.kind}><View style={[s.kindDot, !selected.visited && s.kindDotOpen]} /><Text style={s.kindText}>{selected.visited ? '들른 곳' : '계획만 한 곳'}</Text></View></View>
         </View>
         {(expanded || moving) && <Animated.View style={{ height: bodyHeight, overflow: 'hidden' }}><ScrollView style={{ maxHeight: maxBody }} contentContainerStyle={s.sheetContent} onContentSizeChange={(_, h) => fitBody(h)}>
         <MetaLine textStyle={s.counts} parts={[`일정 ${selected.plan_items.length}개`, `사진 ${selected.photos.length}장`, !!selected.expense_count && `지출 ${money.format(selected.expense_total)}`]} />
@@ -113,7 +126,7 @@ export default function MapScreen() {
         </ScrollView></Animated.View>}
       </View> : <View style={s.noSelection}><Text style={s.emptyTitle}>{mapData.isError ? '지도 정보를 불러오지 못했어요' : '아직 표시할 장소가 없어요'}</Text><Text style={s.hint}>{mapData.isError ? '잠시 후 다시 열어 주세요.' : '플래너에서 일정에 장소를 넣으면 지도에 핀이 생겨요.'}</Text></View>}
     </View>
-    {viewing !== null && selected && <PhotoViewer title={selected.place.name} start={viewing} onClose={() => setViewing(null)}
+    {viewing !== null && selected && <PhotoViewer title={selectedName.name} start={viewing} onClose={() => setViewing(null)}
       photos={selected.photos.map((p) => ({ id: p.id, url: p.url }))} />}
   </SafeAreaView>;
 }
@@ -126,7 +139,7 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   memberScroll: { flexGrow: 0 }, members: { paddingTop: 8, paddingBottom: 6, gap: 6, alignItems: 'center' }, memberChip: { minHeight: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: C.border }, memberActive: { borderColor: C.primary, backgroundColor: C.banner }, memberText: { fontSize: 12, color: C.textSecondary }, memberActiveText: { color: C.primary, fontWeight: '600' },
   visitedOn: { fontSize: 12, color: C.accent, marginTop: 6 },
   filters: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 }, filterButton: { minHeight: 44, justifyContent: 'center' }, filterText: { fontSize: 12, color: C.textMuted }, activeText: { color: C.primary, fontWeight: '600' }, placeCount: { fontSize: 11, color: C.textMuted, marginLeft: 'auto' },
-  mapArea: { flex: 1, minHeight: 160 }, bottom: { backgroundColor: C.background }, sheetContent: { paddingHorizontal: 24, paddingBottom: 12, width: '100%', maxWidth: 600, alignSelf: 'center' },
+  mapArea: { flex: 1, minHeight: 160 }, notice: { position: 'absolute', left: 12, right: 68, bottom: 12, padding: 10, borderRadius: 12, backgroundColor: C.background, fontSize: 12, lineHeight: 18, color: C.textSecondary, zIndex: 1000 }, bottom: { backgroundColor: C.background }, sheetContent: { paddingHorizontal: 24, paddingBottom: 12, width: '100%', maxWidth: 600, alignSelf: 'center' },
   sheetHeader: { paddingHorizontal: 24, paddingBottom: 6, width: '100%', maxWidth: 600, alignSelf: 'center' }, handleArea: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', minHeight: 30 }, handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: C.border },
   placeHeading: { flexDirection: 'row', alignItems: 'center', gap: 12 }, placeTitleGroup: { flex: 1 }, placeName: { fontSize: 19, fontFamily: Type.heading, color: C.text }, area: { fontSize: 12, color: C.textMuted, marginTop: 5 }, badge: { fontSize: 11, color: C.primary, backgroundColor: C.banner, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9 }, counts: { fontSize: 12, color: C.textSecondary, marginTop: 4 },
   planRow: { flexDirection: 'row', gap: 12, paddingTop: 12 }, time: { fontSize: 12, color: C.accent, fontVariant: ['tabular-nums'] }, memo: { flex: 1, fontSize: 12, lineHeight: 18, color: C.textSecondary }, thumbnails: { gap: 6, paddingTop: 14 }, thumbnail: { width: 62, height: 62, borderRadius: 6, backgroundColor: C.surface },

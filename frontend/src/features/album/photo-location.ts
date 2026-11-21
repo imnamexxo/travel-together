@@ -53,9 +53,11 @@ export function autoPlaceId(gps: Gps | null, takenAt: string | null, planItems: 
   const day = toKstParts(takenAt).date;
   let best: { id: string; meters: number } | null = null;
   for (const item of planItems) {
-    if (item.date !== day || !item.place) continue;
-    const meters = distanceMeters(gps, item.place);
-    if (meters <= AUTO_LINK_METERS && (!best || meters < best.meters)) best = { id: item.place.id, meters };
+    // Google 좌표를 30일 안에 다시 받지 못한 장소는 좌표가 없다(ADR 0006).
+    const { place } = item;
+    if (item.date !== day || !place || place.latitude === null || place.longitude === null) continue;
+    const meters = distanceMeters(gps, { latitude: place.latitude, longitude: place.longitude });
+    if (meters <= AUTO_LINK_METERS && (!best || meters < best.meters)) best = { id: place.id, meters };
   }
   return best?.id ?? null;
 }

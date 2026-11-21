@@ -1,6 +1,6 @@
 # 진행 상황
 
-마지막 갱신: 2026-11-18
+마지막 갱신: 2026-11-21
 
 ## 2026-11-17 화면 모드 설정
 
@@ -24,7 +24,8 @@
 ## 바로 다음 할 일
 
 1. 팀원 저장소 초대(아직이면). #1·#2 스펙 이슈는 2026-11-14에 닫음(해외 여행 추가를 본문에 적음)
-2. #62 출시 전 Google Places 약관 맞추기 — 다른 작업을 다 끝낸 뒤 마지막에(2026-11-14 결정)
+2. #62 Google Places 약관 맞추기 PR 머지 → Google Cloud에서 Places API (New) GetPlace 하루 160건 상한 설정 → 새 APK 빌드(앱 코드도 바뀌어 `eas update`로도 되지만 서버와 함께 배포)
+3. 카카오 로컬 API 약관(장소 정보 저장 가능 여부) 확인
 
 ## 사람이 해야 할 일
 
@@ -40,6 +41,7 @@
 | Supabase Storage 비공개 버킷 + `SUPABASE_SERVICE_ROLE_KEY`를 Render 환경 변수에 | #9 | 완료(버킷 `trip-media`로 안내함) |
 | Google Cloud 결제 계정(카드 등록) + Android 지도 키 | #16 | 완료(`GOOGLE_MAPS_ANDROID_KEY`: expo.dev development 환경 + frontend/.env) |
 | Google Places API (New) 켜기 + 서버 키 `GOOGLE_PLACES_API_KEY`를 Render에 | #59 해외 장소 검색 | 대기 (#58) |
+| Google Cloud 할당량: Places API (New) GetPlace 하루 160건(확인·좌표 갱신·이름 받기가 함께 씀, ADR 0006) | #62 머지 후 | 대기 |
 | 팀원 저장소 초대 | #4 전 | 대기 (아이디 필요) |
 | 기획서 용어를 `GLOSSARY.md`에 맞춰 수정 ("그룹", "이용자", "송금 목록" 등) | 제출 전 | 대기 |
 | 기획서 4장 UI 목업 이미지 새로 그리기 | 제출 전 | 대기 |
@@ -80,6 +82,12 @@
 ```
 
 ## 기록
+
+### 2026-11-21
+
+- #62 Google Places 약관(서비스별 약관 14장 2026-10-28 판 원문 확인): 해외 장소는 id와 30일 안의 좌표만 저장(ADR 0006). 마이그레이션 0015가 기존 해외 장소의 이름·주소·종류와 추천 후보의 Google 정보를 지움. 서버가 한 시간마다 29일 지난 좌표를 Place Details Essentials로 다시 받고, 30일 넘게 못 받으면 지움. 장소 확인도 이름 재검색 대신 id 확인. 이름은 `GET /trips/{id}/places/{place_id}/details`로 볼 때만(앱 메모리에만): 안드로이드 지도에서 고른 장소, 앨범 장소별 묶음, 지출·일정 편집의 저장된 장소. 지도 핀·장소 목록·연결 버튼은 일정 제목. 해외 일정은 제목에 Google 이름 대신 검색어를 채움. Google 지도가 아닌 지도(웹 OSM, iOS Apple)에는 해외 핀을 안 찍음. 검색 결과·받은 이름 옆에 "Google Maps" 출처.
+- 무료 범위(가격표 원문): Place Details Essentials 월 10,000건, Pro 월 5,000건, Text Search Pro 월 5,000건, 안드로이드 Maps SDK 무제한.
+- 검증: 서버 321개, 앱 203개 테스트 통과, 타입 검사·lint 통과. 실기기 확인은 아직.
 
 ### 2026-11-18
 

@@ -5,7 +5,7 @@
  * 기본 분담 대상을 바꾸면 따르는 품목만 함께 바뀐다.
  */
 
-import type { Expense, ExpenseInput, ExpenseStatus } from '@/api/client';
+import type { Expense, ExpenseInput, ExpenseStatus, Place } from '@/api/client';
 import { moneyFor, type Money } from '@/lib/money';
 
 const WON = moneyFor('KRW');
@@ -31,9 +31,14 @@ export type ExpenseForm = {
   total: string;
   defaultSharerIds: string[];
   items: FormItem[];
-  /** 장소 후보에서 고른 장소. 고르기 전에는 비어 있다(자동으로 붙이지 않음). */
-  place: { source_place_id: string; name: string } | null;
+  /**
+   * 장소 후보에서 고른 장소. 고르기 전에는 비어 있다(자동으로 붙이지 않음).
+   * saved는 이미 저장된 지출의 장소다. Google 장소는 이름이 저장되지 않아 saved로 이름을 받아 보여 준다(ADR 0006).
+   */
+  place: ExpenseFormPlace | null;
 };
+
+export type ExpenseFormPlace = { source_place_id: string; name: string; saved?: Place };
 
 let nextKey = 0;
 const newKey = () => `item-${++nextKey}`;
@@ -78,7 +83,10 @@ export function formFromExpense(expense: Expense, money: Money = WON): ExpenseFo
     payerId: expense.payer_member_id,
     total: moneyText(expense.total_amount),
     defaultSharerIds: expense.default_sharer_ids,
-    place: expense.place ? { source_place_id: expense.place.source_place_id, name: expense.place.name } : null,
+    // 서버는 이미 이 여행에 있는 장소면 이름을 보지 않는다. Google 장소는 이름이 없으니 상호로 채워 보낸다.
+    place: expense.place
+      ? { source_place_id: expense.place.source_place_id, name: expense.place.name ?? (expense.merchant_name || '장소'), saved: expense.place }
+      : null,
     items: expense.items.map((item) => ({
       key: newKey(),
       name: item.name,
@@ -161,7 +169,7 @@ export function toInput(form: ExpenseForm, money: Money = WON): { input: Expense
       total_amount: amount(form.total, 'total_amount'),
       default_sharer_ids: form.defaultSharerIds,
       items,
-      place: form.place,
+      place: form.place && { source_place_id: form.place.source_place_id, name: form.place.name },
     },
     errors,
   };

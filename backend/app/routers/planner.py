@@ -1,8 +1,8 @@
 import datetime as dt
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,24 +13,34 @@ from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
 from app import loading
 from app.models import Place, PlanItem, Trip
 from app.permissions import require_member
-from app.place_search import PlaceCandidate, PlaceSearcher
+from app.place_search import PlaceCandidate, PlaceSearcher, PlaceSearchUnavailable
 from app.places import get_place_searcher, place_for, search_places
 
 router = APIRouter(prefix="/trips/{trip_id}", tags=["planner"], responses=ERROR_RESPONSES)
 
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "여행·일정 항목 없음"}}
-EXTERNAL = {502: {"model": ErrorResponse, "description": "카카오 장소 검색 실패"}}
+EXTERNAL = {502: {"model": ErrorResponse, "description": "장소 검색(카카오·Google) 실패"}}
 
 
 class PlaceOut(BaseModel):
     id: uuid.UUID
     source_place_id: str
+    # kakao: 이름·주소가 함께 온다. google: 이름·주소·종류가 없고(저장 금지), 볼 때 /details로 받는다(ADR 0006).
+    source: Literal["kakao", "google"]
+    name: str | None
+    address: str | None
+    road_address: str | None
+    # Google 좌표를 30일 안에 다시 받지 못하면 비어 있다. 그런 장소는 지도에 찍지 않는다.
+    latitude: float | None
+    longitude: float | None
+    category: str | None
+
+
+class PlaceDetailsOut(BaseModel):
+    """볼 때만 받는 장소 이름·주소. 앱은 저장하지 않고 메모리에만 둔다."""
+
     name: str
     address: str
-    road_address: str | None
-    latitude: float
-    longitude: float
-    category: str | None
 
 
 class PlaceCandidateOut(BaseModel):
@@ -82,6 +92,7 @@ def place_out(place: Place) -> PlaceOut:
     return PlaceOut(
         id=place.id,
         source_place_id=place.source_place_id,
+        source=place.source,  # type: ignore[arg-type]
         name=place.name,
         address=place.address,
         road_address=place.road_address,
@@ -172,10 +183,37 @@ def search(
     session: Session = Depends(get_session),
     searcher: PlaceSearcher = Depends(get_place_searcher),
 ) -> list[PlaceCandidateOut]:
-    """키워드로 실제 장소를 찾는다(카카오 로컬)."""
+    """키워드로 실제 장소를 찾는다(국내 카카오, 해외 Google). 해외 결과는 저장하지 말고 보여 주기만 한다."""
     require_member(session, trip_id, user)
     near = (lat, lng) if lat is not None and lng is not None else None
     return [candidate_out(c) for c in search_places(searcher, query.strip(), near)]
+
+
+@router.get("/places/{place_id}/details", responses={404: {"model": ErrorResponse, "description": "여행·장소 없음"}, **EXTERNAL})
+def place_details(
+    trip_id: uuid.UUID,
+    place_id: uuid.UUID,
+    request: Request,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> PlaceDetailsOut:
+    """장소 이름·주소. 카카오 장소는 저장된 값, Google 장소는 그때 Google에서 받는다(저장하지 않음, ADR 0006).
+
+    Google 하루 상한에 걸리면 502다. 앱은 이름 대신 일정 제목을 보여 준다.
+    """
+    require_member(session, trip_id, user)
+    place = session.scalars(select(Place).where(Place.id == place_id, Place.trip_id == trip_id)).one_or_none()
+    if place is None:
+        raise ApiError(404, "place_not_found", "장소를 찾을 수 없습니다.")
+    if place.source != "google":
+        return PlaceDetailsOut(name=place.name or "", address=place.road_address or place.address or "")
+    try:
+        details = request.app.state.overseas_place_searcher.details(place.source_place_id)
+    except PlaceSearchUnavailable:
+        raise ApiError(502, "place_search_unavailable", "장소 정보를 받지 못했습니다. 잠시 후 다시 시도해 주세요.")
+    if details is None:
+        raise ApiError(404, "place_not_found", "Google 지도에서 이 장소를 찾을 수 없습니다.")
+    return PlaceDetailsOut(name=details.name, address=details.address)
 
 
 @router.get("/plan-items", responses=NOT_FOUND)

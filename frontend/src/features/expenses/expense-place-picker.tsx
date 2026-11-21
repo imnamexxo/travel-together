@@ -3,10 +3,12 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-nati
 import Pressable from '@/components/pressable';
 
 import { useExpensePlaceCandidates } from '@/api/queries';
+import { GoogleAttribution, PlaceName } from '@/features/places/google-places';
+import type { ExpenseFormPlace } from './expense-form';
 import type { TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
 
-type Chosen = { source_place_id: string; name: string } | null;
+type Chosen = ExpenseFormPlace | null;
 
 type Props = {
   tripId: string;
@@ -15,10 +17,12 @@ type Props = {
   value: Chosen;
   onChange: (place: Chosen) => void;
   editable: boolean;
+  /** 해외 여행이면 후보가 Google 장소라 출처를 단다(ADR 0006). */
+  overseas: boolean;
 };
 
 /** 지출의 장소: 상호(또는 고친 검색어)로 후보를 받아 고르거나 비워 둔다. 자동으로 붙이지 않는다. */
-export default function ExpensePlacePicker({ tripId, merchant, value, onChange, editable }: Props) {
+export default function ExpensePlacePicker({ tripId, merchant, value, onChange, editable, overseas }: Props) {
   const C = useTravelColors();
   const s = useThemedStyles(sStyles);
   const [open, setOpen] = useState(false);
@@ -39,12 +43,16 @@ export default function ExpensePlacePicker({ tripId, merchant, value, onChange, 
     else setSubmitted(q);
   }
 
+  // 저장된 장소는 PlaceName이 이름을 보여 준다(Google 장소는 받아 온다). 방금 고른 후보는 검색 결과의 이름이다.
+  const chosenName = (style: object) => value?.saved
+    ? <PlaceName tripId={tripId} place={value.saved} fallback={value.name} style={style} prefix="📍 " />
+    : <Text style={style}>📍 {value?.name}{overseas && <GoogleAttribution inline />}</Text>;
   if (!editable) {
-    return <Text style={s.value}>{value ? `📍 ${value.name}` : '장소 없음'}</Text>;
+    return value ? chosenName(s.value) : <Text style={s.value}>장소 없음</Text>;
   }
   if (value) {
     return <View style={s.chosen}>
-      <Text style={s.chosenName}>📍 {value.name}</Text>
+      {chosenName(s.chosenName)}
       <Pressable accessibilityRole="button" accessibilityLabel="지출 장소 빼기" onPress={() => onChange(null)} style={s.textButton}><Text style={s.muted}>빼기</Text></Pressable>
     </View>;
   }
@@ -64,6 +72,7 @@ export default function ExpensePlacePicker({ tripId, merchant, value, onChange, 
         <View style={s.candidateHead}><Text style={s.candidateName}>{c.name}</Text>{c.in_trip && <Text style={s.badge}>이 여행의 장소</Text>}</View>
         <Text style={s.muted}>{c.road_address ?? c.address}</Text>
       </Pressable>)}
+    {overseas && !!candidates.data?.length && <GoogleAttribution />}
     <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={s.textButton}><Text style={s.muted}>장소 없이 두기</Text></Pressable>
   </View>;
 }
