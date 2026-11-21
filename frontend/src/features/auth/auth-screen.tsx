@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { openPrivacyPolicy } from '@/constants/legal';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -108,6 +109,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
           {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
           {!!notice && <Text style={s.noticeText}>{notice}</Text>}
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting, busy: submitting }} disabled={submitting} onPress={submit} style={({ pressed }) => [s.primaryButton, (pressed || submitting) && s.pressed]}><Text style={s.primaryText}>{signup ? '회원가입' : '로그인'}</Text></Pressable>
+          {signup && <Pressable accessibilityRole="link" onPress={openPrivacyPolicy} style={s.forgot}><Text style={s.smallLink}>가입하면 개인정보 처리방침에 따라 정보가 처리돼요. 처리방침 보기</Text></Pressable>}
           <SocialLoginButtons />
           <View style={s.switchRow}><Text style={s.switchText}>{signup ? '이미 계정이 있나요?' : '아직 계정이 없나요?'}</Text><Pressable accessibilityRole="button" onPress={() => signup ? router.replace('/login') : router.push('/signup')} style={s.linkButton}><Text style={s.link}>{signup ? '로그인' : '회원가입'}</Text></Pressable></View>
         </View>
