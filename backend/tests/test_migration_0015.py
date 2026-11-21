@@ -1,4 +1,6 @@
-"""마이그레이션 0015: 이미 저장된 해외 장소의 이름·주소·종류와 추천 후보의 Google 정보를 지운다(ADR 0006)."""
+"""마이그레이션 0015~0016: 이미 저장된 해외 장소의 Google 정보를 지우고(ADR 0006), 모든 장소에 받은 시각을 둔다."""
+
+import datetime as dt
 
 from alembic import command
 from alembic.config import Config
@@ -52,12 +54,15 @@ def test_0015_strips_google_details_and_keeps_kakao(engine, database_url):
 
     with engine.begin() as c:
         places = c.execute(
-            text("SELECT source_place_id, source, name, address, category, latitude, coords_fetched_at IS NOT NULL FROM places ORDER BY source")
+            text("SELECT source_place_id, source, name, address, category, latitude, refreshed_at FROM places ORDER BY source")
         ).all()
         suggestion = c.execute(text("SELECT source_place_id, found_name, latitude FROM suggested_items")).one()
 
-    assert places == [
-        ("ChIJ-x", "google", None, None, None, 34.6, True),
-        ("k1", "kakao", "시장", "제주", "시장", 33.5, False),
+    assert [p[:6] for p in places] == [
+        ("ChIJ-x", "google", None, None, None, 34.6),
+        ("k1", "kakao", "시장", "제주", "시장", 33.5),
     ]
+    # 받은 시각을 모르는 장소는 오래된 것으로 두어 서버가 곧 다시 받는다(Google은 해외 검색을 처음 낸 날).
+    kst = dt.timezone(dt.timedelta(hours=9))
+    assert [p[6] for p in places] == [dt.datetime(2026, 11, 14, tzinfo=kst), dt.datetime(2026, 10, 1, tzinfo=kst)]
     assert tuple(suggestion) == ("ChIJ-x", None, None)

@@ -13,7 +13,7 @@ from app.db import make_sessionmaker
 from app.errors import install_error_handlers
 from app.request_log import install_request_log
 from app.gemini import GeminiPlanSuggester, PlanSuggester
-from app.places import purge_expired_google_coords, refresh_google_coords
+from app.places import purge_expired_google_coords, refresh_places
 from app.place_search import GooglePlaceSearcher, KakaoPlaceSearcher, PlaceSearcher
 from app.receipt_reader import GeminiReceiptReader, ReceiptReader
 from app.storage import ObjectStorage, SupabaseStorage
@@ -27,14 +27,14 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-# Google 좌표를 다시 받는 간격(ADR 0006). 무료 Render는 쉬다가 깨어나므로, 시작할 때도 한 번 돈다.
+# 장소 정보를 다시 받는 작업의 간격(Google 좌표 기한·카카오 최신 유지, ADR 0006). 무료 Render는 쉬다가 깨어나므로, 시작할 때도 한 번 돈다.
 COORDS_JOB_INTERVAL_S = 3600
 
 
 def _refresh_coords_once(app: FastAPI) -> None:
     session = app.state.sessionmaker()
     try:
-        refresh_google_coords(session, app.state.overseas_place_searcher)
+        refresh_places(session, {"google": app.state.overseas_place_searcher, "kakao": app.state.place_searcher})
         purge_expired_google_coords(session)
     finally:
         session.close()
@@ -45,7 +45,7 @@ async def _coords_job(app: FastAPI) -> None:
         try:
             await run_in_threadpool(_refresh_coords_once, app)
         except Exception:
-            logger.exception("Google 좌표 갱신 실패")
+            logger.exception("장소 갱신 실패")
         await asyncio.sleep(COORDS_JOB_INTERVAL_S)
 
 

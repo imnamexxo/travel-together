@@ -1,6 +1,7 @@
 """여행의 장소: 여행에 맞는 검색기(국내 카카오, 해외 Google)로 검증하고, 같은 장소는 하나만 둔다.
 
-Google 장소는 id와 30일 안의 좌표만 저장한다(ADR 0006). 좌표는 refresh_google_coords가 다시 받는다.
+Google 장소는 id와 30일 안의 좌표만 저장한다(ADR 0006). 카카오 장소는 이름·주소·좌표를 두되 30일마다 최신으로 맞춘다
+(카카오 운영정책 제5조: 캐시한 데이터를 최신으로 유지). 둘 다 refresh_places가 한다.
 """
 
 import datetime as dt
@@ -18,9 +19,9 @@ from app.place_search import PlaceCandidate, PlaceSearcher, PlaceSearchUnavailab
 
 logger = logging.getLogger(__name__)
 
-# 약관은 Google 좌표를 30일까지 둘 수 있게 한다. 하루 먼저 다시 받는다.
+# 약관은 Google 좌표를 30일까지 둘 수 있게 한다. 하루 먼저 다시 받는다. 카카오도 같은 주기로 최신으로 맞춘다.
 COORDS_KEEP = dt.timedelta(days=30)
-COORDS_REFRESH_AFTER = dt.timedelta(days=29)
+REFRESH_AFTER = dt.timedelta(days=29)
 # 한 번 돌 때 다시 받는 장소 수의 상한(Place Details Essentials 무료 한도 보호).
 REFRESH_BATCH = 200
 
@@ -92,45 +93,59 @@ def place_from_candidate(session: Session, searcher: PlaceSearcher, trip_id: uui
         latitude=candidate.latitude,
         longitude=candidate.longitude,
         category=candidate.category if keep else None,
-        coords_fetched_at=None if keep else dt.datetime.now(dt.timezone.utc),
+        refreshed_at=dt.datetime.now(dt.timezone.utc),
     )
     session.add(place)
     session.flush()
     return place
 
 
-def refresh_google_coords(session: Session, searcher: PlaceSearcher, now: dt.datetime | None = None) -> int:
-    """29일이 지난 Google 좌표를 다시 받는다. 못 받은 채 30일이 지났으면 좌표를 지운다. 다시 받은 수를 돌려준다.
+def _due(session: Session, source: str, now: dt.datetime) -> list[Place]:
+    query = select(Place).where(Place.source == source, Place.refreshed_at < now - REFRESH_AFTER)
+    if source == "google":
+        query = query.where(Place.latitude.is_not(None))
+    return list(session.scalars(query.order_by(Place.refreshed_at).limit(REFRESH_BATCH)))
 
-    AI 추천 후보에는 Google 좌표를 두지 않으므로(ADR 0006) places만 본다.
-    """
-    now = now or dt.datetime.now(dt.timezone.utc)
-    stale = session.scalars(
-        select(Place)
-        .where(
-            Place.source == "google",
-            Place.latitude.is_not(None),
-            Place.coords_fetched_at < now - COORDS_REFRESH_AFTER,
-        )
-        .order_by(Place.coords_fetched_at)
-        .limit(REFRESH_BATCH)
-    ).all()
-    refreshed = 0
-    for place in stale:
-        try:
-            found = searcher.lookup(place.source_place_id, "")
-        except PlaceSearchUnavailable:
-            # Google이 멈췄거나 하루 상한에 걸렸다. 나머지는 다음에(30일이 지나면 purge가 지운다).
-            break
-        if found is None:
+
+def _refresh(place: Place, searcher: PlaceSearcher, now: dt.datetime) -> bool:
+    """한 곳을 다시 받는다. 받았으면 True. 검색기가 멈췄으면 PlaceSearchUnavailable."""
+    found = searcher.lookup(place.source_place_id, place.name or "")
+    if found is None:
+        if place.source == "google":
             # Google에서 사라진 장소(폐업 등)다. 다시 받을 수 없으니 좌표를 지운다.
             place.latitude = place.longitude = None
         else:
-            place.latitude, place.longitude, place.coords_fetched_at = found.latitude, found.longitude, now
-            refreshed += 1
-    session.commit()
-    if stale:
-        logger.info("Google 좌표 갱신: %d곳 중 %d곳", len(stale), refreshed)
+            # 카카오에서 같은 id가 안 나온다(폐업·이름 변경). 정보는 두고 30일 뒤에 다시 본다.
+            logger.info("카카오 장소 확인 안 됨: %s", place.source_place_id)
+            place.refreshed_at = now
+        return False
+    if searcher.stores_details:
+        place.name, place.address, place.road_address, place.category = found.name, found.address, found.road_address, found.category
+    place.latitude, place.longitude, place.refreshed_at = found.latitude, found.longitude, now
+    return True
+
+
+def refresh_places(session: Session, searchers: dict[str, PlaceSearcher], now: dt.datetime | None = None) -> int:
+    """29일이 지난 장소를 검색기에서 다시 받는다. 다시 받은 수를 돌려준다.
+
+    Google은 좌표만(이름은 저장하지 않으므로), 카카오는 이름·주소·종류·좌표를 최신으로 맞춘다.
+    AI 추천 후보는 잠깐 쓰는 값이라 places만 본다.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+    refreshed = 0
+    for source, searcher in searchers.items():
+        due = _due(session, source, now)
+        done = 0
+        for place in due:
+            try:
+                done += _refresh(place, searcher, now)
+            except PlaceSearchUnavailable:
+                # 검색기가 멈췄거나 하루 상한에 걸렸다. 나머지는 다음에(Google 좌표는 30일이 지나면 purge가 지운다).
+                break
+        session.commit()
+        if due:
+            logger.info("장소 갱신(%s): %d곳 중 %d곳", source, len(due), done)
+        refreshed += done
     return refreshed
 
 
@@ -141,7 +156,7 @@ def purge_expired_google_coords(session: Session, now: dt.datetime | None = None
         select(Place).where(
             Place.source == "google",
             Place.latitude.is_not(None),
-            Place.coords_fetched_at < now - COORDS_KEEP,
+            Place.refreshed_at < now - COORDS_KEEP,
         )
     ):
         place.latitude = place.longitude = None

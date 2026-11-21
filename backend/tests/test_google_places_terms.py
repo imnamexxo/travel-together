@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Place
 from app.place_search import GooglePlaceSearcher, PlaceSearchUnavailable
-from app.places import purge_expired_google_coords, refresh_google_coords
+from app.places import purge_expired_google_coords, refresh_places
 from tests.conftest import bearer
 
 OSAKA = {"name": "오사카 여행", "start_date": "2026-12-01", "end_date": "2026-12-02", "currency": "JPY", "is_overseas": True}
@@ -47,7 +47,7 @@ def test_overseas_place_keeps_only_id_and_coords(client, auth, engine, overseas_
     assert (out["latitude"], out["longitude"]) == (34.6873, 135.5262)
     place = stored(engine, "ChIJ-castle")
     assert (place.name, place.address, place.road_address, place.category) == (None, None, None, None)
-    assert place.coords_fetched_at is not None
+    assert place.refreshed_at is not None
     # 이름 검색(Text Search)이 아니라 id 확인(Place Details Essentials)으로 확인한다.
     assert overseas_places.lookups == ["ChIJ-castle"] and overseas_places.queries == []
 
@@ -68,7 +68,6 @@ def test_domestic_place_still_keeps_name_and_address(client, auth, engine, place
     out = add_plan(client, jeju, minji, "k1", "동문재래시장").json()["place"]
 
     assert (out["source"], out["name"], out["address"]) == ("kakao", "동문재래시장", "제주시 이도1동")
-    assert stored(engine, "k1").coords_fetched_at is None
 
 
 def test_details_are_fetched_from_google_each_time_and_not_stored(client, auth, engine, overseas_places):
@@ -116,7 +115,7 @@ def test_details_errors(client, auth, overseas_places):
 def set_fetched_at(engine, source_place_id, when):
     with Session(engine) as session:
         place = session.scalars(select(Place).where(Place.source_place_id == source_place_id)).one()
-        place.coords_fetched_at = when
+        place.refreshed_at = when
         session.commit()
 
 
@@ -133,10 +132,10 @@ def test_refresh_renews_only_coords_older_than_29_days(client, auth, engine, ove
     overseas_places.lookups.clear()
 
     with Session(engine) as session:
-        assert refresh_google_coords(session, overseas_places, now) == 1
+        assert refresh_places(session, {"google": overseas_places}, now) == 1
 
     old = stored(engine, "ChIJ-old")
-    assert (old.latitude, old.longitude, old.coords_fetched_at) == (1.5, 2.5, now)
+    assert (old.latitude, old.longitude, old.refreshed_at) == (1.5, 2.5, now)
     assert overseas_places.lookups == ["ChIJ-old"]
 
 
@@ -149,7 +148,7 @@ def test_refresh_clears_coords_of_places_gone_from_google(client, auth, engine, 
     overseas_places.places.clear()
 
     with Session(engine) as session:
-        refresh_google_coords(session, overseas_places, now)
+        refresh_places(session, {"google": overseas_places}, now)
 
     gone = stored(engine, "ChIJ-closed")
     assert (gone.latitude, gone.longitude) == (None, None)
@@ -167,7 +166,7 @@ def test_coords_are_deleted_after_30_days_when_google_is_down(client, auth, engi
     overseas_places.unavailable = True
 
     with Session(engine) as session:
-        assert refresh_google_coords(session, overseas_places, now) == 0
+        assert refresh_places(session, {"google": overseas_places}, now) == 0
         purge_expired_google_coords(session, now)
 
     assert stored(engine, "ChIJ-a").latitude is None
@@ -234,3 +233,58 @@ def test_google_quota_is_unavailable():
         searcher.details("x")
     with pytest.raises(PlaceSearchUnavailable):
         searcher.lookup("x", "")
+
+
+# 카카오(국내) 장소: 저장은 되지만 최신으로 유지해야 한다(카카오 운영정책 제5조).
+
+
+def test_kakao_place_is_refreshed_after_29_days_with_latest_details(client, auth, engine, places):
+    places.add("k1", "동문재래시장", lat=33.5, lng=126.5, address="제주시 이도1동")
+    jeju, minji = make_trip(client, auth, JEJU)
+    add_plan(client, jeju, minji, "k1", "동문재래시장")
+    now = dt.datetime(2027, 1, 1, tzinfo=UTC)
+    set_fetched_at(engine, "k1", now - dt.timedelta(days=29, hours=1))
+    # 그사이 카카오에서 주소와 좌표가 바뀌었다.
+    places.places[0] = places.places[0].__class__("k1", "동문재래시장", "제주시 일도1동", "제주시 관덕로 1", 33.51, 126.52, "시장")
+    places.queries.clear()
+
+    with Session(engine) as session:
+        assert refresh_places(session, {"kakao": places}, now) == 1
+
+    fresh = stored(engine, "k1")
+    assert (fresh.address, fresh.road_address, fresh.latitude, fresh.refreshed_at) == ("제주시 일도1동", "제주시 관덕로 1", 33.51, now)
+    # 카카오에는 id로 찾는 API가 없어 저장된 이름으로 다시 검색한다.
+    assert places.queries == ["동문재래시장"]
+
+
+def test_kakao_place_missing_from_search_keeps_its_details_and_waits(client, auth, engine, places):
+    places.add("k1", "없어진 가게")
+    jeju, minji = make_trip(client, auth, JEJU)
+    add_plan(client, jeju, minji, "k1", "없어진 가게")
+    now = dt.datetime(2027, 1, 1, tzinfo=UTC)
+    set_fetched_at(engine, "k1", now - dt.timedelta(days=40))
+    places.places.clear()
+
+    with Session(engine) as session:
+        assert refresh_places(session, {"kakao": places}, now) == 0
+        # 30일 뒤에 다시 본다. 같은 시간에 또 묻지 않는다.
+        places.queries.clear()
+        refresh_places(session, {"kakao": places}, now + dt.timedelta(hours=1))
+
+    kept = stored(engine, "k1")
+    assert (kept.name, kept.latitude, kept.refreshed_at) == ("없어진 가게", 33.5, now)
+    assert places.queries == []
+
+
+def test_kakao_down_stops_the_round_without_changing_places(client, auth, engine, places):
+    places.add("k1", "시장")
+    jeju, minji = make_trip(client, auth, JEJU)
+    add_plan(client, jeju, minji, "k1", "시장")
+    old = dt.datetime(2026, 11, 1, tzinfo=UTC)
+    set_fetched_at(engine, "k1", old)
+    places.unavailable = True
+
+    with Session(engine) as session:
+        assert refresh_places(session, {"kakao": places}, dt.datetime(2027, 1, 1, tzinfo=UTC)) == 0
+
+    assert stored(engine, "k1").refreshed_at == old
