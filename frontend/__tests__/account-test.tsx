@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { AlertButton } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 import { ApiError } from '@/api/client';
 
@@ -115,4 +116,15 @@ test('총무는 여행 설정에서 다른 멤버에게 총무를 넘긴다', as
   await waitFor(() => expect(api.handOverOrganizer).toHaveBeenCalledWith('trip-jeju', 'm2'));
   // 이제 일반 멤버라 총무 넘기기가 사라진다.
   await waitFor(() => expect(screen.queryByRole('button', { name: '준호에게 총무 넘기기' })).toBeNull());
+});
+
+test('계정 화면에서 개인정보 처리방침 페이지를 연다', async () => {
+  const open = jest.spyOn(WebBrowser, 'openBrowserAsync').mockResolvedValue({ type: 'opened' } as never);
+  renderApp({ auth: signedIn(), api: fakeApi() });
+
+  fireEvent.press(await screen.findByRole('button', { name: '계정 관리' }));
+  fireEvent.press(await screen.findByRole('link', { name: '개인정보 처리방침' }));
+
+  expect(open).toHaveBeenCalledWith('https://kang1031-frontend.expo.app/privacy');
+  open.mockRestore();
 });
