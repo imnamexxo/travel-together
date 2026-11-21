@@ -33,3 +33,4 @@ expo-env.d.ts
 *.pem
 *.tsbuildinfo
 .env*.local
+dist-legal/
