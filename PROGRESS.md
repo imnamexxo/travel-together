@@ -23,8 +23,14 @@
 
 ## 바로 다음 할 일
 
-1. 팀원 저장소 초대(아직이면). #1·#2 스펙 이슈는 2026-11-14에 닫음(해외 여행 추가를 본문에 적음)
-2. 위치정보지원센터 답변 대기(2026-11-21 lbsc.kr Q&A 문의: B1 설계 신고 대상 여부, 멤버 공유가 제3자 제공인지, 사업자등록 전 신고 필요 여부). 답이 오면 ADR-0003·`docs/research/location-info-act.md` 반영
+1. Play Console 개인 개발자 계정 신원 확인 승인 대기(2026-11-21 가입, 주소 증빙 서류 제출 중: 등본 또는 은행 창구 영문 잔액증명서). 승인 나면 아래 순서로:
+   - 앱 만들기(Travel Together, 한국어, 앱, 무료) → 비공개 테스트 트랙에 출시용 AAB(versionCode 2, https://expo.dev/accounts/kang1031/projects/frontend/builds/97e0d4ca-2e4e-4d24-8778-50774dfb3eb5) 직접 업로드, Play 앱 서명은 Google 관리
+   - 설정 → 앱 서명의 SHA-1을 Google 지도 키(`com.traveltogether.app`)에 추가
+   - 앱 콘텐츠: 개인정보처리방침 https://kang1031-frontend.expo.app/privacy, 데이터 보안은 `docs/play-store/data-safety.md`, 광고 없음, 타겟층 18세 이상, 심사용 테스트 계정
+   - 스토어 등록정보(짧은·자세한 설명, 그래픽 1024×500, 스크린샷) 작성
+   - 테스터 12명 이상 모아 14일 연속 비공개 테스트 → 프로덕션 신청
+2. 위치정보지원센터 답변 대기(2026-11-21 lbsc.kr Q&A 문의). 답이 오면 ADR-0003·`docs/research/location-info-act.md` 반영
+3. 정식 출시 전: Gemini 유료 전환(무료 등급은 약관상 개인정보 금지·학습 사용), 이용자 늘면 Supabase Pro·Render 유료
 
 ## 사람이 해야 할 일
 
