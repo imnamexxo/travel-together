@@ -23,6 +23,8 @@ export type PickedPhoto = {
 };
 
 const LONG_EDGE = 1600;
+// 목록·지도에서 보여 줄 작은 사진. 원본 대신 이것만 받아 저장소 전송량을 줄인다.
+const THUMB_EDGE = 400;
 
 /** 앨범에서 여러 장을 고른다. 취소하면 null. */
 export async function pickPhotos(limit: number): Promise<PickedPhoto[] | null> {
@@ -40,13 +42,19 @@ export async function pickPhotos(limit: number): Promise<PickedPhoto[] | null> {
   }));
 }
 
-/** 긴 변 1600px JPEG로 줄인 새 파일. 메타데이터(EXIF)는 남지 않는다. */
-export async function preparePhoto(photo: PickedPhoto): Promise<string> {
+async function resized(photo: PickedPhoto, edge: number, compress: number): Promise<string> {
   const context = ImageManipulator.ImageManipulator.manipulate(photo.uri);
-  if (Math.max(photo.width, photo.height) > LONG_EDGE) {
-    context.resize(photo.width >= photo.height ? { width: LONG_EDGE, height: null } : { width: null, height: LONG_EDGE });
+  if (Math.max(photo.width, photo.height) > edge) {
+    context.resize(photo.width >= photo.height ? { width: edge, height: null } : { width: null, height: edge });
   }
   const image = await context.renderAsync();
-  const saved = await image.saveAsync({ format: ImageManipulator.SaveFormat.JPEG, compress: 0.8 });
+  const saved = await image.saveAsync({ format: ImageManipulator.SaveFormat.JPEG, compress });
   return saved.uri;
+}
+
+/** 긴 변 1600px JPEG와 긴 변 400px 썸네일. 둘 다 새로 저장한 파일이라 메타데이터(EXIF)는 남지 않는다. */
+export async function preparePhoto(photo: PickedPhoto): Promise<{ uri: string; thumbnailUri: string }> {
+  const uri = await resized(photo, LONG_EDGE, 0.8);
+  const thumbnailUri = await resized(photo, THUMB_EDGE, 0.7);
+  return { uri, thumbnailUri };
 }

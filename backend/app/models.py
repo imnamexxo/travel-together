@@ -324,6 +324,8 @@ class Photo(Base):
     # 멤버가 나가면 그 멤버의 사진을 먼저 지운다(members._remove).
     uploader_member_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("members.id", **MEMBER_FK))
     storage_key: Mapped[str] = mapped_column(String(200), unique=True)
+    # 목록용 작은 사진(긴 변 400px). 앱이 원본과 함께 올린다. 썸네일이 없던 때 올린 사진은 비어 있고 원본을 쓴다.
+    thumbnail_key: Mapped[str | None] = mapped_column(String(200), unique=True)
     taken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     size_bytes: Mapped[int] = mapped_column(Integer)
     # 사진이 연결된 장소(#10). auto: 앱이 촬영 위치로 찾아 줌, manual: 사용자가 고름.
@@ -333,6 +335,11 @@ class Photo(Base):
 
     uploader: Mapped[Member] = relationship()
     place: Mapped[Place | None] = relationship()
+
+    @property
+    def file_keys(self) -> list[str]:
+        """저장소에서 함께 지울 파일(원본, 썸네일)."""
+        return [self.storage_key, *([self.thumbnail_key] if self.thumbnail_key else [])]
 
 
 class Receipt(Base):

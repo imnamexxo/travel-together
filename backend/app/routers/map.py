@@ -20,7 +20,7 @@ from app import loading
 from app.models import Expense, Member, Photo, Place, PlanItem
 from app.permissions import require_member
 from app.photos import get_storage
-from app.routers.photos import STORAGE_DOWN, _signed, _utc
+from app.routers.photos import STORAGE_DOWN, _signed, _utc, thumbnail_url
 from app.routers.planner import PlaceOut, PlanItemOut, place_out, plan_item_out
 from app.storage import ObjectStorage
 
@@ -31,8 +31,10 @@ KST = ZoneInfo("Asia/Seoul")
 
 class MapPhoto(BaseModel):
     id: uuid.UUID
-    # 짧게 열리는 서명 URL(썸네일로 쓴다).
+    # 짧게 열리는 서명 URL(크게 볼 때).
     url: str
+    # 지도 아래 작은 사진. 썸네일이 없던 때 올린 사진은 url과 같다.
+    thumbnail_url: str
     taken_at: dt.datetime | None
     uploader_member_id: uuid.UUID
 
@@ -111,7 +113,7 @@ def map_data(
             visited=bool(place_photos or place_expenses),
             visited_dates=sorted(d for d in days if d is not None),
             plan_items=[plan_item_out(i) for i in place_plans],
-            photos=[MapPhoto(id=p.id, url=urls.get(p.storage_key, ""), taken_at=_utc(p.taken_at), uploader_member_id=p.uploader_member_id) for p in place_photos],
+            photos=[MapPhoto(id=p.id, url=urls.get(p.storage_key, ""), thumbnail_url=thumbnail_url(p, urls), taken_at=_utc(p.taken_at), uploader_member_id=p.uploader_member_id) for p in place_photos],
             expense_count=len(place_expenses),
             expense_total=sum(e.total_amount or 0 for e in place_expenses),
         ))

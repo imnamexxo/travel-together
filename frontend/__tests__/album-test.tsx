@@ -11,7 +11,7 @@ import { renderApp } from './support/render-app';
 
 jest.mock('@/features/album/photo-prep', () => ({
   pickPhotos: jest.fn(),
-  preparePhoto: jest.fn(async (p: { key: string }) => `file:///resized/${p.key}.jpg`),
+  preparePhoto: jest.fn(async (p: { key: string }) => ({ uri: `file:///resized/${p.key}.jpg`, thumbnailUri: `file:///resized/${p.key}_thumb.jpg` })),
 }));
 
 const mockPick = pickPhotos as jest.MockedFunction<typeof pickPhotos>;
@@ -47,8 +47,8 @@ test('고른 사진을 줄여서 촬영 시각과 함께 한 장씩 올린다', 
 
   expect(await screen.findByText('2장 중 2장 올렸어요')).toBeOnTheScreen();
   expect(api.uploadPhoto.mock.calls).toEqual([
-    ['trip-jeju', { uri: 'file:///resized/a.jpg', takenAt: '2026-11-12T15:30:00+09:00', placeId: null }],
-    ['trip-jeju', { uri: 'file:///resized/b.jpg', takenAt: null, placeId: null }],
+    ['trip-jeju', { uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T15:30:00+09:00', placeId: null }],
+    ['trip-jeju', { uri: 'file:///resized/b.jpg', thumbnailUri: 'file:///resized/b_thumb.jpg', takenAt: null, placeId: null }],
   ]);
   expect(mockPick).toHaveBeenCalledWith(200);
   expect(await screen.findByText('사진 2장')).toBeOnTheScreen();

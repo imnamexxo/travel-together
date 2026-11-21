@@ -54,7 +54,7 @@ def test_upload_api_has_no_location_fields_and_ignores_them(client, trip, engine
     schema = client.get("/openapi.json").json()
     upload_body = next(v for k, v in schema["components"]["schemas"].items() if k.startswith("Body_upload_photo"))
     # place_id는 이 여행의 장소를 가리키는 id다. 좌표가 아니다.
-    assert set(upload_body["properties"]) == {"file", "taken_at", "place_id"}
+    assert set(upload_body["properties"]) == {"file", "taken_at", "place_id", "thumbnail"}
 
     assert upload(client, trip, latitude="33.5", longitude="126.5").status_code == 201
     with engine.connect() as conn:

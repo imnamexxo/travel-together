@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { Animated, Image, PanResponder, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, PanResponder, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import { useCurrentTrip } from '@/features/trip/current-trip';
 import { useMapData, useMembers } from '@/api/queries';
 import type { MapPlace } from '@/api/client';
 import PhotoViewer from '@/components/photo-viewer';
+import CachedPhoto from '@/components/cached-photo';
 import { GoogleAttribution, placeLabel, usePlaceName } from '@/features/places/google-places';
 import PlaceMap from './place-map';
 
@@ -120,7 +121,7 @@ export default function MapScreen() {
         <MetaLine textStyle={s.counts} parts={[`일정 ${selected.plan_items.length}개`, `사진 ${selected.photos.length}장`, !!selected.expense_count && `지출 ${money.format(selected.expense_total)}`]} />
         {!!selected.visited_dates.length && <Text style={s.visitedOn}>들른 날 {selected.visited_dates.map(dayLabel).filter(Boolean).join(', ')}</Text>}
         {selected.plan_items.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{dayLabel(item.date)} {item.time?.slice(0, 5) ?? ''}</Text><Text style={s.memo}>{item.memo || item.title}</Text></View>)}
-        {!!selected.photos.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.thumbnails}>{selected.photos.map((photo, i) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`사진 ${i + 1} 크게 보기`} onPress={() => setViewing(i)}><Image source={{ uri: photo.url }} style={s.thumbnail} /></Pressable>)}</ScrollView>}
+        {!!selected.photos.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.thumbnails}>{selected.photos.map((photo, i) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`사진 ${i + 1} 크게 보기`} onPress={() => setViewing(i)}><CachedPhoto uri={photo.thumbnail_url} cacheKey={`${photo.id}-thumb`} style={s.thumbnail} /></Pressable>)}</ScrollView>}
         <View style={s.actions}><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}`)} style={s.action}><Text style={s.link}>플래너 보기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}/album`)} style={s.action}><Text style={s.link}>앨범 보기 ›</Text></Pressable></View>
         <Text style={s.hint}>사진이나 확정된 지출이 있는 곳이 들른 곳이에요</Text>
         </ScrollView></Animated.View>}

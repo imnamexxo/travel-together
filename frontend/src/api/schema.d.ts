@@ -936,6 +936,11 @@ export interface components {
              * @description 앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다
              */
             place_id?: string | null;
+            /**
+             * Thumbnail
+             * @description 목록용 작은 JPEG(긴 변 400px). 없으면 목록에서도 원본을 쓴다
+             */
+            thumbnail?: string | null;
         };
         /** Body_upload_receipt_trips__trip_id__receipts_post */
         Body_upload_receipt_trips__trip_id__receipts_post: {
@@ -1231,6 +1236,8 @@ export interface components {
             id: string;
             /** Url */
             url: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
             /** Taken At */
             taken_at: string | null;
             /**
@@ -1350,6 +1357,8 @@ export interface components {
             id: string;
             /** Url */
             url: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
             /** Taken At */
             taken_at: string | null;
             /**

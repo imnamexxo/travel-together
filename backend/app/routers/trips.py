@@ -274,7 +274,7 @@ def delete_trip(
 
 def remove_trip(session: Session, trip: Trip) -> list[str]:
     """여행을 지운다(커밋은 호출한 쪽). 커밋 뒤 저장소에서 지울 사진·영수증 파일 키를 돌려준다."""
-    keys = list(session.scalars(select(Photo.storage_key).where(Photo.trip_id == trip.id)))
+    keys = [k for p in session.scalars(select(Photo).where(Photo.trip_id == trip.id)) for k in p.file_keys]
     keys += list(session.scalars(select(Receipt.storage_key).where(Receipt.trip_id == trip.id)))
     session.delete(trip)
     return keys
