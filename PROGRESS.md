@@ -25,7 +25,6 @@
 
 1. Play 비공개 테스트(Alpha) 검토 대기(2026-11-26 제출). 통과되면:
    - 테스터 탭의 참여 링크를 테스터 12명 이상에게 보내고, 12명이 참여한 날부터 14일 연속 유지(중간에 빠지면 그 사람은 다시 14일)
-   - 테스트 및 출시 → 앱 무결성의 "앱 서명 키 인증서" SHA-1을 Google 지도 키에 `com.kang1031.traveltogether`로 추가(안 하면 Play로 설치한 앱의 지도가 안 뜸)
 2. 14일이 지나면 프로덕션 액세스 신청 → 정식 출시
 3. 정식 출시 전: Gemini 유료 전환(무료 등급은 약관상 개인정보 금지·학습 사용), 이용자 늘면 Supabase Pro·Render 유료
 
@@ -88,7 +87,7 @@
 ### 2026-11-26
 
 - Play Console 개인 계정 승인. 패키지 `com.traveltogether.app`은 Play에서 이미 쓰여 `com.kang1031.traveltogether`로 변경(#113). 실행 환경 지문에서 package.json scripts 제외(`frontend/fingerprint.config.js`). 새 패키지로 시연 APK·출시용 AAB(versionCode 2) 빌드, 지도 키에 새 패키지 SHA-1 추가.
-- 스토어 등록정보(`docs/play-store/store-listing.md`, 아이콘·그래픽), 앱 콘텐츠(처리방침, 광고 없음, 콘텐츠 등급 12세 이상(사용자 상호작용), 타겟층 18세 이상, 데이터 보안은 CSV 가져오기, 금융 기능, 건강, 앱 액세스 심사용 계정) 작성. 심사용 계정 정보는 `docs/play-store/reviewer-account.local.md`(git 제외). 비공개 테스트 Alpha에 대한민국·테스터 목록 설정 후 검토 제출.
+- 스토어 등록정보(`docs/play-store/store-listing.md`, 아이콘·그래픽), 앱 콘텐츠(처리방침, 광고 없음, 콘텐츠 등급 12세 이상(사용자 상호작용), 타겟층 18세 이상, 데이터 보안은 CSV 가져오기, 금융 기능, 건강, 앱 액세스 심사용 계정) 작성. 심사용 계정 정보는 `docs/play-store/reviewer-account.local.md`(git 제외). 비공개 테스트 Alpha에 대한민국·테스터 목록 설정 후 검토 제출. Play 앱 서명 SHA-1도 지도 키에 추가(앱 서명 페이지: Play Console 앱 주소 끝을 `keymanagement`로).
 - 위치정보지원센터 답변: 추천 장소를 사용자가 확인해 저장해도(B1) 개인위치정보일 가능성을 배제하기 어려움, 사진 위치를 안 읽고 직접 고르면(B2) 아닐 가능성. B2로 변경: 앱은 촬영 시각만 읽고 위치는 안 읽음, 업로드 API는 장소를 받지 않음, 확인 시트 삭제. 마이그레이션 0018로 GPS 기반 연결(`auto`, 11-21 이후 업로드 연결) 해제. ADR-0003·조사 보고서·개인정보 처리방침(시행 11-26)·데이터 보안 답안 수정, 처리방침 웹 재배포.
 
 ### 2026-11-21
