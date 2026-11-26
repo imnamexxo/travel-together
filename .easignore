@@ -34,3 +34,4 @@ expo-env.d.ts
 *.tsbuildinfo
 .env*.local
 dist-legal/
+*.local.md
