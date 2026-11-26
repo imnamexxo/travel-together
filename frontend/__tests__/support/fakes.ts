@@ -407,8 +407,8 @@ export function fakeApi(
     listPhotos: jest.fn(async (tripId) => ({ photos: [...photosOf(tripId)], count: photosOf(tripId).length, limit: photoLimit })),
     uploadPhoto: jest.fn(async (tripId, upload) => {
       const me = trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1';
-      const linked = upload.placeId ? plansOf(tripId).find((i) => i.place?.id === upload.placeId)?.place ?? null : null;
-      const created = photo({ id: `uploaded-${photosOf(tripId).length + 1}`, url: upload.uri, taken_at: upload.takenAt, uploader_member_id: me, uploader_name: profile.display_name, place: linked, link_type: linked ? 'auto' : null });
+      // 서버처럼 올릴 때는 장소를 붙이지 않는다(ADR-0003).
+      const created = photo({ id: `uploaded-${photosOf(tripId).length + 1}`, url: upload.uri, taken_at: upload.takenAt, uploader_member_id: me, uploader_name: profile.display_name, place: null, link_type: null });
       photosOf(tripId).push(created);
       return created;
     }),

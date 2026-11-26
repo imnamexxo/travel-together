@@ -42,8 +42,7 @@ class PhotoOut(BaseModel):
     uploader_name: str
     # 연결된 장소. 없으면 촬영 날짜로만 분류한다.
     place: PlaceOut | None
-    # auto: 앱이 촬영 위치로 찾아 줌 / manual: 멤버가 직접 고름
-    # 새로 올리는 사진은 manual뿐이다. auto는 2026-11-21 전에 휴대폰이 확인 없이 자동 연결한 사진이다.
+    # manual: 멤버가 직접 고름. auto(촬영 위치로 자동 연결)는 더 만들지 않는다(위치정보법, ADR-0003).
     link_type: Literal["auto", "manual"] | None
 
 
@@ -142,13 +141,12 @@ def upload_photo(
     trip_id: uuid.UUID,
     file: Annotated[UploadFile, File(description="JPEG. 앱이 긴 변 1600px로 줄이고 EXIF를 지운 파일")],
     taken_at: Annotated[str | None, Form(description="촬영 시각(시간대 포함 ISO). 모르면 비운다")] = None,
-    place_id: Annotated[uuid.UUID | None, Form(description="사용자가 올리기 전에 확인한 이 여행의 장소. 앱은 촬영 위치로 휴대폰 안에서 추천만 하고 좌표는 보내지 않는다")] = None,
     thumbnail: Annotated[UploadFile | None, File(description="목록용 작은 JPEG(긴 변 400px). 없으면 목록에서도 원본을 쓴다")] = None,
     user: AuthenticatedUser = Depends(get_current_user),
     session: Session = Depends(get_session),
     storage: ObjectStorage = Depends(get_storage),
 ) -> PhotoOut:
-    """사진 한 장을 올린다. 위치 좌표는 받지 않는다(ADR-0003). 서버도 저장 전에 EXIF를 지운다."""
+    """사진 한 장을 올린다. 위치 좌표도 장소도 받지 않는다(ADR-0003). 서버도 저장 전에 EXIF를 지운다."""
     me = require_member(session, trip_id, user)
     when = _parse_taken_at(taken_at)
     data = file.file.read(MAX_BYTES + 1)
@@ -174,13 +172,12 @@ def upload_photo(
     if count >= MAX_PHOTOS:
         raise ApiError(409, "photo_limit", f"여행 사진은 {MAX_PHOTOS}장까지 올릴 수 있습니다.")
 
-    place = _trip_place(session, trip_id, place_id, "place_id") if place_id else None
     name = uuid.uuid4()
     photo = Photo(
         trip_id=trip_id, uploader_member_id=me.id, storage_key=f"trips/{trip_id}/photos/{name}.jpg",
         thumbnail_key=f"trips/{trip_id}/photos/{name}_thumb.jpg" if small else None,
-        taken_at=when, size_bytes=len(clean) + len(small or b""), # 사용자가 확인한 장소라 직접 연결과 같다(위치정보법 검토, docs/research/location-info-act.md).
-        place=place, link_type="manual" if place else None,
+        # 올릴 때는 장소를 붙이지 않는다. 장소는 멤버가 나중에 직접 고른다(사진 위치를 쓰지 않음, ADR-0003).
+        taken_at=when, size_bytes=len(clean) + len(small or b""),
     )
     uploaded: list[str] = []
     try:

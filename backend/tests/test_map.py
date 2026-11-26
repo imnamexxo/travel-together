@@ -37,8 +37,12 @@ def trip(client, auth, places):
 
 
 def photo(client, trip, who, taken_at, place_id=None):
-    data = {"taken_at": taken_at, **({"place_id": place_id} if place_id else {})}
-    return client.post(f"/trips/{trip.id}/photos", files={"file": ("p.jpg", jpeg(), "image/jpeg")}, data=data, headers=bearer(trip.tokens[who])).json()
+    """사진을 올리고, place_id가 있으면 멤버가 직접 그 장소에 연결한다."""
+    headers = bearer(trip.tokens[who])
+    body = client.post(f"/trips/{trip.id}/photos", files={"file": ("p.jpg", jpeg(), "image/jpeg")}, data={"taken_at": taken_at}, headers=headers).json()
+    if place_id:
+        body = client.put(f"/trips/{trip.id}/photos/{body['id']}/place", json={"place_id": place_id}, headers=headers).json()
+    return body
 
 
 def expense(client, trip, payer, paid_at, total, *, place=None, confirm=True):

@@ -39,12 +39,11 @@ def link(client, trip, photo_id, who="준호", **body):
     return client.put(trip.url(f"/{photo_id}/place"), json=body, headers=bearer(trip.tokens[who]))
 
 
-def test_upload_with_confirmed_place_is_a_manual_link(client, trip):
-    # 앱은 촬영 위치로 장소를 추천만 하고, 사용자가 확인한 장소만 보낸다. 서버는 직접 연결로 기록한다.
+def test_upload_ignores_place_and_never_links(client, trip):
+    # 사진 위치로 장소를 고르지 않는다. 예전 앱이 place_id를 보내도 붙이지 않는다(위치정보법, ADR-0003).
     body = upload(client, trip, place_id=trip.market_id).json()
 
-    assert body["place"]["name"] == "동문시장"
-    assert body["link_type"] == "manual"
+    assert (body["place"], body["link_type"]) == (None, None)
 
 
 def test_upload_without_place_is_classified_by_date_only(client, trip):
@@ -58,9 +57,10 @@ def test_place_of_another_trip_is_rejected(client, trip, auth):
     other, _ = auth.add_user()
     other_trip = client.post("/trips", json=JEJU, headers=bearer(other)).json()["id"]
     other_place = client.post(f"/trips/{other_trip}/plan-items", json={"date": "2026-11-12", "title": "x", "place": MARKET}, headers=bearer(other)).json()["place"]["id"]
+    photo = upload(client, trip).json()["id"]
 
-    response = upload(client, trip, place_id=other_place)
-    unknown = upload(client, trip, place_id=str(uuid.uuid4()))
+    response = link(client, trip, photo, place_id=other_place)
+    unknown = link(client, trip, photo, place_id=str(uuid.uuid4()))
 
     assert response.status_code == 422
     assert response.json()["details"][0]["field"] == "place_id"
@@ -76,7 +76,8 @@ def test_any_member_changes_link_to_trip_place_and_it_becomes_manual(client, tri
 
 
 def test_unlinking_clears_place(client, trip):
-    photo = upload(client, trip, place_id=trip.market_id).json()["id"]
+    photo = upload(client, trip).json()["id"]
+    link(client, trip, photo, place_id=trip.market_id)
 
     body = link(client, trip, photo).json()
 
@@ -104,7 +105,7 @@ def test_unverified_kakao_place_is_rejected(client, trip):
 
 
 def test_manual_link_stays_manual_in_the_list(client, trip):
-    photo = upload(client, trip, place_id=trip.market_id).json()["id"]
+    photo = upload(client, trip).json()["id"]
     link(client, trip, photo, place_id=trip.market_id)
 
     listed = client.get(trip.url(), headers=bearer(trip.tokens["민지"])).json()["photos"]
