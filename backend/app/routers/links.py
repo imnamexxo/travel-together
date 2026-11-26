@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse
 router = APIRouter(include_in_schema=False)
 
 APP_SCHEME = "traveltogether"
-ANDROID_PACKAGE = "com.traveltogether.app"
+ANDROID_PACKAGE = "com.kang1031.traveltogether"
 CODE = re.compile(r"^[A-Za-z0-9]{4,32}$")
 
 

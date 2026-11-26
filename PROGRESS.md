@@ -25,7 +25,7 @@
 
 1. Play Console 개인 개발자 계정 신원 확인 승인 대기(2026-11-21 가입, 주소 증빙 서류 제출 중: 등본 또는 은행 창구 영문 잔액증명서). 승인 나면 아래 순서로:
    - 앱 만들기(Travel Together, 한국어, 앱, 무료) → 비공개 테스트 트랙에 출시용 AAB(versionCode 2, https://expo.dev/accounts/kang1031/projects/frontend/builds/97e0d4ca-2e4e-4d24-8778-50774dfb3eb5) 직접 업로드, Play 앱 서명은 Google 관리
-   - 설정 → 앱 서명의 SHA-1을 Google 지도 키(`com.traveltogether.app`)에 추가
+   - 설정 → 앱 서명의 SHA-1을 Google 지도 키(`com.kang1031.traveltogether`)에 추가
    - 앱 콘텐츠: 개인정보처리방침 https://kang1031-frontend.expo.app/privacy, 데이터 보안은 `docs/play-store/data-safety.md`, 광고 없음, 타겟층 18세 이상, 심사용 테스트 계정
    - 스토어 등록정보(짧은·자세한 설명, 그래픽 1024×500, 스크린샷) 작성
    - 테스터 12명 이상 모아 14일 연속 비공개 테스트 → 프로덕션 신청
@@ -38,7 +38,7 @@
 |---|---|---|
 | Supabase 프로젝트 생성 | #3 | 완료 (`nttoauhqqsqhulbtgixn`, 서울 리전) |
 | Render 배포 | #3 | 완료. 2026-11-13 싱가포르로 옮김: https://travel-together-api-sg.onrender.com (DB가 서울이라). 이전 오리건 서버 travel-together-api-d4zr는 확인 후 Suspend |
-| Expo 계정, EAS 개발 빌드, Android 실기기 | #3 | 완료 (EAS 계정 kang1031. 패키지는 2026-11-21 `com.kang1031.frontend` → `com.traveltogether.app`) |
+| Expo 계정, EAS 개발 빌드, Android 실기기 | #3 | 완료 (EAS 계정 kang1031. 패키지는 2026-11-21 `com.kang1031.frontend` → `com.kang1031.traveltogether`) |
 | 테스트용 PostgreSQL 준비 | #3 | 완료 (강동헌 PC: PostgreSQL 17.11 직접 설치, DB `divided_dev`·`divided_test`, 연결 정보는 `backend/.env`). 팀원 PC는 `backend/.env.example` 참고해 각자 준비 |
 | 카카오 디벨로퍼스 앱: REST API 키(#7), 같은 앱으로 카카오 로그인 설정(#23) | #7, #23 | REST 키 완료(Render·backend/.env에 `KAKAO_REST_API_KEY`). 카카오 로그인은 #23 때 |
 | Google Cloud OAuth 클라이언트(웹) ID·Secret → Supabase Google 로그인 | #23 | 대기 |
@@ -57,7 +57,7 @@
 
 - 결제 시각은 한국 시간(+09:00)으로 해석한다. 시차 큰 나라는 어긋나지만 신경 쓰지 않기로 함(2026-11-14).
 - 자체 학습 모델 없이 Gemini 활용만으로 과목 요건이 충족되는가? 충족되지 않으면 모델 학습 티켓을 추가해야 한다. (기획서 7-1절 댓글)
-- 앱 이름은 Travel Together로 정함(2026-11-13). Play에 올리면 패키지 이름을 못 바꾸므로 첫 업로드 전에 `com.traveltogether.app`으로 바꿈(2026-11-21). EAS slug(`frontend`)는 그대로(스토어에 안 보임).
+- 앱 이름은 Travel Together로 정함(2026-11-13). Play에 올리면 패키지 이름을 못 바꾸므로 첫 업로드 전에 `com.kang1031.traveltogether`으로 바꿈(2026-11-21). EAS slug(`frontend`)는 그대로(스토어에 안 보임).
 - Render 리전을 싱가포르로 옮길지. 지금은 oregon이라 서울 DB와 왕복이 길다. 옮기려면 `render.yaml`에 `region: singapore`를 넣고 서비스를 다시 만든다.
 
 ## 주요 문서
@@ -103,7 +103,7 @@
 - 무료 한도로 감당 가능한 규모(가격 페이지 원문): Supabase 파일 1GB(누적)·전송 월 5GB(+캐시 5GB)·DB 500MB·MAU 5만, Render 월 750시간·15분 미사용 시 꺼짐(첫 요청 약 1분), Gemini 무료 등급은 입력을 학습·사람 검토에 쓰고 개인정보 금지·18세 이상만(추가 약관 2026-03-23). 여행 하나(4명·사진 100장)를 50MB로 보면 누적 20개 안팎, 전송량은 월 활발한 여행 10개 안팎에서 막힘. 정식 출시엔 Gemini 유료가 약관상 필요.
 - 사진 썸네일(#103): 업로드 때 긴 변 400px 썸네일을 함께 저장(마이그레이션 0017), 목록·지도는 썸네일, 크게 볼 때만 원본. expo-image cacheKey(사진 id)로 기기 캐시해 서명 URL이 바뀌어도 다시 받지 않음.
 - 위치정보법 검토(`docs/research/location-info-act.md`, 법률 2025.10.1·시행령 2026.2.10·고시·해설서 원문): 기기 안에서만 쓰는 GPS와 사용자가 고른 장소는 신고 대상 아님. 확인 없이 GPS로 고른 장소 id를 서버로 보내는 것만 애매. B1 채택: 올리기 전에 추천 장소 확인 시트, 확인한 것만 manual로 전송(ADR-0003 덧붙임).
-- Play 등록 준비: 패키지 `com.traveltogether.app`(#107), 시연 APK 새로 빌드, 출시용 AAB(versionCode 2) 빌드. 개인정보 처리방침·계정 삭제 안내를 `frontend/public/privacy.html`·`delete-account.html`로 만들어 EAS Hosting(https://kang1031-frontend.expo.app/privacy, /delete-account)에 배포. 앱 계정 화면·회원가입 화면에 처리방침 링크. 웹 앱은 내리고(2026-11-21) 공개 페이지만 둠. 페이지를 고치면: `cd frontend && npm run legal:build && npx eas-cli deploy --prod --export-dir dist-legal`.
+- Play 등록 준비: 패키지 `com.kang1031.traveltogether`(#107), 시연 APK 새로 빌드, 출시용 AAB(versionCode 2) 빌드. 개인정보 처리방침·계정 삭제 안내를 `frontend/public/privacy.html`·`delete-account.html`로 만들어 EAS Hosting(https://kang1031-frontend.expo.app/privacy, /delete-account)에 배포. 앱 계정 화면·회원가입 화면에 처리방침 링크. 웹 앱은 내리고(2026-11-21) 공개 페이지만 둠. 페이지를 고치면: `cd frontend && npm run legal:build && npx eas-cli deploy --prod --export-dir dist-legal`.
 
 ### 2026-11-18
 
