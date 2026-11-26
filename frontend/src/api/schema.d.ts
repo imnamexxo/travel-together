@@ -815,7 +815,7 @@ export interface paths {
         put?: never;
         /**
          * Upload Photo
-         * @description 사진 한 장을 올린다. 위치 좌표는 받지 않는다(ADR-0003). 서버도 저장 전에 EXIF를 지운다.
+         * @description 사진 한 장을 올린다. 위치 좌표도 장소도 받지 않는다(ADR-0003). 서버도 저장 전에 EXIF를 지운다.
          */
         post: operations["upload_photo_trips__trip_id__photos_post"];
         delete?: never;
@@ -931,11 +931,6 @@ export interface components {
              * @description 촬영 시각(시간대 포함 ISO). 모르면 비운다
              */
             taken_at?: string | null;
-            /**
-             * Place Id
-             * @description 앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다
-             */
-            place_id?: string | null;
             /**
              * Thumbnail
              * @description 목록용 작은 JPEG(긴 변 400px). 없으면 목록에서도 원본을 쓴다

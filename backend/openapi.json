@@ -3699,7 +3699,7 @@
           "photos"
         ],
         "summary": "Upload Photo",
-        "description": "사진 한 장을 올린다. 위치 좌표는 받지 않는다(ADR-0003). 서버도 저장 전에 EXIF를 지운다.",
+        "description": "사진 한 장을 올린다. 위치 좌표도 장소도 받지 않는다(ADR-0003). 서버도 저장 전에 EXIF를 지운다.",
         "operationId": "upload_photo_trips__trip_id__photos_post",
         "security": [
           {
@@ -4266,19 +4266,6 @@
             ],
             "title": "Taken At",
             "description": "촬영 시각(시간대 포함 ISO). 모르면 비운다"
-          },
-          "place_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Place Id",
-            "description": "앱이 휴대폰 안에서 촬영 위치로 찾은 이 여행의 장소(자동 연결). 좌표는 보내지 않는다"
           },
           "thumbnail": {
             "anyOf": [

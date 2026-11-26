@@ -23,7 +23,7 @@ function signedIn() {
   return auth;
 }
 
-const picked = (key: string, takenAt: string | null = '2026-11-12T15:30:00+09:00'): PickedPhoto => ({ key, uri: `file:///original/${key}.heic`, width: 4000, height: 3000, takenAt, gps: null });
+const picked = (key: string, takenAt: string | null = '2026-11-12T15:30:00+09:00'): PickedPhoto => ({ key, uri: `file:///original/${key}.heic`, width: 4000, height: 3000, takenAt });
 const organizerTrip = tripDetail({ me: { member_id: 'm1', join_order: 1, is_organizer: true } });
 const memberTrip = tripDetail({ me: { member_id: 'm2', join_order: 2, is_organizer: false } });
 
@@ -47,8 +47,8 @@ test('고른 사진을 줄여서 촬영 시각과 함께 한 장씩 올린다', 
 
   expect(await screen.findByText('2장 중 2장 올렸어요')).toBeOnTheScreen();
   expect(api.uploadPhoto.mock.calls).toEqual([
-    ['trip-jeju', { uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T15:30:00+09:00', placeId: null }],
-    ['trip-jeju', { uri: 'file:///resized/b.jpg', thumbnailUri: 'file:///resized/b_thumb.jpg', takenAt: null, placeId: null }],
+    ['trip-jeju', { uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T15:30:00+09:00' }],
+    ['trip-jeju', { uri: 'file:///resized/b.jpg', thumbnailUri: 'file:///resized/b_thumb.jpg', takenAt: null }],
   ]);
   expect(mockPick).toHaveBeenCalledWith(200);
   expect(await screen.findByText('사진 2장')).toBeOnTheScreen();

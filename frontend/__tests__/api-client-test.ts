@@ -86,7 +86,7 @@ test('사진·영수증은 내용을 읽는 bytes()가 있는 파일 조각으�
   const fetchFn = jest.fn(async (_url: string, _init: RequestInit) => jsonResponse(201, {}));
   const client = clientWith(fetchFn);
 
-  await client.uploadPhoto('t1', { uri: 'file:///cache/a.jpg', takenAt: null, placeId: null });
+  await client.uploadPhoto('t1', { uri: 'file:///cache/a.jpg', takenAt: null });
   await client.uploadReceipt('t1', { uri: 'file:///cache/r.jpg' }, 'key-1');
 
   const parts = append.mock.calls.filter(([key]) => key === 'file').map(([, value]) => value as unknown as FilePart);
@@ -99,7 +99,7 @@ test('사진을 올릴 때 썸네일이 있으면 thumbnail 조각으로 함께 
   const append = jest.spyOn(FormData.prototype, 'append');
   const client = clientWith(jest.fn(async (_url: string, _init: RequestInit) => jsonResponse(201, {})));
 
-  await client.uploadPhoto('t1', { uri: 'file:///cache/a.jpg', thumbnailUri: 'file:///cache/a_thumb.jpg', takenAt: null, placeId: null });
+  await client.uploadPhoto('t1', { uri: 'file:///cache/a.jpg', thumbnailUri: 'file:///cache/a_thumb.jpg', takenAt: null });
 
   const thumbs = append.mock.calls.filter(([key]) => key === 'thumbnail').map(([, value]) => value as unknown as FilePart);
   expect(thumbs.map((part) => [part.name, part.type])).toEqual([['thumbnail.jpg', 'image/jpeg']]);

@@ -1,6 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import { autoPlaceId, distanceMeters, gpsFromExif } from '@/features/album/photo-location';
 import { pickPhotos, type PickedPhoto } from '@/features/album/photo-prep';
 
 import { FakeAuthService, fakeApi, photo, place, planItem, tripDetail } from './support/fakes';
@@ -13,51 +12,11 @@ jest.mock('@/features/album/photo-prep', () => ({
 const mockPick = pickPhotos as jest.MockedFunction<typeof pickPhotos>;
 
 const market = place({ id: 'place-market', name: '동문시장', latitude: 33.5116, longitude: 126.5258 });
-const marketGps = { latitude: 33.5116, longitude: 126.5258 };
 const beach = place({ id: 'place-beach', source_place_id: '222', name: '함덕해수욕장', latitude: 33.5431, longitude: 126.6697 });
 const plans = [
   planItem({ id: 'lunch', date: '2026-11-12', title: '점심', time: '12:00:00', place: market }),
   planItem({ id: 'swim', date: '2026-11-13', title: '바다', place: beach }),
 ];
-
-describe('자동 연결 계산(휴대폰 안)', () => {
-  // 동문시장에서 북쪽으로 약 100m, 약 500m
-  const near = { latitude: 33.5125, longitude: 126.5258 };
-  const far = { latitude: 33.5161, longitude: 126.5258 };
-
-  test('같은 날 일정 장소 중 300m 안의 가장 가까운 곳에 연결한다', () => {
-    expect(distanceMeters(near, marketGps)).toBeLessThan(120);
-    expect(autoPlaceId(near, '2026-11-12T13:00:00+09:00', plans)).toBe('place-market');
-  });
-
-  test('300m 밖이거나, 다른 날의 장소이거나, 위치·시각이 없으면 연결하지 않는다', () => {
-    expect(distanceMeters(far, marketGps)).toBeGreaterThan(300);
-    expect(autoPlaceId(far, '2026-11-12T13:00:00+09:00', plans)).toBeNull();
-    expect(autoPlaceId(near, '2026-11-13T13:00:00+09:00', plans)).toBeNull();
-    expect(autoPlaceId(null, '2026-11-12T13:00:00+09:00', plans)).toBeNull();
-    expect(autoPlaceId(near, null, plans)).toBeNull();
-  });
-
-  test('날짜는 한국 시간으로 판단한다', () => {
-    // UTC로는 11일이지만 한국 시간으로는 12일 오전 1시
-    expect(autoPlaceId(near, '2026-11-11T16:00:00Z', plans)).toBe('place-market');
-  });
-
-  test('가까운 장소가 여럿이면 가장 가까운 곳', () => {
-    const cafe = place({ id: 'place-cafe', name: '시장 옆 카페', latitude: 33.5127, longitude: 126.5258 });
-    const withCafe = [...plans, planItem({ id: 'coffee', date: '2026-11-12', title: '커피', place: cafe })];
-
-    expect(autoPlaceId({ latitude: 33.5126, longitude: 126.5258 }, '2026-11-12T13:00:00+09:00', withCafe)).toBe('place-cafe');
-  });
-
-  test('안드로이드·iOS EXIF의 GPS를 모두 읽는다', () => {
-    expect(gpsFromExif({ GPSLatitude: 33.5, GPSLatitudeRef: 'N', GPSLongitude: 126.5, GPSLongitudeRef: 'E' })).toEqual({ latitude: 33.5, longitude: 126.5 });
-    expect(gpsFromExif({ GPSLatitude: '33/1,30/1,0/1', GPSLatitudeRef: 'N', GPSLongitude: '126/1,30/1,0/1', GPSLongitudeRef: 'E' })).toEqual({ latitude: 33.5, longitude: 126.5 });
-    expect(gpsFromExif({ '{GPS}': { Latitude: 33.5, LatitudeRef: 'S', Longitude: 126.5, LongitudeRef: 'W' } })).toEqual({ latitude: -33.5, longitude: -126.5 });
-    expect(gpsFromExif({ DateTimeOriginal: '2026:11:12 10:00:00' })).toBeNull();
-    expect(gpsFromExif({ GPSLatitude: 0, GPSLongitude: 0 })).toBeNull();
-  });
-});
 
 function signedIn() {
   const auth = new FakeAuthService();
@@ -75,57 +34,21 @@ function render(options: Parameters<typeof fakeApi>[1] = {}, initialUrl = '/trip
 
 afterEach(() => mockPick.mockReset());
 
-const nearMarket: PickedPhoto = { key: 'a', uri: 'file:///a.heic', width: 100, height: 100, takenAt: '2026-11-12T13:00:00+09:00', gps: { latitude: 33.5125, longitude: 126.5258 } };
-const noGps: PickedPhoto = { ...nearMarket, key: 'b', gps: null };
+const picked: PickedPhoto = { key: 'a', uri: 'file:///a.heic', width: 100, height: 100, takenAt: '2026-11-12T13:00:00+09:00' };
 
-test('촬영 위치로 찾은 장소는 추천만 하고, 사용자가 확인한 장소 id만 보낸다(좌표는 보내지 않는다)', async () => {
+test('사진은 장소 없이 올리고, 사진 위치로 장소를 고르지 않는다(위치정보법, ADR-0003)', async () => {
   const api = render();
-  mockPick.mockResolvedValueOnce([nearMarket, noGps]);
-
-  fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
-
-  // 확인하기 전에는 아무것도 올리지 않는다.
-  expect(await screen.findByText('사진을 이 장소에 연결할까요?')).toBeOnTheScreen();
-  expect(screen.getByRole('checkbox', { name: '동문시장에 사진 1장 연결' })).toBeChecked();
-  expect(screen.getByText('근처 일정 장소가 없는 사진 1장은 장소 없이 올라가요. 나중에 앨범에서 연결할 수 있어요.')).toBeOnTheScreen();
-  expect(api.uploadPhoto).not.toHaveBeenCalled();
-  fireEvent.press(screen.getByRole('button', { name: '사진 올리기' }));
-
-  await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(2));
-  expect(api.uploadPhoto.mock.calls[0][1]).toEqual({ uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: 'place-market' });
-  expect(api.uploadPhoto.mock.calls[1][1]).toEqual({ uri: 'file:///resized/b.jpg', thumbnailUri: 'file:///resized/b_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00', placeId: null });
-  expect(JSON.stringify(api.uploadPhoto.mock.calls)).not.toMatch(/33\.51|126\.52/);
-});
-
-test('추천 장소를 체크 해제하면 장소 없이 올리고, 취소하면 올리지 않는다', async () => {
-  const api = render();
-  mockPick.mockResolvedValueOnce([nearMarket]).mockResolvedValueOnce([{ ...nearMarket, key: 'c' }]);
-
-  fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
-  fireEvent.press(await screen.findByRole('checkbox', { name: '동문시장에 사진 1장 연결' }));
-  fireEvent.press(screen.getByRole('button', { name: '사진 올리기' }));
-  await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(1));
-  expect(api.uploadPhoto.mock.calls[0][1].placeId).toBeNull();
-
-  await waitFor(() => expect(screen.getByRole('button', { name: '사진 추가' })).toBeEnabled());
-  fireEvent.press(screen.getByRole('button', { name: '사진 추가' }));
-  fireEvent.press(await screen.findByRole('button', { name: '사진 올리기 취소' }));
-  await waitFor(() => expect(screen.queryByText('사진을 이 장소에 연결할까요?')).toBeNull());
-  expect(api.uploadPhoto).toHaveBeenCalledTimes(1);
-});
-
-test('추천할 장소가 없으면 확인 없이 바로 올린다', async () => {
-  const api = render();
-  mockPick.mockResolvedValueOnce([noGps]);
+  mockPick.mockResolvedValueOnce([picked]);
 
   fireEvent.press(await screen.findByRole('button', { name: '사진 추가' }));
 
   await waitFor(() => expect(api.uploadPhoto).toHaveBeenCalledTimes(1));
+  expect(api.uploadPhoto.mock.calls[0][1]).toEqual({ uri: 'file:///resized/a.jpg', thumbnailUri: 'file:///resized/a_thumb.jpg', takenAt: '2026-11-12T13:00:00+09:00' });
   expect(screen.queryByText('사진을 이 장소에 연결할까요?')).toBeNull();
 });
 
 test('장소별로 보고, 장소 미연결 사진 수가 보인다', async () => {
-  render({ photos: { 'trip-jeju': [photo({ id: 'p1', place: market, link_type: 'auto' }), photo({ id: 'p2' })] } });
+  render({ photos: { 'trip-jeju': [photo({ id: 'p1', place: market, link_type: 'manual' }), photo({ id: 'p2' })] } });
 
   expect(await screen.findByText('장소 미연결 1장')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('tab', { name: '장소별' }));
@@ -134,11 +57,11 @@ test('장소별로 보고, 장소 미연결 사진 수가 보인다', async () =
 });
 
 test('사진 상세에서 연결된 장소와 그날의 일정이 보이고, 다른 장소로 바꿀 수 있다', async () => {
-  const api = render({ photos: { 'trip-jeju': [photo({ id: 'p1', place: market, link_type: 'auto', taken_at: '2026-11-12T04:00:00Z' })] } });
+  const api = render({ photos: { 'trip-jeju': [photo({ id: 'p1', place: market, link_type: 'manual', taken_at: '2026-11-12T04:00:00Z' })] } });
 
   fireEvent.press(await screen.findByRole('button', { name: '민지님 사진 크게 보기' }));
-  expect(await screen.findByText('동문시장 (촬영 위치로 자동 연결)')).toBeOnTheScreen();
-  expect(screen.getByText(/1일 차 12:00 점심/)).toBeOnTheScreen();
+  expect(await screen.findByText('동문시장 (직접 연결)')).toBeOnTheScreen();
+  expect(await screen.findByText(/1일 차 12:00 점심/)).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: '함덕해수욕장에 연결' }));
 
   await waitFor(() => expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p1', { place_id: 'place-beach' }));

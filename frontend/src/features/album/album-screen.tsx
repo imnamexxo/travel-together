@@ -16,9 +16,7 @@ import { Dashes } from '@/components/ticket-parts';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
-import { autoPlaceId } from './photo-location';
-import { pickPhotos, type PickedPhoto } from './photo-prep';
-import PlaceConfirmSheet, { type SuggestedGroup } from './place-confirm-sheet';
+import { pickPhotos } from './photo-prep';
 import { usePhotoUploads } from './use-photo-uploads';
 
 type Mode = 'all' | 'date' | 'place' | 'uploader';
@@ -58,7 +56,6 @@ export default function AlbumScreen() {
   const s = useThemedStyles(sStyles);
   const { trip, days, isOrganizer } = useCurrentTrip();
   const photoList = usePhotos(trip.id);
-  const planItems = usePlanItems(trip.id);
   const remove = useDeletePhoto(trip.id);
   const uploader = usePhotoUploads(trip.id);
   const [mode, setMode] = useState<Mode>('all');
@@ -67,9 +64,6 @@ export default function AlbumScreen() {
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
   const pickingRef = useRef(false);
-  // 올리기 전에 확인할 추천 장소(사진 key → 장소 id). 확인한 장소만 서버로 보낸다.
-  const [pending, setPending] = useState<{ picked: PickedPhoto[]; suggested: Map<string, string | null>; groups: SuggestedGroup[] } | null>(null);
-  const [accepted, setAccepted] = useState<Set<string>>(new Set());
   const { width, height } = useWindowDimensions();
   const contentWidth = Math.min(width, 600);
   const tile = (contentWidth - 48 - 8) / 3;
@@ -92,42 +86,11 @@ export default function AlbumScreen() {
     try {
       const picked = await pickPhotos(remaining);
       if (!picked?.length) return;
-      // 일정을 아직 못 받았으면 받아 온 뒤 장소를 찾는다.
-      const items = planItems.data ?? (await planItems.refetch()).data ?? [];
-      // 촬영 위치는 여기서 장소를 추천하는 데만 쓰고 버린다. 서버에는 사용자가 확인한 장소만 간다
-      // (위치정보법: 단말기 안에서만 활용, docs/research/location-info-act.md).
-      const suggested = new Map(picked.map((p) => [p.key, autoPlaceId(p.gps, p.takenAt, items)] as const));
-      const counts = new Map<string, number>();
-      for (const id of suggested.values()) if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
-      if (!counts.size) { uploader.start(picked); return; }
-      const labelOf = (id: string) => {
-        const item = items.find((i) => i.place?.id === id);
-        return item?.place ? placeLabel(item.place, item.title) : '일정 장소';
-      };
-      const groups = [...counts].map(([placeId, count]) => ({ placeId, label: labelOf(placeId), count }));
-      setAccepted(new Set(counts.keys()));
-      setPending({ picked, suggested, groups });
+      // 장소는 붙이지 않고 올린다. 사진 위치는 읽지 않는다(위치정보법, ADR-0003). 장소는 사진을 열어 직접 고른다.
+      uploader.start(picked);
     } catch {
       showAlert('사진을 불러오지 못했어요', '사진 선택 권한과 기기의 사진 상태를 확인하고 다시 시도해주세요.');
     } finally { pickingRef.current = false; setPicking(false); }
-  }
-
-  function confirmPlaces() {
-    if (!pending) return;
-    const { picked, suggested } = pending;
-    setPending(null);
-    uploader.start(picked, (p) => {
-      const id = suggested.get(p.key) ?? null;
-      return id && accepted.has(id) ? id : null;
-    });
-  }
-
-  function toggleAccepted(placeId: string) {
-    setAccepted((current) => {
-      const next = new Set(current);
-      if (next.has(placeId)) next.delete(placeId); else next.add(placeId);
-      return next;
-    });
   }
 
   function removeSelected() {
@@ -190,8 +153,6 @@ export default function AlbumScreen() {
         </Pressable>)}
       </View>}
     />
-    <PlaceConfirmSheet visible={!!pending} groups={pending?.groups ?? []} accepted={accepted} onToggle={toggleAccepted} onConfirm={confirmPlaces} onCancel={() => setPending(null)}
-      unmatched={pending ? [...pending.suggested.values()].filter((id) => !id).length : 0} />
     <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedId(null)}>
       <SafeAreaView style={s.screen}>
         {selected && <ScrollView contentContainerStyle={s.detail}>
@@ -249,7 +210,7 @@ function PlaceSection({ photo }: { photo: Photo }) {
   return <>
     <Text style={s.fieldTitle}>연결된 장소</Text>
     {photo.place
-      ? <Text style={s.helper}><PlaceName tripId={trip.id} place={photo.place} fallback={plansHere[0]?.title} /> ({photo.link_type === 'auto' ? '촬영 위치로 자동 연결' : '직접 연결'})</Text>
+      ? <Text style={s.helper}><PlaceName tripId={trip.id} place={photo.place} fallback={plansHere[0]?.title} /> (직접 연결)</Text>
       : <Text style={s.helper}>장소에 연결되지 않은 사진이에요. 촬영 날짜로만 분류돼요.</Text>}
     {plansHere.map((i) => <Text key={i.id} style={s.helper}>📅 {dayNumber(i.date)}일 차 {i.time?.slice(0, 5) ?? ''} {i.title}</Text>)}
     <View style={s.detailChips}>
