@@ -771,7 +771,8 @@ export interface paths {
         put?: never;
         /**
          * Ask For Suggestions
-         * @description 여행지·취향으로 날짜별 추천 일정을 받는다. 같은 입력이면 저장된 결과를 200으로 바로 돌려준다.
+         * @description 구간·여행지·취향·하루 시간·숙소로 시간표 추천을 받는다. 이미 잡힌 일정은 피해 빈 시간만 채운다.
+         *     같은 입력(이미 잡힌 일정 포함)이면 저장된 결과를 200으로 바로 돌려준다.
          */
         post: operations["ask_for_suggestions_trips__trip_id__suggestions_post"];
         delete?: never;
@@ -791,7 +792,7 @@ export interface paths {
         put?: never;
         /**
          * Adopt Suggestions
-         * @description 고른 추천 일정만 일정 항목으로 만든다. 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다.
+         * @description 고른 추천 일정만 일정 항목으로 만든다(추천 시각이 있으면 그 시각으로). 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다.
          */
         post: operations["adopt_suggestions_trips__trip_id__suggestions__request_id__adopt_post"];
         delete?: never;
@@ -1597,6 +1598,14 @@ export interface components {
             place: components["schemas"]["PlaceCandidateOut"] | null;
             /** Adopted */
             adopted: boolean;
+            /** Start Time */
+            start_time: string | null;
+            /** Travel Minutes */
+            travel_minutes: number | null;
+            /** Transport */
+            transport: string | null;
+            /** Distance Km */
+            distance_km: number | null;
         };
         /** SuggestedTransferOut */
         SuggestedTransferOut: {
@@ -1646,6 +1655,33 @@ export interface components {
              * @default
              */
             preferences: string;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /**
+             * Day Start
+             * Format: time
+             * @default 09:00:00
+             */
+            day_start: string;
+            /**
+             * Day End
+             * Format: time
+             * @default 21:00:00
+             */
+            day_end: string;
+            /**
+             * Lodging
+             * @default
+             */
+            lodging: string;
+            /**
+             * Pace
+             * @default normal
+             * @enum {string}
+             */
+            pace: "relaxed" | "normal" | "packed";
         };
         /** SuggestionOut */
         SuggestionOut: {
@@ -1658,6 +1694,16 @@ export interface components {
             destination: string;
             /** Preferences */
             preferences: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
             /** Reused */
             reused: boolean;
             /** Items */

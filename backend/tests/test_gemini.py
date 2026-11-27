@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.gemini import (
+    FixedPlan,
     GeminiPlanSuggester,
     PlanRequest,
     PlanShape,
@@ -198,3 +199,44 @@ def test_answer_deadline_is_short_so_a_busy_model_falls_back_quickly():
     from app.gemini import TIMEOUT_MS
 
     assert TIMEOUT_MS <= 30_000
+
+
+def test_stops_are_sorted_by_start_time_and_renumbered_with_padded_hours():
+    raw = plan_json(
+        {**stop(order=1, name="저녁 식당"), "start_time": "18:00", "travel_minutes": 10, "transport": "도보"},
+        {**stop(order=2, name="동문시장"), "start_time": "9:30", "travel_minutes": 20, "transport": "대중교통"},
+        {**stop(day="2026-11-13", order=3, name="함덕해수욕장"), "start_time": "", "travel_minutes": 0, "transport": ""},
+    )
+
+    stops = validate_plan(raw, REQUEST)
+
+    assert [(s.date.day, s.order, s.place_name, s.start_time) for s in stops] == [
+        (12, 1, "동문시장", dt.time(9, 30)),
+        (12, 2, "저녁 식당", dt.time(18)),
+        (13, 1, "함덕해수욕장", None),
+    ]
+
+
+def test_old_style_answers_without_times_still_validate():
+    assert validate_plan(plan_json(stop()), REQUEST)[0].start_time is None
+
+
+def test_prompt_has_day_hours_lodging_pace_and_fixed_plans():
+    request = PlanRequest(
+        "제주 동쪽", dt.date(2026, 11, 13), dt.date(2026, 11, 13), "", day_start=dt.time(10), day_end=dt.time(18),
+        lodging="함덕 호텔", pace="relaxed", fixed=(FixedPlan(dt.date(2026, 11, 13), dt.time(12), "점심 약속", "동문재래시장"), FixedPlan(dt.date(2026, 11, 13), None, "카페")),
+    )
+
+    prompt = build_prompt(request)
+
+    assert "날짜: 2026-11-13 (1일)" in prompt
+    assert "하루 일정 시간: 10:00~18:00" in prompt
+    assert "숙소(출발·귀가 지점): 함덕 호텔" in prompt
+    assert "하루 2~3곳" in prompt
+    assert "- 2026-11-13 12:00 점심 약속 (동문재래시장)" in prompt
+    assert "- 2026-11-13 시간 미정 카페" in prompt
+    assert "travel_minutes" in prompt
+
+
+def test_prompt_without_fixed_plans_says_none():
+    assert "이미 잡힌 일정(바꾸거나 다시 추천하지 않는다):\n없음" in build_prompt(REQUEST)

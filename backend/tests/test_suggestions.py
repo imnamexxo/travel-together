@@ -115,7 +115,6 @@ def test_adopting_twice_does_not_duplicate(client, trip, suggester):
 
     assert again.json() == []
     assert len(client.get(trip.url("/plan-items"), headers=bearer(trip.token)).json()) == 1
-    assert ask(client, trip).json()["items"][0]["adopted"] is True
 
 
 def test_same_input_reuses_saved_result_without_calling_gemini(client, trip, suggester):
@@ -211,3 +210,63 @@ def test_names_match(suggested, found, same):
     from app.routers.suggestions import names_match
 
     assert names_match(suggested, found) is same
+
+
+def timed(day, order, name, at, travel=15, transport="도보", region="제주시"):
+    # Gemini 응답처럼 문자열 시각("9:30")을 검사기에 통과시킨다.
+    return SuggestedStop.model_validate({**stop(day, order, name, region).model_dump(), "start_time": at, "travel_minutes": travel, "transport": transport})
+
+
+def test_range_day_hours_lodging_and_pace_reach_gemini(client, trip, suggester):
+    suggester.responses = [[stop("2026-11-13", 1, "함덕해수욕장")]]
+
+    body = {**ASK, "start_date": "2026-11-13", "end_date": "2026-11-13", "day_start": "10:00", "day_end": "18:00", "lodging": "함덕 호텔", "pace": "relaxed"}
+    response = ask(client, trip, body)
+
+    assert response.status_code == 201
+    assert (response.json()["start_date"], response.json()["end_date"]) == ("2026-11-13", "2026-11-13")
+    request = suggester.requests[0]
+    assert (request.start_date, request.end_date) == (dt.date(2026, 11, 13), dt.date(2026, 11, 13))
+    assert (request.day_start, request.day_end, request.lodging, request.pace) == (dt.time(10), dt.time(18), "함덕 호텔", "relaxed")
+
+
+def test_range_outside_trip_or_reversed_is_rejected(client, trip, suggester):
+    assert ask(client, trip, {**ASK, "start_date": "2026-11-11"}).status_code == 422
+    assert ask(client, trip, {**ASK, "start_date": "2026-11-13", "end_date": "2026-11-12"}).status_code == 422
+    assert ask(client, trip, {**ASK, "day_start": "20:00", "day_end": "09:00"}).status_code == 422
+    assert suggester.requests == []
+
+
+def test_existing_plans_in_range_are_sent_as_fixed_and_change_the_cache_key(client, trip, suggester):
+    client.post(trip.url("/plan-items"), json={"date": "2026-11-12", "time": "12:00", "title": "점심 약속"}, headers=bearer(trip.token))
+    client.post(trip.url("/plan-items"), json={"date": "2026-11-13", "title": "다른 날"}, headers=bearer(trip.token))
+    suggester.responses = [PLAN, PLAN]
+
+    ask(client, trip, {**ASK, "start_date": "2026-11-12", "end_date": "2026-11-12"})
+
+    fixed = suggester.requests[0].fixed
+    assert [(f.date, f.time, f.title) for f in fixed] == [(dt.date(2026, 11, 12), dt.time(12), "점심 약속")]
+    client.post(trip.url("/plan-items"), json={"date": "2026-11-12", "title": "새 일정"}, headers=bearer(trip.token))
+    again = ask(client, trip, {**ASK, "start_date": "2026-11-12", "end_date": "2026-11-12"})
+    assert again.status_code == 201
+    assert len(suggester.requests) == 2
+
+
+def test_timetable_is_returned_with_distance_and_adopted_with_time(client, trip, suggester, places):
+    places.add("333", "성산일출봉", lat=33.458, lng=126.942)
+    suggester.responses = [[
+        timed("2026-11-12", 2, "성산일출봉", "14:00", 60, "자동차", "서귀포시"),
+        timed("2026-11-12", 1, "동문시장", "9:30", 20, "대중교통"),
+    ]]
+
+    result = ask(client, trip).json()
+
+    items = result["items"]
+    assert [(i["order"], i["place_name"], i["start_time"], i["travel_minutes"], i["transport"]) for i in items] == [
+        (1, "동문시장", "09:30:00", 20, "대중교통"),
+        (2, "성산일출봉", "14:00:00", 60, "자동차"),
+    ]
+    assert items[0]["distance_km"] is None
+    assert 35 < items[1]["distance_km"] < 45
+    adopted = client.post(trip.url(f"/suggestions/{result['id']}/adopt"), json={"item_ids": [items[1]["id"]]}, headers=bearer(trip.token)).json()
+    assert adopted[0]["time"] == "14:00:00"

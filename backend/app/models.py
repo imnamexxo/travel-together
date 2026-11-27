@@ -271,6 +271,9 @@ class SuggestionRequest(Base):
     input_hash: Mapped[str] = mapped_column(String(64))
     destination: Mapped[str] = mapped_column(String(60))
     preferences: Mapped[str] = mapped_column(String(200))
+    # 추천받은 날짜 구간. 구간을 고르기 전(0019 이전)에 받은 추천은 비어 있고, 여행 전체 기간이었다.
+    start_date: Mapped[date | None] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     items: Mapped[list["SuggestedItem"]] = relationship(
@@ -300,6 +303,10 @@ class SuggestedItem(Base):
     region: Mapped[str] = mapped_column(String(60))
     stay_minutes: Mapped[int] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(String(200))
+    # 도착 시각, 앞 장소에서 오는 이동 시간(분)과 수단. 0019 이전 추천은 비어 있다.
+    start_time: Mapped[dt.time | None] = mapped_column(Time)
+    travel_minutes: Mapped[int | None] = mapped_column(Integer)
+    transport: Mapped[str | None] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20))
     source_place_id: Mapped[str | None] = mapped_column(String(300))
     found_name: Mapped[str | None] = mapped_column(String(100))
