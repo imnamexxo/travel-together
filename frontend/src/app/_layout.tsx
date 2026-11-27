@@ -10,10 +10,11 @@ import { useTravelTheme } from '@/theme/theme-context';
 import { AppProviders } from '@/app-providers';
 import { RootNavigator } from '@/components/root-navigator';
 import { apiClient, authService } from '@/dependencies';
+import { wrapRoot } from '@/monitoring/sentry';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
   // 제목·숫자 글꼴. 다 받기 전에는 스플래시를 그대로 둔다(글꼴이 바뀌며 화면이 튀지 않게).
   const [fontsLoaded, fontError] = useFonts({ IBMPlexSansKR_400Regular, IBMPlexSansKR_500Medium, IBMPlexSansKR_600SemiBold, IBMPlexSansKR_700Bold });
   if (!fontsLoaded && !fontError) return null;
@@ -25,6 +26,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);
 
 function ThemedNavigation() {
   const { scheme, colors, ready } = useTravelTheme();
