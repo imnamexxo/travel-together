@@ -16,6 +16,7 @@ import { Dashes } from '@/components/ticket-parts';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
+import BatchPlaceSheet from './batch-place-sheet';
 import { pickPhotos } from './photo-prep';
 import { usePhotoUploads } from './use-photo-uploads';
 
@@ -63,6 +64,9 @@ export default function AlbumScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
+  // 여러 장 골라 장소 한 번에 연결하기. null이면 고르는 중이 아니다.
+  const [chosen, setChosen] = useState<string[] | null>(null);
+  const [linkingMany, setLinkingMany] = useState(false);
   const pickingRef = useRef(false);
   const { width, height } = useWindowDimensions();
   const contentWidth = Math.min(width, 600);
@@ -78,6 +82,9 @@ export default function AlbumScreen() {
   const failed = uploader.uploads.filter((u) => u.status === 'failed');
   const doneCount = uploader.uploads.filter((u) => u.status === 'done').length;
   const unlinked = photos.filter((photo) => !photo.place).length;
+  const selecting = chosen !== null;
+  const toggleChosen = (id: string) => setChosen((current) => current && (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
+  const allChosen = selecting && filtered.length > 0 && filtered.every((p) => chosen.includes(p.id));
 
   async function addPhotos() {
     if (pickingRef.current || uploader.busy) return;
@@ -109,9 +116,12 @@ export default function AlbumScreen() {
   const header = <>
     <View style={s.titleRow}>
       <View style={s.titleCopy}><Text style={s.eyebrow}>{trip.name}</Text><Text style={s.title}>여행의 순간</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="사진 추가" disabled={busy} onPress={addPhotos} style={({ pressed }) => [s.plus, pressed && s.pressed]}>
+      {photos.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel={selecting ? '사진 고르기 취소' : '사진 여러 장 골라 장소 연결'} onPress={() => setChosen(selecting ? null : [])} style={s.selectButton}>
+        <Text style={s.navText}>{selecting ? '취소' : '선택'}</Text>
+      </Pressable>}
+      {!selecting && <Pressable accessibilityRole="button" accessibilityLabel="사진 추가" disabled={busy} onPress={addPhotos} style={({ pressed }) => [s.plus, pressed && s.pressed]}>
         {busy ? <ActivityIndicator color={C.onPrimary} /> : <Text style={s.plusText}>＋</Text>}
-      </Pressable>
+      </Pressable>}
     </View>
     <MetaLine style={s.metaGap} textStyle={s.subtitleText} parts={[`사진 ${photos.length}장`, remaining <= 20 ? `${remaining}장 더 올릴 수 있어요` : `${limit}장까지 올릴 수 있어요`, unlinked > 0 && `장소 미연결 ${unlinked}장`]} />
     {uploader.uploads.length > 0 && <View style={s.uploadBox}>
@@ -147,12 +157,24 @@ export default function AlbumScreen() {
         </View>}
       ListFooterComponent={<Text style={s.footer}>사진은 줄여서 올리고 위치 정보는 지워서 보내요.{ '\n' }촬영 위치는 서버에 저장되지 않아요.</Text>}
       renderItem={({ item: row }) => row.kind === 'heading' ? <View style={s.groupHeading}>{row.place ? <PlaceName tripId={trip.id} place={row.place} style={s.groupTitle} /> : <Text style={s.groupTitle}>{row.title}</Text>}<View style={s.groupRule}><Dashes color={C.border} /></View><Text style={s.count}>{row.count}장</Text></View> : <View style={s.photoRow}>
-        {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`${photo.uploader_name}님 사진 크게 보기`} onPress={() => setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }]}>
+        {row.photos.map((photo) => <Pressable key={photo.id} accessibilityRole={selecting ? 'checkbox' : 'button'} accessibilityState={selecting ? { checked: chosen.includes(photo.id) } : undefined}
+          accessibilityLabel={selecting ? `${photo.uploader_name}님 사진 고르기` : `${photo.uploader_name}님 사진 크게 보기`} onPress={() => selecting ? toggleChosen(photo.id) : setSelectedId(photo.id)} style={[s.tile, { width: tile, height: tile }, selecting && chosen.includes(photo.id) && s.tileChosen]}>
           <CachedPhoto uri={photo.thumbnail_url} cacheKey={`${photo.id}-thumb`} style={s.thumbnail} onError={() => setFailedImages((current) => current.includes(photo.id) ? current : [...current, photo.id])} />
           {failedImages.includes(photo.id) && <View style={s.imageError}><Text style={s.imageErrorText}>사진 확인 필요</Text></View>}
+          {selecting && <View style={[s.check, chosen.includes(photo.id) && s.checkOn]}>{chosen.includes(photo.id) && <Text style={s.checkMark}>✓</Text>}</View>}
         </Pressable>)}
       </View>}
     />
+    {selecting && <View style={s.selectBar}>
+      <Pressable accessibilityRole="button" onPress={() => setChosen(allChosen ? [] : filtered.map((p) => p.id))} style={s.selectBarButton}>
+        <Text style={s.navText}>{allChosen ? '모두 해제' : day === null ? '모두 선택' : '이날 모두 선택'}</Text>
+      </Pressable>
+      <Text style={s.count}>{chosen.length}장 선택</Text>
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: !chosen.length }} disabled={!chosen.length} onPress={() => setLinkingMany(true)} style={[s.selectBarPrimary, !chosen.length && s.pressed]}>
+        <Text style={s.selectBarPrimaryText}>장소 연결</Text>
+      </Pressable>
+    </View>}
+    {linkingMany && selecting && <BatchPlaceSheet photos={photos.filter((p) => chosen.includes(p.id))} onClose={() => setLinkingMany(false)} onDone={() => { setLinkingMany(false); setChosen(null); }} />}
     <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedId(null)}>
       <SafeAreaView style={s.screen}>
         {selected && <ScrollView contentContainerStyle={s.detail}>
@@ -239,6 +261,13 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   titleCopy: { flex: 1 }, eyebrow: { fontSize: 12, color: C.textMuted, marginBottom: 8 },
   title: { fontSize: 32, fontFamily: Type.display, color: C.primary, letterSpacing: -1 },
   plus: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  selectButton: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
+  tileChosen: { borderColor: C.primary, borderWidth: 2 },
+  check: { position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#fff', backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: C.primary, borderColor: C.primary }, checkMark: { fontSize: 13, fontWeight: '700', color: C.onPrimary, lineHeight: 15 },
+  selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, backgroundColor: C.background },
+  selectBarButton: { minHeight: 44, justifyContent: 'center' },
+  selectBarPrimary: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, backgroundColor: C.primary, justifyContent: 'center' }, selectBarPrimaryText: { fontSize: 14, fontWeight: '600', color: C.onPrimary },
   plusText: { fontSize: 26, lineHeight: 30, color: C.onPrimary }, pressed: { opacity: 0.6 },
   subtitle: { fontSize: 13, color: C.textSecondary, marginTop: 13 }, subtitleText: { fontSize: 13, color: C.textSecondary }, metaGap: { marginTop: 13 },
   uploadBox: { marginTop: 16, padding: 14, borderRadius: 14, backgroundColor: C.banner, gap: 6 },

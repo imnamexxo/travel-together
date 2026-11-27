@@ -109,3 +109,39 @@ test('지도에서 사진이 연결된 장소는 들른 곳이다', async () => 
   // 미연결 사진 줄은 지도 정보창에서 뺐다(앨범에서 연결한다).
   expect(screen.queryByText(/미연결 사진/)).toBeNull();
 });
+
+test('여러 장을 골라 촬영 날짜의 일정 장소 하나에 한 번에 연결한다', async () => {
+  const api = render({ photos: { 'trip-jeju': [
+    photo({ id: 'p1', taken_at: '2026-11-12T04:00:00Z' }),
+    photo({ id: 'p2', taken_at: '2026-11-12T05:00:00Z', uploader_name: '서준', uploader_member_id: 'member-2' }),
+    photo({ id: 'p3', taken_at: '2026-11-13T05:00:00Z', uploader_name: '하린', uploader_member_id: 'member-3' }),
+  ] } });
+
+  fireEvent.press(await screen.findByRole('button', { name: '사진 여러 장 골라 장소 연결' }));
+  fireEvent.press(screen.getByRole('checkbox', { name: '민지님 사진 고르기' }));
+  fireEvent.press(screen.getByRole('checkbox', { name: '서준님 사진 고르기' }));
+  expect(screen.getByText('2장 선택')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '장소 연결' }));
+
+  // 11월 12일에 찍은 사진이라 그날 일정(동문시장)이 먼저 나온다.
+  expect(await screen.findByText('사진 찍은 날의 일정')).toBeOnTheScreen();
+  expect(screen.getByText('다른 날의 일정')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '동문시장에 연결' }));
+
+  await waitFor(() => expect(api.linkPhotoPlace).toHaveBeenCalledTimes(2));
+  expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p1', { place_id: 'place-market' });
+  expect(api.linkPhotoPlace).toHaveBeenCalledWith('trip-jeju', 'p2', { place_id: 'place-market' });
+  await waitFor(() => expect(screen.queryByText('2장 선택')).toBeNull());
+  expect(await screen.findByText('장소 미연결 1장')).toBeOnTheScreen();
+});
+
+test('고르기 중에 모두 선택하고 취소할 수 있다', async () => {
+  render({ photos: { 'trip-jeju': [photo({ id: 'p1' }), photo({ id: 'p2', uploader_name: '서준', uploader_member_id: 'member-2' })] } });
+
+  fireEvent.press(await screen.findByRole('button', { name: '사진 여러 장 골라 장소 연결' }));
+  fireEvent.press(screen.getByRole('button', { name: '모두 선택' }));
+  expect(screen.getByText('2장 선택')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '사진 고르기 취소' }));
+  expect(screen.queryByText('2장 선택')).toBeNull();
+  expect(screen.getByRole('button', { name: '사진 추가' })).toBeOnTheScreen();
+});
