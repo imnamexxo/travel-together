@@ -301,6 +301,31 @@ export function useLinkPhotoPlace(tripId: string) {
   });
 }
 
+/**
+ * 여러 사진을 이 여행의 같은 장소에 한 번에 연결(place_id 없으면 해제)한다. 사진마다 기존 연결 API를 4개씩 나눠 부르고,
+ * 실패한 사진 수를 돌려준다. 다 끝나면 사진과 일정을 한 번만 다시 불러온다.
+ */
+export function useLinkPhotosPlace(tripId: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ photoIds, link }: { photoIds: string[]; link: { place_id?: string } }) => {
+      let failed = 0;
+      const queue = [...photoIds];
+      await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
+        for (let id = queue.shift(); id; id = queue.shift()) {
+          try { await api.linkPhotoPlace(tripId, id, link); } catch { failed += 1; }
+        }
+      }));
+      return { failed, total: photoIds.length };
+    },
+    onSettled: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos(tripId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.planItems(tripId) }),
+    ]),
+  });
+}
+
 export function useUploadReceipt(tripId: string) {
   const api = useApi();
   const refresh = useRefreshExpenses(tripId);

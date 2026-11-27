@@ -27,6 +27,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
   const [confirmation, setConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [errors, setErrors] = useState<AuthErrors>({});
   const nameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
@@ -35,7 +36,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
 
   async function submit() {
     if (submitting) return;
-    const nextErrors = validateAuth({ email, password, name, confirmation }, signup);
+    const nextErrors = validateAuth({ email, password, name, confirmation, ageConfirmed }, signup);
     setErrors(nextErrors);
     setFormError(null);
     setNotice(null);
@@ -43,7 +44,7 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
       if (signup && nextErrors.name) nameRef.current?.focus();
       else if (nextErrors.email) emailRef.current?.focus();
       else if (nextErrors.password) passwordRef.current?.focus();
-      else confirmationRef.current?.focus();
+      else if (nextErrors.confirmation) confirmationRef.current?.focus();
       return;
     }
     setSubmitting(true);
@@ -104,6 +105,12 @@ export default function AuthScreen({ signup = false }: { signup?: boolean }) {
               <Pressable accessibilityRole="button" accessibilityLabel={showConfirmation ? '확인 비밀번호 숨기기' : '확인 비밀번호 보기'} onPress={() => setShowConfirmation((current) => !current)} style={s.eye}><SymbolView name={eye(showConfirmation)} tintColor={C.textMuted} size={19} /></Pressable>
             </View>
             {!!errors.confirmation && <Text accessibilityRole="alert" style={s.error}>{errors.confirmation}</Text>}
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: ageConfirmed }} accessibilityLabel="만 14세 이상입니다 (필수)"
+              onPress={() => { setAgeConfirmed((current) => !current); setErrors(({ age: _age, ...rest }) => rest); }} style={s.checkRow}>
+              <View style={[s.checkbox, ageConfirmed && s.checkboxOn, errors.age && s.invalid]}>{ageConfirmed && <Text style={s.checkMark}>✓</Text>}</View>
+              <Text style={s.checkText}>만 14세 이상입니다 <Text style={s.required}>(필수)</Text></Text>
+            </Pressable>
+            {!!errors.age && <Text accessibilityRole="alert" style={s.error}>{errors.age}</Text>}
           </>}
           {!signup && <Pressable accessibilityRole="button" onPress={() => router.push('/forgot-password')} style={s.forgot}><Text style={s.smallLink}>비밀번호를 잊으셨나요?</Text></Pressable>}
           {!!formError && <Text accessibilityRole="alert" style={s.error}>{formError}</Text>}
@@ -134,5 +141,9 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   primaryButton: { minHeight: 54, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center', marginTop: 20 }, primaryText: { fontSize: 16, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.65 },
   switchRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }, switchText: { fontSize: 13, color: C.textSecondary }, linkButton: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 13, fontWeight: '600', color: C.accent },
   noticeText: { fontSize: 13, lineHeight: 20, color: C.textSecondary, marginTop: 7 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, marginTop: 14 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface },
+  checkboxOn: { backgroundColor: C.primary, borderColor: C.primary }, checkMark: { fontSize: 14, fontWeight: '700', color: C.onPrimary, lineHeight: 16 },
+  checkText: { fontSize: 14, color: C.text }, required: { fontSize: 12, color: C.textMuted },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }, backText: { fontSize: 14, color: C.accent },
 });
