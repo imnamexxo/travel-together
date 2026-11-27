@@ -60,6 +60,11 @@ test('회원가입할 때 입력한 이름이 가입 요청에 실린다', async
   await fillSignIn('minji@example.com', 'secret123');
   fireEvent.changeText(screen.getByLabelText('비밀번호 확인'), 'secret123');
   fireEvent.press(screen.getByRole('button', { name: '회원가입' }));
+  expect(await screen.findByText('만 14세 이상만 가입할 수 있어요.')).toBeOnTheScreen();
+  expect(auth.signUps).toEqual([]);
+
+  fireEvent.press(screen.getByRole('checkbox', { name: '만 14세 이상입니다 (필수)' }));
+  fireEvent.press(screen.getByRole('button', { name: '회원가입' }));
 
   expect(await screen.findByText('내 여행')).toBeOnTheScreen();
   expect(auth.signUps).toEqual([{ email: 'minji@example.com', displayName: '민지' }]);

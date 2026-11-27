@@ -41,6 +41,8 @@ export default function SocialLoginButtons() {
       {busy === provider ? <ActivityIndicator color={provider === 'kakao' ? '#191919' : C.text} /> : <Text style={provider === 'kakao' ? s.kakaoText : s.googleText}>{LABELS[provider]}</Text>}
     </Pressable>)}
     {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
+    {/* 소셜 로그인은 처음 누르면 바로 가입되므로 여기서도 나이 조건을 알린다(처리방침 9번). */}
+    <Text style={s.notice}>카카오·Google로 처음 계속하면 가입돼요. 만 14세 이상만 가입할 수 있으며, 계속하면 만 14세 이상임을 확인한 것으로 봐요.</Text>
   </View>;
 }
 
@@ -54,4 +56,5 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   kakaoText: { fontSize: 14, fontWeight: '600', color: '#191919' },
   pressed: { opacity: 0.65 },
   error: { fontSize: 12, lineHeight: 19, color: C.error },
+  notice: { fontSize: 11, lineHeight: 17, color: C.textMuted, textAlign: 'center', marginTop: 2 },
 });

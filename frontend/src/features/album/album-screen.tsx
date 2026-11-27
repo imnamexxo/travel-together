@@ -16,6 +16,7 @@ import { Dashes } from '@/components/ticket-parts';
 import { toKstParts } from '@/features/expenses/expense-form';
 import { useCurrentTrip } from '@/features/trip/current-trip';
 import type { TripDay } from '@/features/trip/trip-dates';
+import { reportPhoto } from '@/constants/legal';
 import BatchPlaceSheet from './batch-place-sheet';
 import { pickPhotos } from './photo-prep';
 import { usePhotoUploads } from './use-photo-uploads';
@@ -197,6 +198,9 @@ export default function AlbumScreen() {
             <Text style={s.helper}>{selected.taken_at ? (() => { const t = toKstParts(selected.taken_at); const index = photoDayIndex(selected, days); return `${index >= 0 ? `${index + 1}일 차, ` : ''}${t.date} ${t.time}`; })() : '촬영 시각 정보가 없는 사진이에요.'}</Text>
             <PlaceSection photo={selected} />
             {!canDelete(selected) && <Text style={s.helper}>사진은 올린 사람과 총무만 지울 수 있어요.</Text>}
+            {selected.uploader_member_id !== trip.me.member_id && <Pressable accessibilityRole="button" accessibilityLabel="이 사진 신고하기" onPress={() => reportPhoto(trip.id, selected.id)} style={s.reportButton}>
+              <Text style={s.reportText}>부적절한 사진인가요? 신고하기</Text>
+            </Pressable>}
           </View>
         </ScrollView>}
       </SafeAreaView>
@@ -298,4 +302,5 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   searchButton: { minHeight: 46, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.primary, justifyContent: 'center' }, searchButtonText: { color: C.onPrimary, fontWeight: '600' },
   result: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.divider }, resultName: { fontSize: 14, fontWeight: '600', color: C.text },
   errorText: { fontSize: 12, color: C.error, marginTop: 8 },
+  reportButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 20 }, reportText: { fontSize: 12, color: C.textMuted, textDecorationLine: 'underline' },
 });
