@@ -10,7 +10,7 @@ import { useAuth } from '@/auth/auth-context';
 import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors, useTravelTheme, type ThemeMode } from '@/theme/theme-context';
 import { goBack } from '@/navigation';
-import { openPrivacyPolicy } from '@/constants/legal';
+import { mailSupport, openPrivacyPolicy } from '@/constants/legal';
 
 const PROVIDER_LABEL: Record<string, string> = { email: '이메일', kakao: '카카오', google: 'Google' };
 
@@ -44,6 +44,7 @@ export default function AccountScreen() {
           <Pressable accessibilityRole="button" onPress={() => void signOut()} style={({ pressed }) => [s.outlineButton, pressed && s.pressed]}><Text style={s.outlineText}>로그아웃</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={() => router.push('/account-delete')} style={s.textButton}><Text style={s.mutedLink}>회원 탈퇴</Text></Pressable>
           <Pressable accessibilityRole="link" onPress={openPrivacyPolicy} style={s.textButton}><Text style={s.mutedLink}>개인정보 처리방침</Text></Pressable>
+          <Pressable accessibilityRole="link" onPress={() => mailSupport('[문의] Travel Together')} style={s.textButton}><Text style={s.mutedLink}>문의·신고 메일 보내기</Text></Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
