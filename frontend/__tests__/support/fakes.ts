@@ -404,6 +404,23 @@ export function fakeApi(
       plansOf(tripId).push(...created);
       return created;
     }),
+    importPlanText: jest.fn(async () => {
+      if (!suggestion) throw new ApiError(502, 'ai_unavailable', '추천 서버에 연결하지 못했습니다.');
+      return suggestion;
+    }),
+    // 서버처럼 원래 여행 첫날이 first_date가 되게 옮기고, 기간 밖은 빼고 센다(장소는 그대로).
+    copyPlanItems: jest.fn(async (tripId, { source_trip_id, item_ids, first_date }) => {
+      const [target, source] = [store.find((t) => t.id === tripId)!, store.find((t) => t.id === source_trip_id)!];
+      const shift = (Date.parse(first_date) - Date.parse(source.start_date)) / 86400000;
+      let skipped = 0;
+      const created = plansOf(source_trip_id).filter((i) => item_ids.includes(i.id)).flatMap((item, n) => {
+        const day = new Date(Date.parse(item.date) + shift * 86400000).toISOString().slice(0, 10);
+        if (day < target.start_date || day > target.end_date) { skipped += 1; return []; }
+        return [planItem({ ...item, id: `copied-${n + 1}`, date: day })];
+      });
+      plansOf(tripId).push(...created);
+      return { items: created, skipped, places_dropped: 0 };
+    }),
     listPhotos: jest.fn(async (tripId) => ({ photos: [...photosOf(tripId)], count: photosOf(tripId).length, limit: photoLimit })),
     uploadPhoto: jest.fn(async (tripId, upload) => {
       const me = trips.find((t) => t.id === tripId)?.me.member_id ?? 'member-1';

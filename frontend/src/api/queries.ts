@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useApi } from '@/api/api-context';
-import type { ExpenseInput, PlanItem, Friends, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
+import type { ExpenseInput, PlanCopy, PlanItem, Friends, MapFilter, PhotoPlaceLink, PhotoUpload, PlanItemInput, SuggestionAsk, TransferCreate, TripCreate, TripDetail, TripUpdate } from '@/api/client';
 
 export const queryKeys = {
   me: ['me'] as const,
@@ -265,6 +265,17 @@ export function useAdoptSuggestions(tripId: string) {
     mutationFn: ({ requestId, itemIds }: { requestId: string; itemIds: string[] }) => api.adoptSuggestions(tripId, requestId, itemIds),
     onSuccess: refresh,
   });
+}
+
+export function useImportPlanText(tripId: string) {
+  const api = useApi();
+  return useMutation({ mutationFn: (text: string) => api.importPlanText(tripId, text) });
+}
+
+export function useCopyPlanItems(tripId: string) {
+  const api = useApi();
+  const refresh = useRefreshPlan(tripId);
+  return useMutation({ mutationFn: (copy: PlanCopy) => api.copyPlanItems(tripId, copy), onSuccess: refresh });
 }
 
 /** 서명 URL이 10분이면 만료되므로 그보다 자주 새로 받는다. */

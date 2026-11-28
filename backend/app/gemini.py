@@ -22,7 +22,8 @@ class SuggestedStop(BaseModel):
     date: date
     order: int = Field(ge=1)
     place_name: str = Field(min_length=1, max_length=100)
-    region: str = Field(min_length=1, max_length=60)
+    # 장소가 있는 시·군·구(해외는 도시·구역). 붙여 넣은 글의 "체크인"처럼 장소가 아닌 일정은 빈 문자열이고, 장소 검색을 하지 않는다.
+    region: str = Field(max_length=60)
     stay_minutes: int = Field(ge=10, le=720)
     description: str = Field(max_length=200)
     # 그 장소에 도착하는 시각. 앞 장소(그날 첫 장소는 숙소·출발지)에서 오는 이동 시간과 수단.
@@ -98,6 +99,16 @@ class PlanRequest:
     fixed: tuple[FixedPlan, ...] = ()
 
 
+@dataclass(frozen=True)
+class ImportRequest:
+    """사용자가 붙여 넣은 계획 글을 여행 날짜의 일정 항목으로 바꿔 달라는 요청."""
+
+    text: str
+    start_date: date
+    end_date: date
+    overseas: bool = False
+
+
 class SuggestionFormatError(Exception):
     """응답이 약속한 형식이 아니다(다시 요청해 볼 만하다)."""
 
@@ -114,9 +125,12 @@ class SuggestionUnavailable(Exception):
 class PlanSuggester(Protocol):
     def suggest(self, request: PlanRequest) -> list[SuggestedStop]: ...
 
+    def parse(self, request: ImportRequest) -> list[SuggestedStop]: ...
 
-def validate_plan(raw: str | None, request: PlanRequest) -> list[SuggestedStop]:
-    """형식과 날짜 범위를 검사한다. 어긋나면 SuggestionFormatError."""
+
+def validate_plan(raw: str | None, request: "PlanRequest | ImportRequest", *, drop_outside: bool = False) -> list[SuggestedStop]:
+    """형식과 날짜 범위를 검사한다. 어긋나면 SuggestionFormatError.
+    drop_outside면 기간 밖 날짜는 오류 대신 버린다(붙여 넣은 글에 여행 전후 일정이 섞여 있을 수 있다)."""
     if not raw:
         raise SuggestionFormatError("빈 응답")
     try:
@@ -124,8 +138,9 @@ def validate_plan(raw: str | None, request: PlanRequest) -> list[SuggestedStop]:
     except ValidationError as exc:
         raise SuggestionFormatError(str(exc)) from exc
     outside = [s for s in plan.stops if not request.start_date <= s.date <= request.end_date]
-    if outside:
+    if outside and not drop_outside:
         raise SuggestionFormatError(f"여행 기간 밖 날짜: {outside[0].date}")
+    plan.stops = [s for s in plan.stops if s not in outside]
     # 시각이 있으면 시각 순, 없으면 받은 순서. 그날 순서(order)는 1부터 다시 매긴다.
     stops = sorted(plan.stops, key=lambda s: (s.date, s.start_time is None, s.start_time or TimeOfDay(0), s.order))
     numbered: list[SuggestedStop] = []
@@ -180,6 +195,25 @@ def build_prompt(request: PlanRequest) -> str:
         + naming
         + "- stay_minutes는 예상 체류 시간(분), description은 한 줄 설명(60자 이내)이다.\n"
         "- date는 위 날짜 중 하나를 YYYY-MM-DD로 쓴다. order는 그날 방문 순서(1부터)다."
+    )
+
+
+def build_import_prompt(request: ImportRequest) -> str:
+    days = (request.end_date - request.start_date).days + 1
+    dates = ", ".join(f"{i + 1}일 차={(request.start_date + timedelta(days=i)).isoformat()}" for i in range(days))
+    where = "Google 지도" if request.overseas else "카카오맵 같은 지도 앱"
+    return (
+        "너는 사용자가 메모·메신저에 써 둔 여행 계획을 일정 항목으로 옮겨 적는 도우미다. 새 일정을 지어내지 않는다.\n"
+        f"여행 날짜: {dates}\n\n"
+        "규칙:\n"
+        "- 글에 있는 일정만 옮긴다. 글에 없는 장소나 시간을 추가하지 않는다.\n"
+        "- 날짜는 글의 '1일차', 'Day 2', '12/10', '토요일' 같은 표현을 위 여행 날짜에 맞춘다. 날짜가 없으면 글의 순서대로 1일 차부터 넣는다. 여행 날짜 밖의 일정은 넣지 않는다.\n"
+        "- order는 그날 글에 나온 순서(1부터)다. start_time은 글에 시각이 있을 때만 HH:MM(24시간)으로, 없으면 빈 문자열이다.\n"
+        f"- place_name은 {where}에서 검색할 수 있는 장소 이름이다. 장소가 아닌 일정(체크인, 공항 이동, 휴식 등)은 place_name에 일정 이름을 쓰고 region을 빈 문자열로 둔다.\n"
+        "- region은 장소가 있는 시·군·구(해외는 도시와 구역)다. 글에 없으면 장소로 미루어 쓴다.\n"
+        "- description에는 그 일정에 대해 글에 적힌 메모(가격, 예약, 준비물 등)를 60자 이내로 옮긴다. 없으면 빈 문자열이다.\n"
+        "- stay_minutes는 글에 있으면 그 값, 없으면 60이다. travel_minutes는 0, transport는 빈 문자열이다.\n\n"
+        f"사용자의 글:\n\"\"\"\n{request.text}\n\"\"\""
     )
 
 
@@ -241,7 +275,7 @@ class GeminiPlanSuggester:
             self._client = genai.Client(api_key=self._api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
         return self._client
 
-    def suggest(self, request: PlanRequest) -> list[SuggestedStop]:
+    def _ask(self, prompt: str, temperature: float) -> str | None:
         if not self._api_key:
             raise SuggestionUnavailable("GEMINI_API_KEY가 설정되지 않았습니다.")
         from google.genai import errors, types
@@ -251,11 +285,11 @@ class GeminiPlanSuggester:
                 self._get_client(),
                 self._model,
                 sleep=self._sleep,
-                contents=build_prompt(request),
+                contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=PlanShape,
-                    temperature=0.7,
+                    temperature=temperature,
                     # 생각(thinking)은 답을 몇 배 느리게 만든다. 일정 추천에는 필요 없다.
                     thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
@@ -264,4 +298,11 @@ class GeminiPlanSuggester:
             raise SuggestionUnavailable(str(exc)) from exc
         except Exception as exc:  # 네트워크 오류 등. 원인은 로그로만 남긴다.
             raise SuggestionUnavailable(repr(exc)) from exc
-        return validate_plan(response.text, request)
+        return response.text
+
+    def suggest(self, request: PlanRequest) -> list[SuggestedStop]:
+        return validate_plan(self._ask(build_prompt(request), 0.7), request)
+
+    def parse(self, request: ImportRequest) -> list[SuggestedStop]:
+        # 옮겨 적기라 지어내지 않도록 온도를 낮춘다.
+        return validate_plan(self._ask(build_import_prompt(request), 0.1), request, drop_outside=True)

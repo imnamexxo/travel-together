@@ -3162,6 +3162,85 @@
         }
       }
     },
+    "/trips/{trip_id}/plan-items/copy": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Copy Plan Items",
+        "description": "내가 속한 다른 여행의 일정 항목을 이 여행으로 복사한다(시각·제목·메모·예상 비용·장소).\n날짜는 원래 여행의 첫날이 first_date가 되도록 옮기고, 이 여행 기간 밖으로 나가는 것은 넣지 않는다.\n장소는 같은 검색기(국내 카카오·해외 Google)의 장소일 때만 옮긴다. 원래 여행은 바뀌지 않는다.",
+        "operationId": "copy_plan_items_trips__trip_id__plan_items_copy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCopyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanCopyOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행·일정 항목 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/trips/{trip_id}/plan-items/order": {
       "put": {
         "tags": [
@@ -3455,6 +3534,105 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SuggestionAsk"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "여행 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "오늘 추천 횟수를 다 씀",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Gemini 실패·형식 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{trip_id}/suggestions/import": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Import Plan Text",
+        "description": "써 둔 계획 글을 여행 날짜의 일정 후보로 바꾼다. 추천과 같은 모양으로 돌려주고, 고른 것만 adopt로 넣는다.\n여행 기간 밖의 일정은 버린다. 추천과 하루 횟수를 함께 센다. 같은 글이면 저장된 결과를 200으로 돌려준다.",
+        "operationId": "import_plan_text_trips__trip_id__suggestions_import_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanTextIn"
               }
             }
           }
@@ -5733,6 +5911,64 @@
         "title": "PlaceRef",
         "description": "검색 결과에서 고른 장소. 서버가 여행의 검색기(카카오·Google)로 다시 확인한다."
       },
+      "PlanCopyIn": {
+        "properties": {
+          "source_trip_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Source Trip Id"
+          },
+          "item_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Item Ids"
+          },
+          "first_date": {
+            "type": "string",
+            "format": "date",
+            "title": "First Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_trip_id",
+          "item_ids",
+          "first_date"
+        ],
+        "title": "PlanCopyIn",
+        "description": "다른 여행의 일정 가져오기. 원래 여행의 첫날이 first_date가 되도록 날짜를 통째로 옮긴다."
+      },
+      "PlanCopyOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "places_dropped": {
+            "type": "integer",
+            "title": "Places Dropped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "skipped",
+          "places_dropped"
+        ],
+        "title": "PlanCopyOut"
+      },
       "PlanItemIn": {
         "properties": {
           "date": {
@@ -5913,6 +6149,21 @@
           "item_ids"
         ],
         "title": "PlanOrder"
+      },
+      "PlanTextIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "PlanTextIn"
       },
       "Profile": {
         "properties": {
