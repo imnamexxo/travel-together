@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import Head from 'expo-router/head';
 import { IBMPlexSansKR_400Regular, IBMPlexSansKR_500Medium, IBMPlexSansKR_600SemiBold, IBMPlexSansKR_700Bold, useFonts } from '@expo-google-fonts/ibm-plex-sans-kr';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -17,9 +18,12 @@ SplashScreen.preventAutoHideAsync();
 function RootLayout() {
   // 제목·숫자 글꼴. 다 받기 전에는 스플래시를 그대로 둔다(글꼴이 바뀌며 화면이 튀지 않게).
   const [fontsLoaded, fontError] = useFonts({ IBMPlexSansKR_400Regular, IBMPlexSansKR_500Medium, IBMPlexSansKR_600SemiBold, IBMPlexSansKR_700Bold });
-  if (!fontsLoaded && !fontError) return null;
+  // 웹 페이지 제목(검색 결과·브라우저 탭). 글꼴을 받기 전(정적 렌더링 포함)에도 넣는다. 설명·미리보기 정보는 +html.tsx에 있다.
+  const head = <Head><title>Travel Together - 함께 짜는 여행 일정·사진·경비 정산</title></Head>;
+  if (!fontsLoaded && !fontError) return head;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {head}
       <AppProviders authService={authService} api={apiClient}>
         <ThemedNavigation />
       </AppProviders>
