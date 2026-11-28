@@ -66,8 +66,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest && node --test src/features/auth/validation.test.mjs",
-    "web:build": "eas-cli env:exec production \"npx expo export --platform web\"",
+    "web:build": "npx eas-cli env:exec production \"npx expo export --platform web\"",
     "gen:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts",
+    "web:deploy": "npx eas-cli deploy --prod --export-dir dist",
     "legal:build": "node scripts/build-legal-site.mjs"
   },
   "private": true,
