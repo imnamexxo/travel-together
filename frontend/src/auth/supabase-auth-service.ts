@@ -77,6 +77,12 @@ export function createSupabaseAuthService(supabase: SupabaseClient): AuthService
       return 'signed_in';
     },
 
+    async completeSocialSignIn(code) {
+      // 같은 브라우저에 남아 있는 PKCE 검증 값으로 바꾼다. 다른 브라우저에서 열면 실패한다.
+      const exchanged = await supabase.auth.exchangeCodeForSession(code);
+      if (exchanged.error) throw new AuthError('소셜 로그인에 실패했습니다. 다시 시도해 주세요.');
+    },
+
     async requestPasswordReset(email) {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: passwordResetUrl() });
       if (error) throw toAuthError(error);

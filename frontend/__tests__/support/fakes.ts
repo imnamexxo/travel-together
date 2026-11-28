@@ -63,6 +63,14 @@ export class FakeAuthService implements AuthService {
     return this.socialResult;
   }
 
+  readonly completedCodes: string[] = [];
+
+  async completeSocialSignIn(code: string): Promise<void> {
+    this.completedCodes.push(code);
+    if (code === 'bad') throw new AuthError('소셜 로그인에 실패했습니다. 다시 시도해 주세요.');
+    this.setSession({ userId: 'social-user', email: null, provider: 'kakao' });
+  }
+
   readonly resetRequests: string[] = [];
 
   async requestPasswordReset(email: string) {

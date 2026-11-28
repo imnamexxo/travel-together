@@ -7,8 +7,10 @@
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 import { takenAtFromExif } from './exif-time';
+import { readJpegExifTimes } from './jpeg-exif';
 
 export type PickedPhoto = {
   /** 기기 안에서 사진을 구분하는 값(같은 사진을 두 번 고르지 않게) */
@@ -29,13 +31,22 @@ export async function pickPhotos(limit: number): Promise<PickedPhoto[] | null> {
     mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: limit, orderedSelection: true, quality: 1, exif: true,
   });
   if (result.canceled) return null;
-  return result.assets.slice(0, limit).map((asset) => ({
+  return Promise.all(result.assets.slice(0, limit).map(async (asset) => ({
     key: asset.assetId ?? asset.uri,
     uri: asset.uri,
     width: asset.width,
     height: asset.height,
-    takenAt: takenAtFromExif(asset.exif),
-  }));
+    takenAt: takenAtFromExif(asset.exif ?? (Platform.OS === 'web' ? await webExifTimes(asset.uri) : null)),
+  })));
+}
+
+/** 브라우저는 사진 선택 결과에 EXIF를 주지 않아 파일에서 촬영 시각 태그만 직접 읽는다. 못 읽으면 null. */
+async function webExifTimes(uri: string): Promise<Record<string, string> | null> {
+  try {
+    return readJpegExifTimes(new Uint8Array(await (await fetch(uri)).arrayBuffer()));
+  } catch {
+    return null;
+  }
 }
 
 async function resized(photo: PickedPhoto, edge: number, compress: number): Promise<string> {
