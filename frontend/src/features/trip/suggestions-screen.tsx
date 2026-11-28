@@ -4,20 +4,17 @@ import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, type Suggestion, type SuggestionAsk } from '@/api/client';
-import { useAdoptSuggestions, useAskSuggestions, usePlanItems } from '@/api/queries';
+import { useAskSuggestions, usePlanItems } from '@/api/queries';
 import { Type, type TravelPalette } from '@/constants/theme';
 import { useThemedStyles, useTravelColors } from '@/theme/theme-context';
-import MetaLine from '@/components/meta-line';
 import { goBack } from '@/navigation';
 import { useCurrentTrip } from './current-trip';
+import SuggestionResult from './suggestion-result';
 
 const PRESETS = ['맛집 위주', '여유로운 일정', '자연·풍경', '실내 위주', '아이와 함께'];
 const PACES: { value: SuggestionAsk['pace'] & string; label: string }[] = [
   { value: 'relaxed', label: '여유롭게' }, { value: 'normal', label: '보통' }, { value: 'packed', label: '빡빡하게' },
 ];
-/** 앞 장소와 직선으로 이만큼(km) 넘게 떨어져 있으면 이동이 길다고 알린다. */
-export const FAR_KM = 25;
-
 /** "9:00"·"0930"처럼 써도 "09:00"으로. 시각이 아니면 null. */
 export function normalizeTime(value: string): string | null {
   const match = /^(\d{1,2}):?(\d{2})$/.exec(value.trim());
@@ -37,7 +34,6 @@ export default function SuggestionsScreen() {
   const s = useThemedStyles(sStyles);
   const { trip, days } = useCurrentTrip();
   const ask = useAskSuggestions(trip.id);
-  const adopt = useAdoptSuggestions(trip.id);
   const planItems = usePlanItems(trip.id);
   const [range, setRange] = useState<[number, number]>([0, Math.max(days.length - 1, 0)]);
   const [destination, setDestination] = useState('');
@@ -47,7 +43,6 @@ export default function SuggestionsScreen() {
   const [lodging, setLodging] = useState('');
   const [pace, setPace] = useState<(typeof PACES)[number]['value']>('normal');
   const [result, setResult] = useState<Suggestion | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [failure, setFailure] = useState<{ message: string; aiFailed: boolean } | null>(null);
   const planner = `/trips/${trip.id}` as const;
@@ -74,7 +69,6 @@ export default function SuggestionsScreen() {
         day_start: startTime, day_end: endTime, lodging: lodging.trim(), pace,
       });
       setResult(suggestion);
-      setSelected([]);
     } catch (e) {
       setFailure({
         message: e instanceof Error ? e.message : '추천을 받지 못했어요.',
@@ -82,22 +76,6 @@ export default function SuggestionsScreen() {
       });
     }
   }
-
-  async function addToPlanner() {
-    if (!result || !selected.length) return;
-    setFailure(null);
-    try {
-      await adopt.mutateAsync({ requestId: result.id, itemIds: selected });
-      goBack(planner);
-    } catch (e) {
-      setFailure({ message: e instanceof Error ? e.message : '플래너에 추가하지 못했어요.', aiFailed: false });
-    }
-  }
-
-  const byDate = (result?.items ?? []).reduce<Record<string, Suggestion['items']>>((groups, item) => {
-    (groups[item.date] ??= []).push(item);
-    return groups;
-  }, {});
 
   return <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -159,38 +137,8 @@ export default function SuggestionsScreen() {
           {failure.aiFailed && <Pressable accessibilityRole="button" onPress={() => goBack(planner)} style={s.textButton}><Text style={s.link}>플래너에서 직접 일정 쓰기 ›</Text></Pressable>}
         </View>}
 
-        {result && !ask.isPending && <>
-          <Text style={s.resultTitle}>{result.destination}</Text>
-          {result.reused && <Text style={s.caption}>같은 조건으로 받은 추천을 다시 보여드려요.</Text>}
-          {Object.entries(byDate).map(([date, items]) => {
-            const dayNumber = days.findIndex((d) => d.iso === date) + 1;
-            return <View key={date} style={s.day}>
-              <Text style={s.dayTitle}>{dayNumber > 0 ? `${dayNumber}일 차  ` : ''}{days[dayNumber - 1]?.title ?? date}</Text>
-              {items.map((item) => {
-                const on = selected.includes(item.id);
-                const far = item.distance_km != null && item.distance_km >= FAR_KM;
-                return <View key={item.id}>
-                  {(item.travel_minutes != null || far) && <Text style={[s.travel, far && s.travelFar]}>
-                    ↓ {[item.transport, item.travel_minutes != null && `${item.travel_minutes}분`].filter(Boolean).join(' ')}{far ? `  앞 장소와 ${item.distance_km}km, 이동이 길어요` : ''}
-                  </Text>}
-                  <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.place_name} 선택`} accessibilityState={{ checked: on || item.adopted, disabled: item.adopted }} disabled={item.adopted}
-                    onPress={() => setSelected((current) => on ? current.filter((id) => id !== item.id) : [...current, item.id])} style={[s.card, on && s.cardOn, item.adopted && s.cardDone]}>
-                    <View style={s.between}>
-                      <Text style={s.cardTitle}>{on ? '✓ ' : ''}{item.start_time ? `${item.start_time.slice(0, 5)}  ` : `${item.order}. `}{item.place_name}</Text>
-                      {item.adopted ? <Text style={s.badgeDone}>추가됨</Text> : item.status === 'needs_check' && <Text style={s.badgeWarn}>확인 필요</Text>}
-                    </View>
-                    <MetaLine textStyle={s.caption} parts={[item.place ? (item.place.road_address ?? item.place.address) : item.status === 'verified' ? item.region : `${item.region}, 지도에서 찾지 못했어요`, `약 ${item.stay_minutes}분`]} />
-                    {!!item.description && <Text style={s.desc}>{item.description}</Text>}
-                  </Pressable>
-                </View>;
-              })}
-            </View>;
-          })}
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: !selected.length || adopt.isPending }} disabled={!selected.length || adopt.isPending} onPress={addToPlanner} style={[s.primary, (!selected.length || adopt.isPending) && s.pressed]}>
-            <Text style={s.primaryText}>플래너에 추가 ({selected.length})</Text>
-          </Pressable>
-          <Text style={s.caption}>추천 시각까지 함께 들어가요. &quot;확인 필요&quot;는 지도에서 찾지 못한 곳이라 장소 없이 들어가니, 플래너에서 장소를 직접 골라 주세요. 이동 시간은 AI가 어림한 값이에요.</Text>
-        </>}
+        {result && !ask.isPending && <SuggestionResult key={result.id} result={result} onAdopted={() => goBack(planner)}
+          note={'추천 시각까지 함께 들어가요. "확인 필요"는 지도에서 찾지 못한 곳이라 장소 없이 들어가니, 플래너에서 장소를 직접 골라 주세요. 이동 시간은 AI가 어림한 값이에요.'} />}
       </ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
@@ -214,13 +162,5 @@ const sStyles = (C: TravelPalette) => StyleSheet.create({
   primaryText: { fontSize: 15, fontWeight: '600', color: C.onPrimary }, pressed: { opacity: 0.5 },
   progress: { alignItems: 'center', paddingVertical: 28 },
   failure: { marginTop: 8 }, textButton: { minHeight: 44, justifyContent: 'center' }, link: { fontSize: 14, fontWeight: '600', color: C.accent }, smallLink: { fontSize: 12, fontWeight: '600', color: C.accent },
-  resultTitle: { fontSize: 18, fontFamily: Type.heading, color: C.text, marginTop: 30 },
-  day: { marginTop: 22 }, dayTitle: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 6 },
-  travel: { fontSize: 12, color: C.textMuted, marginTop: 8, marginLeft: 12 }, travelFar: { color: C.error },
-  card: { marginTop: 8, padding: 16, borderRadius: 14, borderWidth: 1.5, borderColor: C.divider }, cardOn: { borderColor: C.primary, backgroundColor: C.banner }, cardDone: { opacity: 0.55 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  cardTitle: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: C.text },
-  desc: { fontSize: 13, color: C.textSecondary, marginTop: 6, lineHeight: 19 },
-  badgeWarn: { fontSize: 11, fontWeight: '600', color: C.error, backgroundColor: C.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
-  badgeDone: { fontSize: 11, fontWeight: '600', color: C.textSecondary },
 });

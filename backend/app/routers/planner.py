@@ -14,7 +14,7 @@ from app import loading
 from app.models import Place, PlanItem, Trip
 from app.permissions import require_member
 from app.place_search import PlaceCandidate, PlaceSearcher, PlaceSearchUnavailable
-from app.places import get_place_searcher, place_for, search_places
+from app.places import copy_place, get_place_searcher, place_for, search_places
 
 router = APIRouter(prefix="/trips/{trip_id}", tags=["planner"], responses=ERROR_RESPONSES)
 
@@ -86,6 +86,22 @@ class PlanItemOut(BaseModel):
 class PlanOrder(BaseModel):
     date: dt.date
     item_ids: list[uuid.UUID]
+
+
+class PlanCopyIn(BaseModel):
+    """다른 여행의 일정 가져오기. 원래 여행의 첫날이 first_date가 되도록 날짜를 통째로 옮긴다."""
+
+    source_trip_id: uuid.UUID
+    item_ids: list[uuid.UUID] = Field(min_length=1, max_length=200)
+    first_date: dt.date
+
+
+class PlanCopyOut(BaseModel):
+    items: list["PlanItemOut"]
+    # 옮긴 날짜가 이 여행 기간 밖이라 넣지 못한 수
+    skipped: int
+    # 국내↔해외처럼 장소 검색기가 달라 장소 없이 넣은 수
+    places_dropped: int
 
 
 def place_out(place: Place) -> PlaceOut:
@@ -247,6 +263,53 @@ def create_plan_item(
     slot_into_day(session, item)
     session.commit()
     return plan_item_out(item)
+
+
+# "/plan-items/{item_id}"보다 먼저 선언해야 "copy"를 id로 읽지 않는다.
+@router.post("/plan-items/copy", status_code=status.HTTP_201_CREATED, responses=NOT_FOUND)
+def copy_plan_items(
+    trip_id: uuid.UUID,
+    body: PlanCopyIn,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> PlanCopyOut:
+    """내가 속한 다른 여행의 일정 항목을 이 여행으로 복사한다(시각·제목·메모·예상 비용·장소).
+    날짜는 원래 여행의 첫날이 first_date가 되도록 옮기고, 이 여행 기간 밖으로 나가는 것은 넣지 않는다.
+    장소는 같은 검색기(국내 카카오·해외 Google)의 장소일 때만 옮긴다. 원래 여행은 바뀌지 않는다."""
+    me = require_member(session, trip_id, user)
+    source = require_member(session, body.source_trip_id, user).trip
+    if source.id == trip_id:
+        raise ApiError(422, "validation_failed", "입력값을 확인해 주세요.", [ErrorDetail(field="source_trip_id", message="다른 여행을 골라 주세요.")])
+    check_in_period(me.trip, body.first_date)
+    originals = session.scalars(
+        select(PlanItem).where(PlanItem.trip_id == source.id, PlanItem.id.in_(body.item_ids))
+        .order_by(PlanItem.date, PlanItem.position).options(*loading.PLAN_ITEM)
+    ).all()
+    shift = body.first_date - source.start_date
+    wanted_source = "google" if me.trip.is_overseas else "kakao"
+    created: list[PlanItem] = []
+    skipped = dropped = 0
+    for original in originals:
+        day = original.date + shift
+        if not me.trip.start_date <= day <= me.trip.end_date:
+            skipped += 1
+            continue
+        place = None
+        if original.place is not None:
+            if original.place.source == wanted_source:
+                place = copy_place(session, trip_id, original.place)
+            else:
+                dropped += 1
+        item = PlanItem(
+            trip_id=trip_id, date=day, position=0, time=original.time, title=original.title, memo=original.memo,
+            estimated_cost=original.estimated_cost, place=place, created_by=me,
+        )
+        session.add(item)
+        session.flush()
+        slot_into_day(session, item)
+        created.append(item)
+    session.commit()
+    return PlanCopyOut(items=[plan_item_out(i) for i in created], skipped=skipped, places_dropped=dropped)
 
 
 # "/plan-items/{item_id}"보다 먼저 선언해야 "order"를 id로 읽지 않는다.
