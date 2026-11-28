@@ -85,6 +85,7 @@
 ## 기록
 
 ### 2026-11-28
+- 웹 소개 페이지·검색 등록(#131, #132): 로그인 전 웹 첫 주소는 소개 페이지, 앱은 그대로 로그인 화면. 제목·설명·공유 미리보기(+html.tsx, 루트 Head), robots.txt·sitemap.xml. Google Search Console(URL 접두어, HTML 파일 확인 완료, 사이트맵 제출)과 네이버 서치어드바이저(HTML 파일 확인, 사이트맵·웹 페이지 수집 요청) 등록. 확인 파일(`public/google*.html`, `public/naver*.html`)은 지우면 안 된다.
 - 웹 해외 여행 지도(#129): Google Maps JavaScript API. Google Cloud에 웹 전용 키(Maps JavaScript API만, expo.app·localhost:8081 주소 제한), 하루 지도 불러오기 한도 300회(월 1만 회 무료 안). 키는 `EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY`. 국내 여행은 카카오맵 그대로.
 - 웹 배포 주의: `npm run web:deploy` 후 대표 주소(kang1031-frontend.expo.app)가 예전 배포를 계속 보여 준 적이 있다. 배포 뒤 대표 주소의 `entry-*.js` 이름이 `dist/_expo/static/js/web/`과 같은지 확인하고, 다르면 `npx eas-cli deploy:alias --prod --id <배포 id>`로 올린다.
 - 웹 버전 배포(#127): https://kang1031-frontend.expo.app. 업로드(blob), 웹 촬영 시각(EXIF 직접 읽기, GPS 제외), 웹 소셜 로그인(페이지 이동 + auth-callback), 웹 지도 카카오맵 JS SDK(키 `EXPO_PUBLIC_KAKAO_JS_KEY`, 카카오 JS SDK 도메인에 expo.app·localhost:8081 등록). Supabase Redirect URLs에 웹 주소 추가, Site URL을 웹 주소로 변경. 배포: `npm run web:build` → `npm run web:deploy`(EAS_NO_VCS=1). 처리방침·계정 삭제 페이지도 같은 배포에 들어간다. `/trips/…` 같은 동적 주소는 404 상태로 오지만 앱이 떠서 화면을 찾아간다.
