@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /auth-callback
+Disallow: /reset-password
+Disallow: /account
+Disallow: /account-delete
+Disallow: /friends
+Disallow: /trips/
+
+Sitemap: https://kang1031-frontend.expo.app/sitemap.xml
