@@ -5,6 +5,7 @@
 
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
 /** 로그인 후 돌아올 앱 주소. Supabase Authentication → URL Configuration → Redirect URLs에 등록해야 한다. */
 export function redirectUrl(): string {
@@ -20,6 +21,11 @@ export type BrowserResult = { type: 'success'; url: string } | { type: 'cancel' 
 
 /** 로그인 페이지를 열고, 앱 주소로 돌아오면 그 주소를 준다. 사용자가 닫으면 cancel. */
 export async function openLoginPage(url: string, returnUrl: string): Promise<BrowserResult> {
+  if (Platform.OS === 'web') {
+    // 웹은 팝업이 막힐 수 있어 이 창에서 로그인 페이지로 간다. 돌아오면 auth-callback 화면이 이어서 처리한다.
+    window.location.assign(url);
+    return new Promise<BrowserResult>(() => {});
+  }
   const result = await WebBrowser.openAuthSessionAsync(url, returnUrl);
   return result.type === 'success' ? { type: 'success', url: result.url } : { type: 'cancel' };
 }

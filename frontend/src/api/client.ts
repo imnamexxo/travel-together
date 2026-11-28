@@ -3,7 +3,7 @@
  * 타입은 서버 OpenAPI 명세에서 생성한 schema.d.ts만 쓴다(`npm run gen:api`).
  */
 
-import { filePart } from '@/api/file-part';
+import { appendFile } from '@/api/file-part';
 import type { components } from '@/api/schema';
 
 export type Profile = components['schemas']['Profile'];
@@ -257,11 +257,11 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     importPlanText: (tripId, text) => request<Suggestion>('POST', `${trip(tripId)}/suggestions/import`, { text }),
     copyPlanItems: (tripId, copy) => request<PlanCopyResult>('POST', `${trip(tripId)}/plan-items/copy`, copy),
     listPhotos: (tripId) => request<PhotoList>('GET', `${trip(tripId)}/photos`),
-    uploadPhoto: (tripId, photo) => {
+    uploadPhoto: async (tripId, photo) => {
       const form = new FormData();
-      form.append('file', filePart(photo.uri, 'photo.jpg', 'image/jpeg') as unknown as Blob);
+      await appendFile(form, 'file', photo.uri, 'photo.jpg', 'image/jpeg');
       if (photo.takenAt) form.append('taken_at', photo.takenAt);
-      if (photo.thumbnailUri) form.append('thumbnail', filePart(photo.thumbnailUri, 'thumbnail.jpg', 'image/jpeg') as unknown as Blob);
+      if (photo.thumbnailUri) await appendFile(form, 'thumbnail', photo.thumbnailUri, 'thumbnail.jpg', 'image/jpeg');
       return request<Photo>('POST', `${trip(tripId)}/photos`, form);
     },
     deletePhoto: (tripId, photoId) => request<void>('DELETE', `${trip(tripId)}/photos/${encodeURIComponent(photoId)}`),
@@ -272,9 +272,9 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
       const params = [date && `date=${encodeURIComponent(date)}`, memberId && `member_id=${encodeURIComponent(memberId)}`].filter(Boolean).join('&');
       return request<MapData>('GET', `${trip(tripId)}/map${params ? `?${params}` : ''}`);
     },
-    uploadReceipt: (tripId, receipt, idempotencyKey) => {
+    uploadReceipt: async (tripId, receipt, idempotencyKey) => {
       const form = new FormData();
-      form.append('file', filePart(receipt.uri, 'receipt.jpg', 'image/jpeg') as unknown as Blob);
+      await appendFile(form, 'file', receipt.uri, 'receipt.jpg', 'image/jpeg');
       form.append('idempotency_key', idempotencyKey);
       return request<ReceiptUpload>('POST', `${trip(tripId)}/receipts`, form);
     },

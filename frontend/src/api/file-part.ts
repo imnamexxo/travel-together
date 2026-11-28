@@ -14,3 +14,8 @@ export function filePart(uri: string, name: string, type: string): FilePart {
   const file = new File(uri);
   return { name, type, bytes: () => file.bytes() };
 }
+
+/** 업로드 폼에 파일을 붙인다. 휴대폰은 위의 조각을 그대로 붙인다(웹은 file-part.web.ts). */
+export async function appendFile(form: FormData, field: string, uri: string, name: string, type: string): Promise<void> {
+  form.append(field, filePart(uri, name, type) as unknown as Blob);
+}

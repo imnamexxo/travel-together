@@ -32,6 +32,8 @@ export interface AuthService {
   signUp(email: string, password: string, displayName: string): Promise<SignUpResult>;
   /** 카카오·Google 계정으로 가입·로그인(Supabase OAuth, PKCE). 처음이면 서버가 공급자의 이름으로 프로필을 만든다. */
   signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult>;
+  /** 웹: 소셜 로그인 페이지에서 auth-callback으로 돌아온 code를 세션으로 바꾼다(앱은 signInWithProvider 안에서 끝난다). */
+  completeSocialSignIn(code: string): Promise<void>;
   /** 비밀번호 재설정 메일을 보낸다. 메일의 링크는 앱의 reset-password 화면으로 연다. */
   requestPasswordReset(email: string): Promise<void>;
   /** 메일 링크의 code로 새 비밀번호를 정한다. 성공하면 로그인된다. */

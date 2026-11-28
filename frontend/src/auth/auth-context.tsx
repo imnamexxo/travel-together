@@ -10,6 +10,7 @@ type AuthContextValue = {
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, displayName: string): Promise<SignUpResult>;
   signInWithProvider(provider: SocialProvider): Promise<SocialSignInResult>;
+  completeSocialSignIn(code: string): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(code: string, newPassword: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
@@ -46,6 +47,7 @@ export function AuthProvider({ service, children }: { service: AuthService; chil
     [service],
   );
   const signInWithProvider = useCallback((provider: SocialProvider) => service.signInWithProvider(provider), [service]);
+  const completeSocialSignIn = useCallback((code: string) => service.completeSocialSignIn(code), [service]);
   const requestPasswordReset = useCallback((email: string) => service.requestPasswordReset(email), [service]);
   const resetPassword = useCallback((code: string, newPassword: string) => service.resetPassword(code, newPassword), [service]);
   const changePassword = useCallback((current: string, next: string) => service.changePassword(current, next), [service]);
@@ -58,12 +60,13 @@ export function AuthProvider({ service, children }: { service: AuthService; chil
       signIn,
       signUp,
       signInWithProvider,
+      completeSocialSignIn,
       requestPasswordReset,
       resetPassword,
       changePassword,
       signOut,
     }),
-    [loaded, session, signIn, signUp, signInWithProvider, requestPasswordReset, resetPassword, changePassword, signOut],
+    [loaded, session, signIn, signUp, signInWithProvider, completeSocialSignIn, requestPasswordReset, resetPassword, changePassword, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

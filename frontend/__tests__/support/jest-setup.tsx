@@ -13,9 +13,10 @@ jest.mock('react-native-maps', () => {
 });
 
 // 테스트 환경에는 파일 시스템 네이티브 모듈이 없다. 파일 내용 대신 uri를 담은 가짜 조각을 쓴다.
-jest.mock('@/api/file-part', () => ({
-  filePart: (uri: string, name: string, type: string) => ({ uri, name, type, bytes: async () => new Uint8Array([1, 2, 3]) }),
-}));
+jest.mock('@/api/file-part', () => {
+  const filePart = (uri: string, name: string, type: string) => ({ uri, name, type, bytes: async () => new Uint8Array([1, 2, 3]) });
+  return { filePart, appendFile: async (form: FormData, field: string, uri: string, name: string, type: string) => form.append(field, filePart(uri, name, type) as unknown as Blob) };
+});
 
 // 테스트 속 여행은 2026-11-12부터다. 플래너는 "오늘"을 먼저 여므로, 날짜가 바뀌어도 결과가 같도록 시계를 고정한다.
 // Date만 바꾸고 타이머는 실제 것을 쓴다(findBy 등 비동기 대기가 그대로 동작하도록).
