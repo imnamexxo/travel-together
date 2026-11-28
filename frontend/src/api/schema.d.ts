@@ -716,6 +716,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{trip_id}/plan-items/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy Plan Items
+         * @description 내가 속한 다른 여행의 일정 항목을 이 여행으로 복사한다(시각·제목·메모·예상 비용·장소).
+         *     날짜는 원래 여행의 첫날이 first_date가 되도록 옮기고, 이 여행 기간 밖으로 나가는 것은 넣지 않는다.
+         *     장소는 같은 검색기(국내 카카오·해외 Google)의 장소일 때만 옮긴다. 원래 여행은 바뀌지 않는다.
+         */
+        post: operations["copy_plan_items_trips__trip_id__plan_items_copy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{trip_id}/plan-items/order": {
         parameters: {
             query?: never;
@@ -775,6 +797,27 @@ export interface paths {
          *     같은 입력(이미 잡힌 일정 포함)이면 저장된 결과를 200으로 바로 돌려준다.
          */
         post: operations["ask_for_suggestions_trips__trip_id__suggestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{trip_id}/suggestions/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Plan Text
+         * @description 써 둔 계획 글을 여행 날짜의 일정 후보로 바꾼다. 추천과 같은 모양으로 돌려주고, 고른 것만 adopt로 넣는다.
+         *     여행 기간 밖의 일정은 버린다. 추천과 하루 횟수를 함께 센다. 같은 글이면 저장된 결과를 200으로 돌려준다.
+         */
+        post: operations["import_plan_text_trips__trip_id__suggestions_import_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1446,6 +1489,33 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * PlanCopyIn
+         * @description 다른 여행의 일정 가져오기. 원래 여행의 첫날이 first_date가 되도록 날짜를 통째로 옮긴다.
+         */
+        PlanCopyIn: {
+            /**
+             * Source Trip Id
+             * Format: uuid
+             */
+            source_trip_id: string;
+            /** Item Ids */
+            item_ids: string[];
+            /**
+             * First Date
+             * Format: date
+             */
+            first_date: string;
+        };
+        /** PlanCopyOut */
+        PlanCopyOut: {
+            /** Items */
+            items: components["schemas"]["PlanItemOut"][];
+            /** Skipped */
+            skipped: number;
+            /** Places Dropped */
+            places_dropped: number;
+        };
         /** PlanItemIn */
         PlanItemIn: {
             /**
@@ -1503,6 +1573,11 @@ export interface components {
             date: string;
             /** Item Ids */
             item_ids: string[];
+        };
+        /** PlanTextIn */
+        PlanTextIn: {
+            /** Text */
+            text: string;
         };
         /** Profile */
         Profile: {
@@ -4137,6 +4212,59 @@ export interface operations {
             };
         };
     };
+    copy_plan_items_trips__trip_id__plan_items_copy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanCopyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanCopyOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행·일정 항목 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     reorder_plan_items_trips__trip_id__plan_items_order_put: {
         parameters: {
             query?: never;
@@ -4322,6 +4450,77 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SuggestionAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionOut"];
+                };
+            };
+            /** @description 로그인 필요 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 여행 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 검증 실패 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 오늘 추천 횟수를 다 씀 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gemini 실패·형식 오류 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_plan_text_trips__trip_id__suggestions_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanTextIn"];
             };
         };
         responses: {

@@ -9,10 +9,12 @@ import pytest
 from app.gemini import (
     FixedPlan,
     GeminiPlanSuggester,
+    ImportRequest,
     PlanRequest,
     PlanShape,
     SuggestionFormatError,
     SuggestionUnavailable,
+    build_import_prompt,
     build_prompt,
     validate_plan,
 )
@@ -240,3 +242,24 @@ def test_prompt_has_day_hours_lodging_pace_and_fixed_plans():
 
 def test_prompt_without_fixed_plans_says_none():
     assert "이미 잡힌 일정(바꾸거나 다시 추천하지 않는다):\n없음" in build_prompt(REQUEST)
+
+
+IMPORT = ImportRequest("1일차 동문시장\n3일차 공항", dt.date(2026, 11, 12), dt.date(2026, 11, 13))
+
+
+def test_parse_drops_days_outside_the_trip_and_asks_with_low_temperature():
+    models = FakeModels(plan_json(stop("2026-11-12", 1, "동문시장"), stop("2026-11-14", 1, "공항")))
+
+    stops = suggester_with(models).parse(IMPORT)
+
+    assert [s.place_name for s in stops] == ["동문시장"]
+    assert models.calls[0]["config"].temperature == 0.1
+
+
+def test_import_prompt_maps_trip_days_and_keeps_the_text():
+    prompt = build_import_prompt(IMPORT)
+
+    assert "1일 차=2026-11-12, 2일 차=2026-11-13" in prompt
+    assert "새 일정을 지어내지 않는다" in prompt
+    assert "region을 빈 문자열" in prompt
+    assert "1일차 동문시장" in prompt

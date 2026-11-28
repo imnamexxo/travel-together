@@ -127,7 +127,7 @@ test('같은 조건이면 저장된 추천이라고 알려 주고, 이미 추가
   await openAndAsk();
   fireEvent.press(screen.getByRole('button', { name: '추천받기' }));
 
-  expect(await screen.findByText('같은 조건으로 받은 추천을 다시 보여드려요.')).toBeOnTheScreen();
+  expect(await screen.findByText('같은 조건으로 받은 결과를 다시 보여드려요.')).toBeOnTheScreen();
   expect(screen.getByRole('checkbox', { name: '동문시장 선택' })).toBeDisabled();
   expect(screen.getByText('추가됨')).toBeOnTheScreen();
 });

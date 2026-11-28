@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
 from app.auth import AuthenticatedUser, InvalidToken
-from app.gemini import PlanRequest, SuggestedStop
+from app.gemini import ImportRequest, PlanRequest, SuggestedStop
 from app.place_search import PlaceCandidate, PlaceDetails, PlaceSearchUnavailable
 from app.receipt_reader import ReceiptDraft
 from app.auth_admin import AuthAdminUnavailable
@@ -117,6 +117,10 @@ class FakePlanSuggester:
         if isinstance(response, Exception):
             raise response
         return response
+
+    def parse(self, request: ImportRequest) -> list[SuggestedStop]:
+        """붙여 넣은 글 변환도 같은 응답 줄을 쓴다. 요청은 requests에 함께 기록한다."""
+        return self.suggest(request)  # type: ignore[arg-type]
 
 
 class FakeStorage:

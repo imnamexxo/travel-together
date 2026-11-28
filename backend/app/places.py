@@ -100,6 +100,26 @@ def place_from_candidate(session: Session, searcher: PlaceSearcher, trip_id: uui
     return place
 
 
+def copy_place(session: Session, trip_id: uuid.UUID, original: Place) -> Place:
+    """다른 여행의 장소를 이 여행으로 복사한다. 같은 장소가 이미 있으면 그것을 쓴다.
+
+    받은 시각(refreshed_at)을 그대로 옮겨서 갱신·만료 기한(카카오 최신 유지, Google 좌표 30일, ADR 0006)이 늘어나지 않게 한다.
+    """
+    existing = session.scalars(
+        select(Place).where(Place.trip_id == trip_id, Place.source_place_id == original.source_place_id)
+    ).one_or_none()
+    if existing is not None:
+        return existing
+    place = Place(
+        trip_id=trip_id, source_place_id=original.source_place_id, source=original.source, name=original.name,
+        address=original.address, road_address=original.road_address, latitude=original.latitude,
+        longitude=original.longitude, category=original.category, refreshed_at=original.refreshed_at,
+    )
+    session.add(place)
+    session.flush()
+    return place
+
+
 def _due(session: Session, source: str, now: dt.datetime) -> list[Place]:
     query = select(Place).where(Place.source == source, Place.refreshed_at < now - REFRESH_AFTER)
     if source == "google":

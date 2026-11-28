@@ -38,6 +38,8 @@ export type PlanItemInput = components['schemas']['PlanItemIn'];
 export type Suggestion = components['schemas']['SuggestionOut'];
 export type SuggestedItem = components['schemas']['SuggestedItemOut'];
 export type SuggestionAsk = components['schemas']['SuggestionAsk'];
+export type PlanCopy = components['schemas']['PlanCopyIn'];
+export type PlanCopyResult = components['schemas']['PlanCopyOut'];
 export type Photo = components['schemas']['PhotoOut'];
 export type PhotoList = components['schemas']['PhotoList'];
 /** 올릴 사진: 기기 안의 JPEG 파일과 촬영 시각. 위치 좌표는 넣지 않는다(ADR-0003). */
@@ -137,6 +139,10 @@ export interface ApiClient {
   askSuggestions(tripId: string, ask: SuggestionAsk): Promise<Suggestion>;
   /** 고른 추천 일정만 일정 항목으로 만든다. 만든 일정 항목을 돌려준다. */
   adoptSuggestions(tripId: string, requestId: string, itemIds: string[]): Promise<PlanItem[]>;
+  /** 써 둔 계획 글을 일정 후보(추천과 같은 모양)로 바꾼다. 고른 것만 adoptSuggestions로 넣는다. */
+  importPlanText(tripId: string, text: string): Promise<Suggestion>;
+  /** 내가 속한 다른 여행의 일정 항목을 이 여행으로 복사한다. 원래 여행의 첫날이 first_date가 된다. */
+  copyPlanItems(tripId: string, copy: PlanCopy): Promise<PlanCopyResult>;
   listPhotos(tripId: string): Promise<PhotoList>;
   uploadPhoto(tripId: string, photo: PhotoUpload): Promise<Photo>;
   deletePhoto(tripId: string, photoId: string): Promise<void>;
@@ -248,6 +254,8 @@ export function createApiClient({ baseUrl, getAccessToken, fetchFn = fetch }: Ap
     reorderPlanItems: (tripId, date, itemIds) => request<PlanItem[]>('PUT', `${trip(tripId)}/plan-items/order`, { date, item_ids: itemIds }),
     askSuggestions: (tripId, ask) => request<Suggestion>('POST', `${trip(tripId)}/suggestions`, ask),
     adoptSuggestions: (tripId, requestId, itemIds) => request<PlanItem[]>('POST', `${trip(tripId)}/suggestions/${encodeURIComponent(requestId)}/adopt`, { item_ids: itemIds }),
+    importPlanText: (tripId, text) => request<Suggestion>('POST', `${trip(tripId)}/suggestions/import`, { text }),
+    copyPlanItems: (tripId, copy) => request<PlanCopyResult>('POST', `${trip(tripId)}/plan-items/copy`, copy),
     listPhotos: (tripId) => request<PhotoList>('GET', `${trip(tripId)}/photos`),
     uploadPhoto: (tripId, photo) => {
       const form = new FormData();

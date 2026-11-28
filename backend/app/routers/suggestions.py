@@ -6,6 +6,7 @@ import math
 import re
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.auth import AuthenticatedUser, get_current_user
 from app.db import get_session
 from app.errors import ERROR_RESPONSES, ApiError, ErrorDetail, ErrorResponse
-from app.gemini import FixedPlan, Pace, PlanRequest, PlanSuggester, SuggestedStop, SuggestionFormatError, SuggestionUnavailable
+from app.gemini import FixedPlan, ImportRequest, Pace, PlanRequest, PlanSuggester, SuggestedStop, SuggestionFormatError, SuggestionUnavailable
 from app.models import PlanItem, SuggestedItem, SuggestionRequest, Trip
 from app.permissions import require_member
 from app.place_search import PlaceCandidate, PlaceSearcher, PlaceSearchUnavailable
@@ -44,6 +45,14 @@ class SuggestionAsk(BaseModel):
     day_end: dt.time = dt.time(21, 0)
     lodging: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] = ""
     pace: Pace = "normal"
+
+
+class PlanTextIn(BaseModel):
+    # 메모·메신저에 써 둔 계획. 길면 Gemini 비용과 시간이 커지므로 3000자까지.
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=3000)]
+
+
+IMPORT_TITLE = "붙여 넣은 계획"
 
 
 class SuggestedItemOut(BaseModel):
@@ -154,7 +163,10 @@ def _verify(searcher: PlaceSearcher, stop: SuggestedStop, *, overseas: bool = Fa
 
     해외 여행(Google)은 같은 장소도 한국어 표기가 여러 가지라 이름이 맞는 후보가 없으면 첫 후보를 쓴다.
     Google은 "장소명 + 지역" 검색의 첫 결과가 대개 그 장소다. 사용자가 일정에 넣기 전에 보고 고른다.
+    지역이 비어 있으면 장소가 아닌 일정(붙여 넣은 글의 "체크인" 등)이라 검색하지 않는다.
     """
+    if not stop.region.strip():
+        return None
     try:
         candidates = searcher.search(f"{stop.place_name} {stop.region}")
     except PlaceSearchUnavailable:
@@ -165,17 +177,69 @@ def _verify(searcher: PlaceSearcher, stop: SuggestedStop, *, overseas: bool = Fa
     return match
 
 
-def _ask_gemini(suggester: PlanSuggester, request: PlanRequest) -> list[SuggestedStop]:
+def _ask_gemini(ask: Callable[[], list[SuggestedStop]], failed: str = "추천 일정을 만들지 못했습니다. 직접 일정을 써 주세요.") -> list[SuggestedStop]:
     """형식이 틀리면 한 번 더 묻고, 그래도 틀리면 502."""
     for attempt in range(2):
         try:
-            return suggester.suggest(request)
+            return ask()
         except SuggestionFormatError:
             if attempt == 1:
-                raise ApiError(502, "ai_bad_response", "추천 일정을 만들지 못했습니다. 직접 일정을 써 주세요.")
+                raise ApiError(502, "ai_bad_response", failed)
         except SuggestionUnavailable:
             raise ApiError(502, "ai_unavailable", "추천 서버에 연결하지 못했습니다. 잠시 후 다시 시도하거나 직접 일정을 써 주세요.")
     raise AssertionError("unreachable")
+
+
+def _check_daily_limit(session: Session, trip_id: uuid.UUID) -> None:
+    """추천과 붙여넣기 변환은 Gemini를 부르므로 여행마다 하루 횟수를 함께 센다."""
+    used_today = session.scalar(
+        select(func.count()).where(SuggestionRequest.trip_id == trip_id, SuggestionRequest.created_at >= _start_of_today_kst())
+    )
+    if (used_today or 0) >= DAILY_LIMIT:
+        raise ApiError(
+            429,
+            "suggestion_limit",
+            f"이 여행의 오늘 추천 횟수({DAILY_LIMIT}회)를 모두 썼습니다. 내일 0시(한국 시간)부터 다시 요청할 수 있습니다.",
+        )
+
+
+def _saved(session: Session, trip_id: uuid.UUID, input_hash: str) -> SuggestionRequest | None:
+    return session.scalars(
+        select(SuggestionRequest).where(SuggestionRequest.trip_id == trip_id, SuggestionRequest.input_hash == input_hash)
+    ).one_or_none()
+
+
+def _add_checked_items(request: SuggestionRequest, stops: list[SuggestedStop], searcher: PlaceSearcher, overseas: bool) -> None:
+    """장소마다 검색기(카카오·Google)로 확인해 후보로 담는다. 확인된 장소도 채택 전에는 places에 넣지 않는다."""
+    # 한 곳씩 하면 12곳이면 12번을 기다리므로 동시에 묻는다(순서는 그대로).
+    started = time.monotonic()
+    with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
+        verified = list(pool.map(lambda stop: _verify(searcher, stop, overseas=overseas), stops))
+    logger.info("장소 확인(%s) %d곳 %.1f초", "Google" if overseas else "카카오", len(stops), time.monotonic() - started)
+    for stop, found in zip(stops, verified):
+        keep = found is not None and searcher.stores_details
+        request.items.append(
+            SuggestedItem(
+                date=stop.date,
+                order=stop.order,
+                place_name=stop.place_name,
+                region=stop.region,
+                stay_minutes=stop.stay_minutes,
+                description=stop.description,
+                start_time=stop.start_time,
+                travel_minutes=stop.travel_minutes,
+                transport=stop.transport or None,
+                status="verified" if found else "needs_check",
+                source_place_id=found.source_place_id if found else None,
+                # Google 장소는 id만 둔다(ADR 0006). 화면에는 AI가 쓴 이름(place_name)을 보여 준다.
+                found_name=found.name if keep else None,
+                found_address=found.address if keep else None,
+                found_road_address=found.road_address if keep else None,
+                latitude=found.latitude if keep else None,
+                longitude=found.longitude if keep else None,
+                found_category=found.category if keep else None,
+            )
+        )
 
 
 def _start_of_today_kst() -> datetime:
@@ -253,59 +317,64 @@ def ask_for_suggestions(
     start, end = _range(trip, body)
     fixed = _fixed_plans(session, trip_id, start, end)
     input_hash = _input_hash(trip, body, start, end, fixed)
-    saved = session.scalars(
-        select(SuggestionRequest).where(SuggestionRequest.trip_id == trip_id, SuggestionRequest.input_hash == input_hash)
-    ).one_or_none()
+    saved = _saved(session, trip_id, input_hash)
     if saved is not None:
         response.status_code = status.HTTP_200_OK
         return _out(saved, trip, reused=True)
+    _check_daily_limit(session, trip_id)
 
-    used_today = session.scalar(
-        select(func.count()).where(SuggestionRequest.trip_id == trip_id, SuggestionRequest.created_at >= _start_of_today_kst())
-    )
-    if (used_today or 0) >= DAILY_LIMIT:
-        raise ApiError(
-            429,
-            "suggestion_limit",
-            f"이 여행의 오늘 추천 횟수({DAILY_LIMIT}회)를 모두 썼습니다. 내일 0시(한국 시간)부터 다시 요청할 수 있습니다.",
-        )
-
-    stops = _ask_gemini(suggester, PlanRequest(
+    plan_request = PlanRequest(
         body.destination, start, end, body.preferences, overseas=trip.is_overseas,
         day_start=body.day_start, day_end=body.day_end, lodging=body.lodging, pace=body.pace, fixed=tuple(fixed),
-    ))
+    )
+    stops = _ask_gemini(lambda: suggester.suggest(plan_request))
     request = SuggestionRequest(
         trip_id=trip_id, input_hash=input_hash, destination=body.destination, preferences=body.preferences, start_date=start, end_date=end,
     )
-    # 장소마다 검색(카카오·Google)이 필요하다. 한 곳씩 하면 12곳이면 12번을 기다리므로 동시에 묻는다(순서는 그대로).
-    started = time.monotonic()
-    with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
-        verified = list(pool.map(lambda stop: _verify(searcher, stop, overseas=trip.is_overseas), stops))
-    logger.info("장소 확인(%s) %d곳 %.1f초", "Google" if trip.is_overseas else "카카오", len(stops), time.monotonic() - started)
-    for stop, found in zip(stops, verified):
-        keep = found is not None and searcher.stores_details
-        request.items.append(
-            SuggestedItem(
-                date=stop.date,
-                order=stop.order,
-                place_name=stop.place_name,
-                region=stop.region,
-                stay_minutes=stop.stay_minutes,
-                description=stop.description,
-                start_time=stop.start_time,
-                travel_minutes=stop.travel_minutes,
-                transport=stop.transport or None,
-                status="verified" if found else "needs_check",
-                source_place_id=found.source_place_id if found else None,
-                # Google 장소는 id만 둔다(ADR 0006). 화면에는 AI가 쓴 이름(place_name)을 보여 준다.
-                found_name=found.name if keep else None,
-                found_address=found.address if keep else None,
-                found_road_address=found.road_address if keep else None,
-                latitude=found.latitude if keep else None,
-                longitude=found.longitude if keep else None,
-                found_category=found.category if keep else None,
-            )
-        )
+    _add_checked_items(request, stops, searcher, trip.is_overseas)
+    session.add(request)
+    session.commit()
+    return _out(request, trip, reused=False)
+
+
+@router.post(
+    "/import",
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        404: {"model": ErrorResponse, "description": "여행 없음"},
+        429: {"model": ErrorResponse, "description": "오늘 추천 횟수를 다 씀"},
+        502: {"model": ErrorResponse, "description": "Gemini 실패·형식 오류"},
+    },
+)
+def import_plan_text(
+    trip_id: uuid.UUID,
+    body: PlanTextIn,
+    response: Response,
+    user: AuthenticatedUser = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    suggester: PlanSuggester = Depends(get_plan_suggester),
+    searcher: PlaceSearcher = Depends(get_place_searcher),
+) -> SuggestionOut:
+    """써 둔 계획 글을 여행 날짜의 일정 후보로 바꾼다. 추천과 같은 모양으로 돌려주고, 고른 것만 adopt로 넣는다.
+    여행 기간 밖의 일정은 버린다. 추천과 하루 횟수를 함께 센다. 같은 글이면 저장된 결과를 200으로 돌려준다."""
+    me = require_member(session, trip_id, user)
+    trip = me.trip
+    key = ["import", body.text, trip.start_date.isoformat(), trip.end_date.isoformat(), trip.is_overseas]
+    input_hash = hashlib.sha256(json.dumps(key, ensure_ascii=False).encode()).hexdigest()
+    saved = _saved(session, trip_id, input_hash)
+    if saved is not None:
+        response.status_code = status.HTTP_200_OK
+        return _out(saved, trip, reused=True)
+    _check_daily_limit(session, trip_id)
+
+    import_request = ImportRequest(body.text, trip.start_date, trip.end_date, overseas=trip.is_overseas)
+    stops = _ask_gemini(lambda: suggester.parse(import_request), "계획을 일정으로 옮기지 못했습니다. 날짜와 장소가 보이게 다시 써 보거나 직접 일정을 써 주세요.")
+    if not stops:
+        raise ApiError(422, "no_plans_found", "글에서 여행 기간에 맞는 일정을 찾지 못했습니다. 날짜(예: 1일차, 12/10)와 장소가 보이게 써 주세요.")
+    request = SuggestionRequest(
+        trip_id=trip_id, input_hash=input_hash, destination=IMPORT_TITLE, preferences="", start_date=trip.start_date, end_date=trip.end_date,
+    )
+    _add_checked_items(request, stops, searcher, trip.is_overseas)
     session.add(request)
     session.commit()
     return _out(request, trip, reused=False)

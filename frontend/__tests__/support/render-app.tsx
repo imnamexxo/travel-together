@@ -20,6 +20,7 @@ import NewExpenseScreen from '@/app/trips/[tripId]/expenses/new';
 import MembersScreen from '@/app/trips/[tripId]/members';
 import TripSettingsScreen from '@/app/trips/[tripId]/settings';
 import SuggestionsScreen from '@/app/trips/[tripId]/suggestions';
+import ImportScreen from '@/app/trips/[tripId]/import';
 import SettlementScreen from '@/app/trips/[tripId]/(tabs)/settlement';
 import FriendLink from '@/app/friend';
 import FriendsScreen from '@/app/friends';
@@ -63,6 +64,7 @@ export function renderApp({ auth, api, initialUrl = '/' }: { auth: AuthService; 
       'trips/[tripId]/members': MembersScreen,
       'trips/[tripId]/settings': TripSettingsScreen,
       'trips/[tripId]/suggestions': SuggestionsScreen,
+      'trips/[tripId]/import': ImportScreen,
       'trips/[tripId]/expenses/new': NewExpenseScreen,
       'trips/[tripId]/expenses/[expenseId]': ExpenseScreen,
     },
