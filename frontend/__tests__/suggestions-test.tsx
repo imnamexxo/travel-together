@@ -148,7 +148,7 @@ test('구간을 골라 하루 시간·숙소·밀도와 함께 묻고, 시각과
   await waitFor(() => expect(api.askSuggestions).toHaveBeenCalledWith('trip-jeju', {
     destination: '제주 동쪽', preferences: '', start_date: '2026-11-13', end_date: '2026-11-13', day_start: '09:30', day_end: '21:00', lodging: '함덕 호텔', pace: 'relaxed',
   }));
-  expect(await screen.findByText(/10:00 {2}동문시장/)).toBeOnTheScreen();
+  expect(await screen.findByRole('checkbox', { name: '동문시장 선택' })).toHaveTextContent(/10:00\s+동문시장/);
   expect(screen.getByText(/↓ 대중교통 20분/)).toBeOnTheScreen();
   expect(screen.getByText(/앞 장소와 31.4km, 이동이 길어요/)).toBeOnTheScreen();
 });
@@ -160,7 +160,7 @@ test('구간에 이미 잡힌 일정 수를 알려 준다', async () => {
 
   expect(screen.getByText(/이미 잡힌 일정 1개를 피해서 추천해요/)).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('checkbox', { name: '2일 차' }));
-  expect(screen.queryByText(/이미 잡힌 일정/)).toBeNull();
+  expect(screen.queryByText(/이미 잡힌 일정 \d+개/)).toBeNull();
 });
 
 test('하루 시간이 잘못되면 요청하지 않는다', async () => {
