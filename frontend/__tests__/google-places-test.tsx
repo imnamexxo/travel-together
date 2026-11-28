@@ -65,11 +65,11 @@ test('이름 받기가 실패하면(하루 상한) 일정 제목을 대신 보�
   expect(screen.queryByLabelText('Google Maps')).toBeNull();
 });
 
-test('Google 지도가 아닌 지도(iOS·웹)에서는 해외 장소 핀을 찍지 않고 이름도 받지 않는다', async () => {
+test('Google 지도가 아닌 지도(iOS)에서는 해외 장소 핀을 찍지 않고 이름도 받지 않는다', async () => {
   Platform.OS = 'ios';
   const api = render('/trips/trip-osaka/map', { planItems: { 'trip-osaka': [planItem({ id: 'a', date: '2026-11-12', title: '성 구경', place: castle })] } });
 
-  expect(await screen.findByText('해외 장소는 Google 지도 약관 때문에 안드로이드 앱에서만 지도에 표시돼요.')).toBeOnTheScreen();
+  expect(await screen.findByText('해외 장소는 Google 지도 약관 때문에 안드로이드 앱과 웹에서만 지도에 표시돼요.')).toBeOnTheScreen();
   expect(screen.queryByText('○ 성 구경')).toBeNull();
   expect(api.getPlaceDetails).not.toHaveBeenCalled();
 });

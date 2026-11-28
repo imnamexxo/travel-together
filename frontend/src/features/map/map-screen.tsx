@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { Animated, PanResponder, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Linking, PanResponder, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Pressable from '@/components/pressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,14 +13,24 @@ import type { MapPlace } from '@/api/client';
 import PhotoViewer from '@/components/photo-viewer';
 import CachedPhoto from '@/components/cached-photo';
 import { GoogleAttribution, placeLabel, usePlaceName } from '@/features/places/google-places';
+import { GOOGLE_MAPS_WEB_KEY } from './google-web-key';
 import PlaceMap from './place-map';
 
 type Filter = 'all' | 'visited' | 'planned';
 // 펼쳤을 때 장소 정보(요약·일정·사진·버튼) 부분의 처음 높이. 실제로는 내용 높이만큼(화면의 절반까지) 펼친다.
 const SHEET_BODY = 230;
 const NO_PLACES: MapPlace[] = [];
-// 이 기기의 지도가 Google 지도인가(react-native-maps는 안드로이드에서 Google 지도, iOS에서 Apple 지도).
-const isGoogleMap = () => Platform.OS === 'android';
+/**
+ * 이 여행의 지도가 Google 지도인가. 앱(react-native-maps)은 안드로이드 Google 지도, iOS Apple 지도.
+ * 웹은 해외 여행이면 Google 지도(웹 키가 있을 때), 국내 여행이면 카카오맵.
+ */
+export const isGoogleMap = (overseas: boolean, platform = Platform.OS, webKey = GOOGLE_MAPS_WEB_KEY) =>
+  platform === 'android' || (platform === 'web' && overseas && !!webKey);
+
+/** Google 지도 앱·웹에서 그 장소를 연다(장소 id로 찾는다). */
+export function googleMapsUrl(placeId: string, name: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${encodeURIComponent(placeId)}`;
+}
 
 type SheetState = { expanded: boolean; full: number; settle: (open: boolean) => void };
 
@@ -55,9 +65,9 @@ export default function MapScreen() {
   const places = useMemo(() => all.filter((p) => filter === 'all' || (filter === 'visited' ? p.visited : !p.visited)), [all, filter]);
   // 핀 이름은 받아 오지 않는다: 카카오는 저장된 이름, Google 장소는 일정 제목(ADR 0006).
   // Google 좌표를 30일 안에 다시 받지 못한 장소는 좌표가 없어 핀을 찍지 않는다.
-  const GOOGLE_MAP = isGoogleMap();
-  // Google 장소 정보는 Google 지도에만 함께 쓸 수 있다(약관 14.2). 안드로이드만 Google 지도이고,
-  // 웹(OpenStreetMap)과 iOS(Apple 지도)에서는 Google 장소의 핀을 찍지 않고 이름도 받지 않는다.
+  const GOOGLE_MAP = isGoogleMap(trip.is_overseas);
+  // Google 장소 정보는 Google 지도에만 함께 쓸 수 있다(약관 14.2). 안드로이드 앱과 웹(해외 여행)만 Google 지도이고,
+  // iOS(Apple 지도)에서는 Google 장소의 핀을 찍지 않고 이름도 받지 않는다.
   const pins = useMemo(() => places.flatMap(({ place, visited, plan_items }) =>
     place.latitude === null || place.longitude === null || (place.source === 'google' && !GOOGLE_MAP) ? []
       : [{ id: place.id, name: placeLabel(place, plan_items[0]?.title), latitude: place.latitude, longitude: place.longitude, visited, source: place.source }]), [places, GOOGLE_MAP]);
@@ -110,7 +120,7 @@ export default function MapScreen() {
       </ScrollView>}
       <View style={s.filters}>{([{ key: 'all', title: '전체' }, { key: 'visited', title: '● 들른 곳' }, { key: 'planned', title: '○ 계획만 한 곳' }] as const).map((entry) => <Pressable key={entry.key} accessibilityRole="tab" accessibilityState={{ selected: filter === entry.key }} onPress={() => pick(() => setFilter(entry.key))} style={s.filterButton}><Text style={[s.filterText, filter === entry.key && s.activeText]}>{entry.title}</Text></Pressable>)}<Text style={s.placeCount}>{places.length}곳</Text></View>
     </View>
-    <View style={s.mapArea}><PlaceMap pins={pins} selectedId={selected?.place.id ?? null} onSelect={setSelectedId} />{hiddenGoogle && <Text style={s.notice}>해외 장소는 Google 지도 약관 때문에 안드로이드 앱에서만 지도에 표시돼요.</Text>}</View>
+    <View style={s.mapArea}><PlaceMap pins={pins} selectedId={selected?.place.id ?? null} onSelect={setSelectedId} provider={trip.is_overseas ? 'google' : 'kakao'} />{hiddenGoogle && <Text style={s.notice}>해외 장소는 Google 지도 약관 때문에 안드로이드 앱과 웹에서만 지도에 표시돼요.</Text>}</View>
     <View style={s.bottom}>
       {selected ? <View>
         <View {...drag.panHandlers} style={s.sheetHeader}>
@@ -123,6 +133,7 @@ export default function MapScreen() {
         {selected.plan_items.map((item) => <View key={item.id} style={s.planRow}><Text style={s.time}>{dayLabel(item.date)} {item.time?.slice(0, 5) ?? ''}</Text><Text style={s.memo}>{item.memo || item.title}</Text></View>)}
         {!!selected.photos.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.thumbnails}>{selected.photos.map((photo, i) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`사진 ${i + 1} 크게 보기`} onPress={() => setViewing(i)}><CachedPhoto uri={photo.thumbnail_url} cacheKey={`${photo.id}-thumb`} style={s.thumbnail} /></Pressable>)}</ScrollView>}
         <View style={s.actions}><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}`)} style={s.action}><Text style={s.link}>플래너 보기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate(`/trips/${trip.id}/album`)} style={s.action}><Text style={s.link}>앨범 보기 ›</Text></Pressable></View>
+        {selected.place.source === 'google' && <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(googleMapsUrl(selected.place.source_place_id, selectedName.name)).catch(() => {})} style={s.action}><Text style={s.link}>Google 지도에서 열기 ›</Text></Pressable>}
         <Text style={s.hint}>사진이나 확정된 지출이 있는 곳이 들른 곳이에요</Text>
         </ScrollView></Animated.View>}
       </View> : <View style={s.noSelection}><Text style={s.emptyTitle}>{mapData.isError ? '지도 정보를 불러오지 못했어요' : '아직 표시할 장소가 없어요'}</Text><Text style={s.hint}>{mapData.isError ? '잠시 후 다시 열어 주세요.' : '플래너에서 일정에 장소를 넣으면 지도에 핀이 생겨요.'}</Text></View>}
