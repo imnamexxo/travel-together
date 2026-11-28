@@ -15,12 +15,17 @@ const suggestion: Suggestion = {
   id: 'req-1',
   destination: '제주',
   preferences: '맛집 위주',
+  start_date: '2026-11-12',
+  end_date: '2026-11-13',
   reused: false,
   items: [
     { id: 's1', date: '2026-11-12', order: 1, place_name: '동문시장', region: '제주시', stay_minutes: 90, description: '먹거리 구경', status: 'verified', adopted: false,
+      start_time: '10:00:00', travel_minutes: 20, transport: '대중교통', distance_km: null,
       place: { source_place_id: '111', name: '동문재래시장', address: '제주시 일도일동', road_address: '제주시 관덕로14길 20', latitude: 33.5, longitude: 126.5, category: null } },
-    { id: 's2', date: '2026-11-12', order: 2, place_name: '지어낸 가게', region: '제주시', stay_minutes: 60, description: '???', status: 'needs_check', adopted: false, place: null },
+    { id: 's2', date: '2026-11-12', order: 2, place_name: '지어낸 가게', region: '제주시', stay_minutes: 60, description: '???', status: 'needs_check', adopted: false, place: null,
+      start_time: '12:00:00', travel_minutes: 10, transport: '도보', distance_km: null },
     { id: 's3', date: '2026-11-13', order: 1, place_name: '함덕해수욕장', region: '제주시', stay_minutes: 120, description: '바다 산책', status: 'verified', adopted: false,
+      start_time: null, travel_minutes: null, transport: null, distance_km: null,
       place: { source_place_id: '222', name: '함덕해수욕장', address: '제주시 조천읍', road_address: null, latitude: 33.5, longitude: 126.6, category: null } },
   ],
 };
@@ -48,7 +53,9 @@ test('추천을 받는 동안 진행 표시가 보이고, 날짜별 카드와 �
   fireEvent.press(screen.getByRole('button', { name: '추천받기' }));
 
   expect(await screen.findByText('추천 일정을 만드는 중이에요. 30초쯤 걸릴 수 있어요.')).toBeOnTheScreen();
-  expect(api.askSuggestions).toHaveBeenCalledWith('trip-jeju', { destination: '제주', preferences: '맛집 위주' });
+  expect(api.askSuggestions).toHaveBeenCalledWith('trip-jeju', {
+    destination: '제주', preferences: '맛집 위주', start_date: '2026-11-12', end_date: '2026-11-14', day_start: '09:00', day_end: '21:00', lodging: '', pace: 'normal',
+  });
   finish(suggestion);
 
   expect(await screen.findByText('1일 차  11월 12일 목요일')).toBeOnTheScreen();
@@ -123,4 +130,46 @@ test('같은 조건이면 저장된 추천이라고 알려 주고, 이미 추가
   expect(await screen.findByText('같은 조건으로 받은 추천을 다시 보여드려요.')).toBeOnTheScreen();
   expect(screen.getByRole('checkbox', { name: '동문시장 선택' })).toBeDisabled();
   expect(screen.getByText('추가됨')).toBeOnTheScreen();
+});
+
+test('구간을 골라 하루 시간·숙소·밀도와 함께 묻고, 시각과 이동 정보가 보인다', async () => {
+  const api = render({ suggestion: { ...suggestion, items: [
+    suggestion.items[0],
+    { ...suggestion.items[1], distance_km: 31.4, transport: '자동차', travel_minutes: 45 },
+  ] } });
+
+  await openAndAsk('제주 동쪽');
+  fireEvent.press(screen.getByRole('checkbox', { name: '2일 차' }));
+  fireEvent.changeText(screen.getByLabelText('하루 시작 시각'), '9:30');
+  fireEvent.changeText(screen.getByLabelText('숙소'), '함덕 호텔');
+  fireEvent.press(screen.getByRole('radio', { name: '여유롭게' }));
+  fireEvent.press(screen.getByRole('button', { name: '추천받기' }));
+
+  await waitFor(() => expect(api.askSuggestions).toHaveBeenCalledWith('trip-jeju', {
+    destination: '제주 동쪽', preferences: '', start_date: '2026-11-13', end_date: '2026-11-13', day_start: '09:30', day_end: '21:00', lodging: '함덕 호텔', pace: 'relaxed',
+  }));
+  expect(await screen.findByRole('checkbox', { name: '동문시장 선택' })).toHaveTextContent(/10:00\s+동문시장/);
+  expect(screen.getByText(/↓ 대중교통 20분/)).toBeOnTheScreen();
+  expect(screen.getByText(/앞 장소와 31.4km, 이동이 길어요/)).toBeOnTheScreen();
+});
+
+test('구간에 이미 잡힌 일정 수를 알려 준다', async () => {
+  render({ planItems: { 'trip-jeju': [planItem({ id: 'old', date: '2026-11-12', title: '원래 일정' })] } });
+
+  await openAndAsk();
+
+  expect(screen.getByText(/이미 잡힌 일정 1개를 피해서 추천해요/)).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('checkbox', { name: '2일 차' }));
+  expect(screen.queryByText(/이미 잡힌 일정 \d+개/)).toBeNull();
+});
+
+test('하루 시간이 잘못되면 요청하지 않는다', async () => {
+  const api = render();
+
+  await openAndAsk();
+  fireEvent.changeText(screen.getByLabelText('하루 끝 시각'), '08:00');
+  fireEvent.press(screen.getByRole('button', { name: '추천받기' }));
+
+  expect(await screen.findByText('끝나는 시각은 시작 시각보다 늦어야 해요.')).toBeOnTheScreen();
+  expect(api.askSuggestions).not.toHaveBeenCalled();
 });

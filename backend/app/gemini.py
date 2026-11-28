@@ -8,9 +8,10 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Protocol
+from datetime import time as TimeOfDay
+from typing import Literal, Protocol
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,23 @@ class SuggestedStop(BaseModel):
     region: str = Field(min_length=1, max_length=60)
     stay_minutes: int = Field(ge=10, le=720)
     description: str = Field(max_length=200)
+    # 그 장소에 도착하는 시각. 앞 장소(그날 첫 장소는 숙소·출발지)에서 오는 이동 시간과 수단.
+    start_time: TimeOfDay | None = None
+    travel_minutes: int | None = Field(default=None, ge=0, le=600)
+    transport: str = Field(default="", max_length=20)
+
+    @field_validator("start_time", mode="before")
+    @classmethod
+    def _pad_time(cls, value):
+        """'9:00'처럼 한 자리 시도 받는다. 빈 문자열은 시각 없음으로 본다."""
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            hour, _, minute = value.partition(":")
+            if hour.isdigit() and minute[:2].isdigit():
+                return f"{int(hour):02d}:{minute[:2]}"
+        return value
 
 
 class SuggestedPlan(BaseModel):
@@ -40,6 +58,9 @@ class StopShape(BaseModel):
     region: str
     stay_minutes: int
     description: str
+    start_time: str
+    travel_minutes: int
+    transport: str
 
 
 class PlanShape(BaseModel):
@@ -47,13 +68,34 @@ class PlanShape(BaseModel):
 
 
 @dataclass(frozen=True)
+class FixedPlan:
+    """추천 구간에 이미 잡혀 있는 일정. 추천은 이걸 피해 빈 시간만 채운다."""
+
+    date: date
+    time: TimeOfDay | None
+    title: str
+    place_name: str | None = None
+
+
+Pace = Literal["relaxed", "normal", "packed"]
+PACE_STOPS: dict[str, str] = {"relaxed": "2~3곳", "normal": "3~5곳", "packed": "5~7곳"}
+PACE_LABEL: dict[str, str] = {"relaxed": "여유롭게", "normal": "보통", "packed": "빡빡하게"}
+
+
+@dataclass(frozen=True)
 class PlanRequest:
     destination: str
+    # 추천받을 구간(여행 기간 안). 여러 도시를 도는 여행은 구간마다 따로 묻는다.
     start_date: date
     end_date: date
     preferences: str
     # 해외 여행이면 Google 지도 기준으로 장소 이름·지역을 쓰게 한다(ADR 0004).
     overseas: bool = False
+    day_start: TimeOfDay = TimeOfDay(9, 0)
+    day_end: TimeOfDay = TimeOfDay(21, 0)
+    lodging: str = ""
+    pace: Pace = "normal"
+    fixed: tuple[FixedPlan, ...] = ()
 
 
 class SuggestionFormatError(Exception):
@@ -84,7 +126,24 @@ def validate_plan(raw: str | None, request: PlanRequest) -> list[SuggestedStop]:
     outside = [s for s in plan.stops if not request.start_date <= s.date <= request.end_date]
     if outside:
         raise SuggestionFormatError(f"여행 기간 밖 날짜: {outside[0].date}")
-    return sorted(plan.stops, key=lambda s: (s.date, s.order))
+    # 시각이 있으면 시각 순, 없으면 받은 순서. 그날 순서(order)는 1부터 다시 매긴다.
+    stops = sorted(plan.stops, key=lambda s: (s.date, s.start_time is None, s.start_time or TimeOfDay(0), s.order))
+    numbered: list[SuggestedStop] = []
+    for stop in stops:
+        same_day = sum(1 for n in numbered if n.date == stop.date)
+        numbered.append(stop.model_copy(update={"order": same_day + 1}))
+    return numbered
+
+
+def _fixed_lines(request: PlanRequest) -> str:
+    if not request.fixed:
+        return "없음"
+    lines = []
+    for plan in sorted(request.fixed, key=lambda p: (p.date, p.time is None, p.time or TimeOfDay(0))):
+        when = plan.time.strftime("%H:%M") if plan.time else "시간 미정"
+        where = f" ({plan.place_name})" if plan.place_name and plan.place_name != plan.title else ""
+        lines.append(f"- {plan.date.isoformat()} {when} {plan.title}{where}")
+    return "\n".join(lines)
 
 
 def build_prompt(request: PlanRequest) -> str:
@@ -102,16 +161,25 @@ def build_prompt(request: PlanRequest) -> str:
             "- place_name은 지도 앱에서 검색되는 실제 상호나 장소 이름만 쓴다. 지어내지 않는다.\n"
             "- region은 그 장소가 있는 시·군·구(예: 제주시, 서귀포시, 강릉시)다.\n"
         )
+    day_start, day_end = request.day_start.strftime("%H:%M"), request.day_end.strftime("%H:%M")
     return (
         intro
         + f"여행지: {request.destination}\n"
         f"날짜: {dates} ({days}일)\n"
-        f"취향: {request.preferences or '특별히 없음'}\n\n"
+        f"하루 일정 시간: {day_start}~{day_end}\n"
+        f"숙소(출발·귀가 지점): {request.lodging or '정하지 않음'}\n"
+        f"일정 밀도: {PACE_LABEL[request.pace]}(하루 {PACE_STOPS[request.pace]})\n"
+        f"취향: {request.preferences or '특별히 없음'}\n"
+        f"이미 잡힌 일정(바꾸거나 다시 추천하지 않는다):\n{_fixed_lines(request)}\n\n"
         "규칙:\n"
-        "- 날짜마다 3~5곳을 하루 동선 순서대로 추천한다(order는 그날 1부터).\n"
+        "- 이미 잡힌 일정의 시간을 피해 빈 시간에만 장소를 넣는다. 시간 미정인 일정도 그날 동선에 들어간다고 생각한다.\n"
+        "- 하루 동선이 짧아지도록 가까운 곳끼리 묶고, 같은 길을 되돌아가지 않게 순서를 정한다. 숙소가 있으면 숙소에서 출발해 숙소로 돌아온다고 생각한다.\n"
+        "- start_time은 그 장소에 도착하는 시각(HH:MM, 24시간)이다. 앞 장소의 start_time + stay_minutes + 이번 travel_minutes 이후여야 하고, 하루 일정 시간 안이어야 한다.\n"
+        "- travel_minutes와 transport는 앞 장소(그날 첫 장소는 숙소나 출발지)에서 오는 현실적인 이동 시간(분)과 수단(도보, 대중교통, 자동차, 택시 중 하나)이다.\n"
+        "- 점심(11:30~13:30)과 저녁(17:30~19:30)에는 식당을 넣는다. 그 시간에 이미 식사 일정이 있으면 넣지 않는다.\n"
         + naming
         + "- stay_minutes는 예상 체류 시간(분), description은 한 줄 설명(60자 이내)이다.\n"
-        "- date는 위 날짜 중 하나를 YYYY-MM-DD로 쓴다."
+        "- date는 위 날짜 중 하나를 YYYY-MM-DD로 쓴다. order는 그날 방문 순서(1부터)다."
     )
 
 

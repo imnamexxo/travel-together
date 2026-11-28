@@ -3430,7 +3430,7 @@
           "suggestions"
         ],
         "summary": "Ask For Suggestions",
-        "description": "여행지·취향으로 날짜별 추천 일정을 받는다. 같은 입력이면 저장된 결과를 200으로 바로 돌려준다.",
+        "description": "구간·여행지·취향·하루 시간·숙소로 시간표 추천을 받는다. 이미 잡힌 일정은 피해 빈 시간만 채운다.\n같은 입력(이미 잡힌 일정 포함)이면 저장된 결과를 200으로 바로 돌려준다.",
         "operationId": "ask_for_suggestions_trips__trip_id__suggestions_post",
         "security": [
           {
@@ -3529,7 +3529,7 @@
           "suggestions"
         ],
         "summary": "Adopt Suggestions",
-        "description": "고른 추천 일정만 일정 항목으로 만든다. 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다.",
+        "description": "고른 추천 일정만 일정 항목으로 만든다(추천 시각이 있으면 그 시각으로). 기존 일정 항목은 건드리지 않는다. 이미 채택한 것은 건너뛴다.",
         "operationId": "adopt_suggestions_trips__trip_id__suggestions__request_id__adopt_post",
         "security": [
           {
@@ -6126,6 +6126,51 @@
           "adopted": {
             "type": "boolean",
             "title": "Adopted"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "travel_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Travel Minutes"
+          },
+          "transport": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transport"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
           }
         },
         "type": "object",
@@ -6139,7 +6184,11 @@
           "description",
           "status",
           "place",
-          "adopted"
+          "adopted",
+          "start_time",
+          "travel_minutes",
+          "transport",
+          "distance_km"
         ],
         "title": "SuggestedItemOut"
       },
@@ -6222,6 +6271,58 @@
             "maxLength": 200,
             "title": "Preferences",
             "default": ""
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "day_start": {
+            "type": "string",
+            "format": "time",
+            "title": "Day Start",
+            "default": "09:00:00"
+          },
+          "day_end": {
+            "type": "string",
+            "format": "time",
+            "title": "Day End",
+            "default": "21:00:00"
+          },
+          "lodging": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "Lodging",
+            "default": ""
+          },
+          "pace": {
+            "type": "string",
+            "enum": [
+              "relaxed",
+              "normal",
+              "packed"
+            ],
+            "title": "Pace",
+            "default": "normal"
           }
         },
         "type": "object",
@@ -6245,6 +6346,16 @@
             "type": "string",
             "title": "Preferences"
           },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
           "reused": {
             "type": "boolean",
             "title": "Reused"
@@ -6262,6 +6373,8 @@
           "id",
           "destination",
           "preferences",
+          "start_date",
+          "end_date",
           "reused",
           "items"
         ],
